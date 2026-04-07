@@ -102,4 +102,13 @@ Ele valida a expiração do token e também amarra as Roles baseadas no `req.use
 Qualquer manutenção referente a bloquear acessos numa certa rota REST deve ser feita passando o AuthGuard dentro do `app.post('/api/...', authGuard(['master']))`.
 
 ---
+
+## ⚠️ Política de Documentação Contínua
+
+**ATENÇÃO DESENVOLVEDORES E EDITORES**: 
+A sobrevivência técnica deste ecossistema depende da clareza das informações. **Sempre que você realizar uma alteração importante na arquitetura, adicionar uma nova variável, criar uma nova funcionalidade ou mudar lógicas de acesso, VOCÊ DEVE atualizar este arquivo `README.md`**.
+
+Manter este documento sempre sincronizado com as regras do sistema garante que a próxima pessoa que assumir ou ler o código não fique cega.
+
+---
 *Este é o documento vivo do Ecossistema Interno Templum. Mantenha os estilos em `style.css` baseados em "CSS Variables" para preservar o Auto-Dark/Light Mode Premium criado no projeto.*
