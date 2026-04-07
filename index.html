@@ -137,17 +137,14 @@
                                 <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DESCRIÇÃO</label>
                                 <textarea id="edit-card-description" class="desc-editor" placeholder="Detalhes da demanda, briefing e observacoes..."></textarea>
                             </div>
-                            <div>
-                                <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">ATRIBUIR PARA</label>
-                                <input type="text" id="edit-card-assignee" placeholder="Email do membro" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
-                            </div>
                         </div>
                     </div>
 
                     <div class="modal-section">
                         <h3><i class="fa-regular fa-user"></i> Membros</h3>
                         <div class="inline-form-row">
-                            <input type="text" id="member-input" class="modal-text-input" placeholder="Email do membro">
+                            <input type="text" id="member-input" class="modal-text-input" placeholder="Email do membro" list="member-suggestions">
+                            <datalist id="member-suggestions"></datalist>
                             <button type="button" class="sidebar-btn compact-btn" id="add-member-btn"><i class="fa-solid fa-plus"></i> Adicionar</button>
                         </div>
                         <div id="members-list" class="pill-list"></div>
@@ -190,6 +187,14 @@
                             <input type="file" id="image-input" class="modal-text-input" accept="image/*" multiple>
                         </div>
                         <div id="images-list" class="image-grid"></div>
+                    </div>
+
+                    <div class="modal-section">
+                        <h3><i class="fa-solid fa-paperclip"></i> Arquivos Anexos</h3>
+                        <div class="inline-form-row">
+                            <input type="file" id="file-input" class="modal-text-input" multiple>
+                        </div>
+                        <div id="files-list" class="file-list"></div>
                     </div>
 
                     <div class="modal-section">

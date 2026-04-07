@@ -89,17 +89,35 @@
         </div>
     </aside>
 
-    <main class="main-content" style="padding: 32px 48px; overflow-y: auto;">
-        <header class="app-header">
-            <div>
-                <h1 class="board-title">Calendário Editorial</h1>
-                <p style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Planejamento Geral de Produção do Mês em Vigor</p>
+    <main class="main-content" style="overflow-y: auto;">
+        <header class="topbar">
+            <div class="search-container">
+                <i class="fa-solid fa-calendar-days"></i>
+                <input type="text" value="Planejamento editorial por workspace e mes" readonly>
+            </div>
+
+            <div class="topbar-actions">
+                <button class="icon-btn theme-toggle" id="theme-toggle" aria-label="Alternar Tema">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
             </div>
         </header>
 
-        <div class="calendar-toolbar">
-            <label for="calendar-month" style="color: var(--text-muted); font-size: 13px; font-weight: 600;">MÊS EXIBIDO</label>
-            <input type="month" id="calendar-month" class="calendar-month-input">
+        <div class="board-header">
+            <div class="board-title" style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <h1 id="dyn-board-title">Calendário Editorial</h1>
+                    <span class="tag-status">Planejamento</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Planejamento Geral de Produção do Mês em Vigor</p>
+            </div>
+
+            <div class="board-filters" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                <select id="ws-switcher" class="calendar-month-input">
+                    <option>Carregando contas...</option>
+                </select>
+                <input type="month" id="calendar-month" class="calendar-month-input">
+            </div>
         </div>
 
         <div class="calendar-container" id="cal-grid">
@@ -121,7 +139,6 @@
         if (!pageToken) window.location.href='/login.html';
         const getPageAuthHeaders = () => ({ 'Authorization': 'Bearer ' + pageToken });
         const monthInput = document.getElementById('calendar-month');
-        const activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
 
         function getPlatformIcon(platform) {
             if (platform === 'instagram') return 'fa-instagram';
@@ -149,7 +166,8 @@
                 if (!selectedMonth) return;
 
                 const [year, month] = selectedMonth.split('-').map(Number);
-                const res = await fetch('/api/board?workspace=' + encodeURIComponent(activeWorkspaceId), { headers: getPageAuthHeaders() });
+                const selectedWorkspace = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
+                const res = await fetch('/api/board?workspace=' + encodeURIComponent(selectedWorkspace), { headers: getPageAuthHeaders() });
                 const data = await res.json();
                 
                 const scheduledCards = [];
@@ -196,6 +214,7 @@
             }
         }
         
+        window.renderCalendarPage = renderCalendar;
         monthInput.value = new Date().toISOString().slice(0, 7);
         monthInput.addEventListener('change', renderCalendar);
         renderCalendar();

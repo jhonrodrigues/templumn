@@ -30,12 +30,14 @@ async function initWorkspaces() {
                 if(w.id === activeWorkspaceId) opt.selected = true;
                 sw.appendChild(opt);
             });
-            document.getElementById('dyn-board-title').innerText = wss.find(w => w.id === activeWorkspaceId)?.name || 'Board';
+            const dynamicTitle = document.getElementById('dyn-board-title');
+            if (dynamicTitle) dynamicTitle.innerText = wss.find(w => w.id === activeWorkspaceId)?.name || 'Board';
             sw.onchange = (e) => {
                 activeWorkspaceId = e.target.value;
                 localStorage.setItem('templum-active-ws', activeWorkspaceId);
-                document.getElementById('dyn-board-title').innerText = e.target.options[e.target.selectedIndex].text;
+                if (dynamicTitle) dynamicTitle.innerText = e.target.options[e.target.selectedIndex].text;
                 loadStateFromServer();
+                if (window.renderCalendarPage) window.renderCalendarPage();
             };
         }
         
@@ -119,6 +121,19 @@ function resetNewCardModal() {
     renderWorkspaceSelector('new-card-workspaces', [activeWorkspaceId]);
 }
 
+async function loadMemberSuggestions(search = '') {
+    const datalist = document.getElementById('member-suggestions');
+    if (!datalist) return;
+    try {
+        const response = await fetch('/api/users/options?q=' + encodeURIComponent(search), { headers: getAuthHeaders() });
+        if (!response.ok) return;
+        const users = await response.json();
+        datalist.innerHTML = users.map((user) => `<option value="${user.email}"></option>`).join('');
+    } catch (err) {
+        console.error('Member suggestions error', err);
+    }
+}
+
 async function initBranding() {
     try {
         const res = await fetch('/api/settings');
@@ -157,6 +172,25 @@ function renderBoard() {
             <div>${column.title} <span class="count">${column.cards.length}</span></div>
             <button><i class="fa-solid fa-ellipsis"></i></button>
         `;
+        const menuBtn = headerEl.querySelector('button');
+        if (menuBtn) {
+            menuBtn.onclick = async () => {
+                const nextTitle = prompt('Novo nome do quadro:', column.title);
+                if (!nextTitle || nextTitle.trim() === '' || nextTitle.trim() === column.title) return;
+                try {
+                    const response = await fetch('/api/columns/' + column.id, {
+                        method: 'PUT',
+                        headers: authHeaders,
+                        body: JSON.stringify({ title: nextTitle.trim() })
+                    });
+                    if (!response.ok) throw new Error('column update failed');
+                    column.title = nextTitle.trim();
+                    renderBoard();
+                } catch (err) {
+                    alert('Nao foi possivel editar esse quadro.');
+                }
+            };
+        }
         
         // Body (Droppable)
         const bodyEl = document.createElement('div');
@@ -402,7 +436,6 @@ const editTitleInput = document.getElementById('edit-card-title');
 const editDescriptionInput = document.getElementById('edit-card-description');
 const editPlatformInput = document.getElementById('edit-card-platform');
 const editDateInput = document.getElementById('edit-card-date');
-const editAssigneeInput = document.getElementById('edit-card-assignee');
 const saveCardBtn = document.getElementById('save-card-btn');
 const memberInput = document.getElementById('member-input');
 const membersList = document.getElementById('members-list');
@@ -419,6 +452,8 @@ const commentsList = document.getElementById('comments-list');
 const addCommentBtn = document.getElementById('add-comment-btn');
 const imageInput = document.getElementById('image-input');
 const imagesList = document.getElementById('images-list');
+const fileInput = document.getElementById('file-input');
+const filesList = document.getElementById('files-list');
 const removeCardFromWorkspaceBtn = document.getElementById('remove-card-from-workspace-btn');
 
 function normalizeArray(value) {
@@ -451,6 +486,15 @@ function readFilesAsDataUrls(fileList) {
         reader.onerror = reject;
         reader.readAsDataURL(file);
     })));
+}
+
+function formatFilePayload(files, dataUrls) {
+    return Array.from(files || []).map((file, index) => ({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        data: dataUrls[index]
+    }));
 }
 
 function renderMembersEditor() {
@@ -569,6 +613,25 @@ function renderImagesEditor() {
     });
 }
 
+function renderFilesEditor() {
+    if (!filesList || !activeCardData) return;
+    filesList.innerHTML = activeCardData.files.length
+        ? activeCardData.files.map((file, index) => `
+            <div class="file-item">
+                <a class="file-link" href="${file.data}" download="${escapeHtml(file.name || 'anexo')}"><i class="fa-solid fa-paperclip"></i> ${escapeHtml(file.name || 'Arquivo')}</a>
+                <button type="button" class="comment-delete" data-file-index="${index}"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        `).join('')
+        : '<div style="color: var(--text-muted); font-size: 13px;">Nenhum arquivo anexado.</div>';
+
+    filesList.querySelectorAll('[data-file-index]').forEach((btn) => {
+        btn.onclick = () => {
+            activeCardData.files.splice(Number(btn.dataset.fileIndex), 1);
+            renderFilesEditor();
+        };
+    });
+}
+
 function openModal(card, colId) {
     activeCardId = card.id;
     activeCardColId = colId;
@@ -580,6 +643,7 @@ function openModal(card, colId) {
         checklist: normalizeArray(card.checklist),
         comments: normalizeArray(card.comments_data),
         images: normalizeArray(card.images),
+        files: normalizeArray(card.files),
         visible_workspaces: Array.from(new Set([card.workspace_id || activeWorkspaceId, ...normalizeArray(card.visible_workspaces)]))
     };
     const colName = boardState.columns.find(c => c.id === colId).title;
@@ -589,21 +653,23 @@ function openModal(card, colId) {
     if (editDescriptionInput) editDescriptionInput.value = card.description || '';
     if (editPlatformInput) editPlatformInput.value = card.platform || '';
     if (editDateInput) editDateInput.value = card.post_date || '';
-    if (editAssigneeInput) editAssigneeInput.value = card.assignee || '';
     if (memberInput) memberInput.value = '';
     if (labelInput) labelInput.value = '';
     if (checklistInput) checklistInput.value = '';
     if (commentInput) commentInput.value = '';
     if (imageInput) imageInput.value = '';
+    if (fileInput) fileInput.value = '';
     renderWorkspaceSelector('edit-card-workspaces', activeCardData.visible_workspaces);
     if (removeCardFromWorkspaceBtn) {
         removeCardFromWorkspaceBtn.style.display = activeCardData.visible_workspaces.length > 1 ? 'flex' : 'none';
     }
+    loadMemberSuggestions();
     renderMembersEditor();
     renderLabelsEditor();
     renderChecklistEditor();
     renderCommentsEditor();
     renderImagesEditor();
+    renderFilesEditor();
     modalOverlay.classList.add('active');
 }
 
@@ -612,10 +678,20 @@ if (addMemberBtn) {
         if (!activeCardData || !memberInput) return;
         const member = memberInput.value.trim();
         if (!member) return;
+        if (activeCardData.members.includes(member)) {
+            memberInput.value = '';
+            return;
+        }
         activeCardData.members.push(member);
         memberInput.value = '';
         renderMembersEditor();
     };
+}
+
+if (memberInput) {
+    memberInput.addEventListener('input', () => {
+        loadMemberSuggestions(memberInput.value.trim());
+    });
 }
 
 if (addLabelBtn) {
@@ -665,6 +741,20 @@ if (imageInput) {
     };
 }
 
+if (fileInput) {
+    fileInput.onchange = async () => {
+        if (!activeCardData) return;
+        try {
+            const loadedFiles = await readFilesAsDataUrls(fileInput.files);
+            activeCardData.files.push(...formatFilePayload(fileInput.files, loadedFiles));
+            renderFilesEditor();
+            fileInput.value = '';
+        } catch (e) {
+            alert('Erro ao carregar arquivo');
+        }
+    };
+}
+
 if (removeCardFromWorkspaceBtn) {
     removeCardFromWorkspaceBtn.onclick = async () => {
         if (!activeCardId || !activeCardData) return;
@@ -694,7 +784,7 @@ if (saveCardBtn) {
         const description = editDescriptionInput ? editDescriptionInput.value.trim() : '';
         const platform = editPlatformInput ? editPlatformInput.value : '';
         const post_date = editDateInput ? editDateInput.value : '';
-        const assignee = editAssigneeInput ? editAssigneeInput.value.trim() : '';
+        const assignee = activeCardData.members.length > 0 ? activeCardData.members[0] : '';
         const visible_workspaces = getSelectedWorkspaceIds('edit-card-workspaces');
         activeCardData.visible_workspaces = visible_workspaces;
 
@@ -707,7 +797,7 @@ if (saveCardBtn) {
             const response = await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), {
                 method: 'PUT',
                 headers: authHeaders,
-                body: JSON.stringify({ title, description, platform, post_date, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, visible_workspaces, primary_workspace_id: activeCardData.workspace_id })
+                body: JSON.stringify({ title, description, platform, post_date, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id })
             });
 
             if (!response.ok) throw new Error('save failed');
@@ -725,9 +815,10 @@ if (saveCardBtn) {
                 activeCard.checklist = activeCardData.checklist;
                 activeCard.comments_data = activeCardData.comments;
                 activeCard.images = activeCardData.images;
+                activeCard.files = activeCardData.files;
                 activeCard.visible_workspaces = visible_workspaces;
                 activeCard.comments = activeCardData.comments.length;
-                activeCard.attachments = activeCardData.images.length;
+                activeCard.attachments = activeCardData.images.length + activeCardData.files.length;
             }
 
             document.getElementById('modal-title').innerText = title;

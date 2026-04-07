@@ -29,14 +29,14 @@ Toda a lógica e os pilares de informações da plataforma estão organizados da
   * Captura do ID de Workspace via localStorage.
   * Disparos das famosas requisições HTTP (`fetch()`) mandando `Bearer Token` para buscar colunas e usuários.
   * Sistema completo de Drag-and-Drop (DND) dos cards da tabela.
-  * Modais, menus esquerdo em tempo-real, edicao/exclusao direta de cards e persistencia de descricao, membros, etiquetas, checklist, comentarios, imagens e visibilidade entre workspaces no modal principal.
+  * Modais, menus esquerdo em tempo-real, edicao/exclusao direta de cards e persistencia de descricao, membros com sugestao automatica, etiquetas, checklist, comentarios, imagens, arquivos e visibilidade entre workspaces no modal principal.
 
 ### 3. Interface Visual Nativa (Telas HTML)
 Todas as telas compartilham a mesma tag de `style.css` com variáveis de Thema Escuro (Dark Mode).
 * **`login.html`**: Recebe o Form de senha. Dispara a API `/api/login` e se tiver sucesso salva o Token no `localStorage` do navegador do cliente.
-* **`index.html`**: Painel Kanban Mestre onde a operação acontece ("cards", "tags", "colunas") e onde o modal permite editar, apagar e manter a estrutura interna do card (descricao, membros, etiquetas, checklist, comentarios, imagens e collab entre workspaces).
+* **`index.html`**: Painel Kanban Mestre onde a operação acontece ("cards", "tags", "colunas") e onde o modal permite editar, apagar e manter a estrutura interna do card (descricao, membros com autocomplete, etiquetas, checklist, comentarios, imagens, arquivos e collab entre workspaces), alem de renomear quadros pelo menu de tres pontos.
 * **`mesa.html`**: A "Minha Mesa". Interface tipo Dashboard Pessoal que filtra apenas as tarefas de quem tá "logado" na tela.
-* **`calendario.html`**: Painel Editorial. Puxa a `post_date` de todos os cards visiveis no workspace ativo, permite escolher o mes e monta a grade mensal real.
+* **`calendario.html`**: Painel Editorial. Usa o mesmo shell visual do sistema, permite escolher a conta/workspace e o mes, e monta a grade mensal real a partir da `post_date`.
 * **`usuarios.html`**: O "RH Digital". Tela focada na aba de Gestão de Permissões. Traz a API para criar acessos, remover cargos e listar funcionários.
 * **`gestao.html`**: Relatórios de entrega de cards em pizza/estatísticas.
 * **`admin-settings.html`**: Espaço de configurações mestre operacionais, onde hoje os diretores podem Injetar Novos Workspaces (Novas filiais de igrejas) no banco de dados.
@@ -50,7 +50,7 @@ Para quem for dar engenharia ou manutenção ao SQL contido no `server.js`, exis
 1. **Table `workspaces`**: IDs virtuais de agrupamento de clientes (Ex: `lagoinhaalphaville`). Tudo gravado no software pertence a um workspace.
 2. **Table `users`**: O painel de RH com Roles (Permissões: `master`, `gestor`, `membro`). Protegidos via check na rota `/api/users`.
 3. **Table `columns`**: A entidade coluna Kanban contendo arrays de posicionamento (Ordem 1, 2, 3), que recebem cards.
-4. **Table `cards`**: O ticket operacional em si, armazenando `title`, `description`, tags coloridas (JSON array), `members`, `checklist`, `comments`, `images`, `visible_workspaces`, datas, plataformas e o foreign id principal do Workspace. 
+4. **Table `cards`**: O ticket operacional em si, armazenando `title`, `description`, tags coloridas (JSON array), `members`, `checklist`, `comments`, `images`, `files`, `visible_workspaces`, datas, plataformas e o foreign id principal do Workspace. 
 
 ---
 

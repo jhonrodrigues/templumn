@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS cards (
     checklist JSONB DEFAULT '[]'::jsonb,
     comments JSONB DEFAULT '[]'::jsonb,
     images JSONB DEFAULT '[]'::jsonb,
+    files JSONB DEFAULT '[]'::jsonb,
     visible_workspaces JSONB DEFAULT '[]'::jsonb,
     comments_count INTEGER DEFAULT 0,
     attachments_count INTEGER DEFAULT 0,
