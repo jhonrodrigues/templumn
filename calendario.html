@@ -41,28 +41,45 @@
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div>
+    <aside class="sidebar">
+        <div class="sidebar-header">
             <div class="logo">
                 <div class="logo-icon"><i class="fa-solid fa-shapes"></i></div>
-                Templum
+                <span class="logo-text">Templum</span>
             </div>
-            <div class="menu-section" style="margin-top:20px;">
-                <span class="section-title" style="margin-left: 12px;">Contas / Workspaces</span>
+        </div>
+
+        <div class="sidebar-menu">
+            <div class="menu-section">
+                <span class="section-title">Contas / Workspaces</span>
                 <ul id="sidebar-ws-list"></ul>
             </div>
-            <ul class="nav-links">
-                <li><a href="index.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Kanban</a></li>
-                <li><a href="gestao.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> Gestão do Mês</a></li>
-                <li><a href="calendario.html" class="nav-link active"><i class="fa-regular fa-calendar-days"></i> Calendário</a></li>
-                <li><a href="admin-settings.html" class="nav-link"><i class="fa-solid fa-gear"></i> Admin Master</a></li>
-            </ul>
+
+            <div class="menu-section">
+                <span class="section-title">Minha Mesa</span>
+                <ul>
+                    <li onclick="window.location.href='index.html'"><i class="fa-solid fa-table-columns"></i> Kanban Central</li>
+                    <li onclick="window.location.href='mesa.html'"><i class="fa-solid fa-user-check"></i> Minhas Tarefas</li>
+                    <li onclick="window.location.href='calendario.html'"><i class="fa-regular fa-calendar-days"></i> Calendário do Mês</li>
+                </ul>
+            </div>
+            
+            <div class="menu-section">
+                <span class="section-title">Gestão e Liderança</span>
+                <ul>
+                    <li onclick="window.location.href='gestao.html'"><i class="fa-solid fa-chart-pie"></i> Relatórios da Agência</li>
+                    <li onclick="window.location.href='usuarios.html'"><i class="fa-solid fa-users"></i> Equipe e Acessos</li>
+                    <li onclick="window.location.href='admin-settings.html'"><i class="fa-solid fa-cogs"></i> Master Configurações</li>
+                </ul>
+            </div>
         </div>
+        
         <div class="user-profile">
-            <img src="https://ui-avatars.com/api/?name=Admin&background=random" class="avatar-sm">
-            <span>Agência Master</span>
+            <div class="user-info" style="width:100%;">
+                <button onclick="localStorage.clear(); window.location.href='/login.html';" style="width:100%; padding: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border:none; border-radius:8px; cursor:pointer; font-weight: 600;"><i class="fa-solid fa-right-from-bracket"></i> Sair do Sistema</button>
+            </div>
         </div>
-    </div>
+    </aside>
 
     <div class="main-content" style="padding: 32px 48px;">
         <header class="app-header">

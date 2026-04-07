@@ -397,6 +397,15 @@ body {
 }
 .modal-overlay.active { opacity: 1; pointer-events: auto; }
 
+.modal-box {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    padding: 32px; border-radius: 16px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+    position: relative;
+    max-height: 90vh; overflow-y: auto;
+}
+
 .card-modal-content {
     background: var(--bg-surface);
     width: 800px; max-width: 95vw; max-height: 90vh;
