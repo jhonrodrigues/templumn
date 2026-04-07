@@ -1,3 +1,14 @@
+// === SECURITY GUARD ===
+const TEMPLUM_TOKEN = localStorage.getItem('templum-auth-token');
+if (!TEMPLUM_TOKEN) {
+    window.location.href = '/login.html';
+}
+const authHeaders = {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + TEMPLUM_TOKEN
+};
+const getAuthHeaders = () => ({ 'Authorization': 'Bearer ' + localStorage.getItem('templum-auth-token') });
+
 // State Object to track the dynamic state
 let boardState = { columns: [] };
 
@@ -6,7 +17,11 @@ async function loadStateFromServer() {
     if (!boardCanvas) return; // Not on the Kanban page
     
     try {
-        const response = await fetch('/api/board');
+        const response = await fetch('/api/board', { headers: getAuthHeaders() });
+        if (response.status === 401 || response.status === 403) {
+            window.location.href = '/login.html';
+            return;
+        }
         if (response.ok) {
             const data = await response.json();
             boardState.columns = data.columns;
@@ -87,7 +102,7 @@ function renderBoard() {
                 try {
                     await fetch('/api/cards', {
                         method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
+                        headers: authHeaders,
                         body: JSON.stringify({ title: title, column_id: column.id })
                     });
                     loadStateFromServer(); // re-fetch the entire board live!
@@ -197,7 +212,7 @@ function handleDrop(e) {
         // Notify PostgreSQL Engine Asynchronously
         fetch('/api/board/move', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders,
             body: JSON.stringify({
                 cardId: draggedCardId,
                 targetColId: targetColId,
@@ -224,7 +239,7 @@ if (delBtn) {
         if (!activeCardId) return;
         if(confirm('Tem certeza que deseja excluir DEIFINITIVAMENTE este cartão do Banco de Dados?')) {
             try {
-                await fetch('/api/cards/' + activeCardId, { method: 'DELETE' });
+                await fetch('/api/cards/' + activeCardId, { method: 'DELETE', headers: authHeaders });
                 modalOverlay.classList.remove('active');
                 loadStateFromServer();
             } catch(e) {

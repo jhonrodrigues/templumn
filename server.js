@@ -4,9 +4,12 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const path = require('path');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'templum-super-secret-key-agencia';
 
 // Database Connection
 const pool = new Pool({
@@ -20,6 +23,11 @@ async function initDb() {
     try {
         const sql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
         await pool.query(sql);
+        
+        // Setup initial Admin Account
+        const hash = await bcrypt.hash('123456', 8);
+        await pool.query('INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING', ['admin@templum.com', hash, 'master']);
+        
         console.log('[TEMPLUM] Database schema e tabelas criadas com sucesso!');
     } catch (err) {
         console.error('[TEMPLUM] Erro ao inicializar tabelas:', err);
@@ -33,11 +41,41 @@ app.use(express.json());
 app.use(express.static(__dirname)); 
 
 // =======================
+//   SECURITY SYSTEM
+// =======================
+app.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        const uRes = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (uRes.rows.length === 0) return res.status(401).json({error: 'Usuário não encontrado. Fale com a gestão.'});
+        const user = uRes.rows[0];
+        const valid = await bcrypt.compare(password, user.password_hash);
+        if (!valid) return res.status(401).json({error: 'Senha master incorreta.'});
+        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+        res.json({ token, email: user.email });
+    } catch(err) {
+        res.status(500).json({error: 'Erro de validação.'});
+    }
+});
+
+function authGuard(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({error: 'Token Ausente - Não Autorizado'});
+    
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({error: 'Sessão Expirada'});
+        req.user = user;
+        next();
+    });
+}
+
+// =======================
 //   ROUTES OVERVIEW
 // =======================
 
 // --- API: Board API (Columns & Cards) ---
-app.get('/api/board', async (req, res) => {
+app.get('/api/board', authGuard, async (req, res) => {
     try {
         // Query to get all columns and nest their cards using Postgres JSON aggregation
         const query = `
@@ -69,7 +107,7 @@ app.get('/api/board', async (req, res) => {
     }
 });
 
-app.post('/api/board/move', async (req, res) => {
+app.post('/api/board/move', authGuard, async (req, res) => {
     const { cardId, targetColId, newOrder } = req.body;
     try {
         await pool.query('UPDATE cards SET column_id = $1, card_order = $2 WHERE id = $3', [targetColId, newOrder, cardId]);
@@ -80,7 +118,7 @@ app.post('/api/board/move', async (req, res) => {
 });
 
 // --- API: Create & Delete Cards ---
-app.post('/api/cards', async (req, res) => {
+app.post('/api/cards', authGuard, async (req, res) => {
     const { title, column_id } = req.body;
     const id = 'card-' + Date.now() + Math.floor(Math.random()*1000);
     try {
@@ -94,7 +132,7 @@ app.post('/api/cards', async (req, res) => {
     }
 });
 
-app.delete('/api/cards/:id', async (req, res) => {
+app.delete('/api/cards/:id', authGuard, async (req, res) => {
     try {
         await pool.query('DELETE FROM cards WHERE id = $1', [req.params.id]);
         res.json({ success: true });
@@ -104,7 +142,7 @@ app.delete('/api/cards/:id', async (req, res) => {
 });
 
 // --- API: Dashboard Metrics ---
-app.get('/api/dashboard', async (req, res) => {
+app.get('/api/dashboard', authGuard, async (req, res) => {
     try {
         const totalRes = await pool.query('SELECT COUNT(*) as t FROM cards');
         const grouped = await pool.query('SELECT column_id, COUNT(*) as c FROM cards GROUP BY column_id');
@@ -143,7 +181,7 @@ app.get('/api/settings', async (req, res) => {
     }
 });
 
-app.post('/api/settings', async (req, res) => {
+app.post('/api/settings', authGuard, async (req, res) => {
     const { primary_color } = req.body;
     try {
         await pool.query(`

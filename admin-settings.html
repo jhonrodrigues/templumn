@@ -156,7 +156,7 @@
                 saveBtn.innerHTML = 'Salvando...';
                 await fetch('/api/settings', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: authHeaders,
                     body: JSON.stringify({ primary_color: finalColor })
                 });
                 alert('Sucesso! A nova cor foi vinculada pelo servidor PostgreSQL.');

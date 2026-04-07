@@ -183,7 +183,9 @@
         // Dashboard Engine
         async function loadDashboard() {
             try {
-                const res = await fetch('/api/dashboard');
+                const res = await fetch('/api/dashboard', { headers: getAuthHeaders() });
+                if (res.status === 401 || res.status === 403) return window.location.href='/login.html';
+                
                 const data = await res.json();
                 
                 // Update Total
