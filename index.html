@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Templum - Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-layout">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon"><i class="fa-solid fa-shapes"></i></div>
+                    <span class="logo-text">Templum</span>
+                </div>
+            </div>
+
+            <div class="sidebar-menu">
+                <div class="menu-section">
+                    <span class="section-title">Contas / Workspaces</span>
+                    <ul>
+                        <li class="active"><i class="fa-solid fa-church"></i> IBL Alphaville (Principal)</li>
+                        <li><i class="fa-solid fa-fire"></i> Juventude</li>
+                        <li><i class="fa-solid fa-child-reaching"></i> Kids</li>
+                        <li><i class="fa-solid fa-music"></i> Louvor</li>
+                    </ul>
+                </div>
+
+                <div class="menu-section">
+                    <span class="section-title">Minha Mesa</span>
+                    <ul>
+                        <li><i class="fa-solid fa-inbox"></i> Minhas Tarefas</li>
+                        <li><i class="fa-solid fa-chart-pie"></i> Relatórios (Agência)</li>
+                        <li><i class="fa-solid fa-users"></i> Gerir Membros</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="user-profile">
+                <img src="https://ui-avatars.com/api/?name=Admin+Master&background=6366f1&color=fff" alt="User Profile" class="avatar">
+                <div class="user-info">
+                    <span class="name">Admin Master</span>
+                    <span class="role">Gestão Templum</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            
+            <!-- Top Header -->
+            <header class="topbar">
+                <div class="search-container">
+                    <i class="fa-solid fa-search"></i>
+                    <input type="text" placeholder="Buscar tarefas, tags, anexos...">
+                </div>
+
+                <div class="topbar-actions">
+                    <button class="icon-btn theme-toggle" id="theme-toggle" aria-label="Alternar Tema">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <button class="icon-btn"><i class="fa-regular fa-bell"></i><span class="badge">3</span></button>
+                    <button class="new-btn"><i class="fa-solid fa-plus"></i> Novo Card</button>
+                </div>
+            </header>
+
+            <!-- Board Header -->
+            <div class="board-header">
+                <div class="board-title">
+                    <h1>Mídias Culto de Domingo <span class="tag-status">Em andamento</span></h1>
+                    <p>Workflow padrão da equipe criativa para os cultos principais.</p>
+                </div>
+                <div class="board-filters">
+                    <div class="avatar-group">
+                        <img src="https://ui-avatars.com/api/?name=Designer+1&background=random" class="avatar-sm">
+                        <img src="https://ui-avatars.com/api/?name=Social+Media&background=random" class="avatar-sm">
+                        <button class="add-member"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kanban Canvas -->
+            <div class="board-canvas" id="board-canvas">
+                <!-- Columns get injected here by JS -->
+            </div>
+
+        </main>
+
+    </div>
+
+    <!-- Card Detail Modal Overlay -->
+    <div class="modal-overlay" id="card-modal">
+        <div class="card-modal-content">
+            <button class="close-modal"><i class="fa-solid fa-times"></i></button>
+            <div class="modal-header">
+                <div class="modal-label">Na lista <strong id="modal-list-name">To Do</strong></div>
+                <h2 id="modal-title">Título do Card</h2>
+            </div>
+            
+            <div class="modal-body-layout">
+                
+                <div class="modal-main">
+                    <div class="modal-section">
+                        <h3><i class="fa-solid fa-align-left"></i> Descrição</h3>
+                        <textarea class="desc-editor" placeholder="Adicione uma descrição mais detalhada..."></textarea>
+                    </div>
+
+                    <div class="modal-section">
+                        <h3><i class="fa-solid fa-list-check"></i> Checklist</h3>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width: 30%"></div>
+                        </div>
+                        <ul class="checklist-items">
+                            <li><input type="checkbox" checked> Aprovação do Copy</li>
+                            <li><input type="checkbox"> Criação do KV no Photoshop</li>
+                            <li><input type="checkbox"> Exportar formatos finais</li>
+                        </ul>
+                    </div>
+
+                    <div class="modal-section">
+                        <h3><i class="fa-regular fa-comments"></i> Atividade</h3>
+                        <div class="comment-box">
+                            <img src="https://ui-avatars.com/api/?name=Admin+Master&background=6366f1&color=fff" class="avatar-sm">
+                            <input type="text" placeholder="Escreva um comentário...">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-sidebar">
+                    <span class="sidebar-title">Adicionar</span>
+                    <button class="sidebar-btn"><i class="fa-regular fa-user"></i> Membros</button>
+                    <button class="sidebar-btn"><i class="fa-solid fa-tag"></i> Etiquetas</button>
+                    <button class="sidebar-btn"><i class="fa-solid fa-check-square"></i> Checklist</button>
+                    <button class="sidebar-btn"><i class="fa-regular fa-clock"></i> Datas</button>
+                    <button class="sidebar-btn"><i class="fa-solid fa-paperclip"></i> Anexo</button>
+
+                    <div class="spacer"></div>
+
+                    <span class="sidebar-title">Ações</span>
+                    <button class="sidebar-btn"><i class="fa-solid fa-arrow-right"></i> Mover</button>
+                    <button class="sidebar-btn"><i class="fa-solid fa-copy"></i> Copiar</button>
+                    <button class="sidebar-btn danger"><i class="fa-solid fa-trash"></i> Excluir</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
