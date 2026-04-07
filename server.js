@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,6 +14,18 @@ const pool = new Pool({
     // SSL Required in some cloud DBs (Easypanel might vary)
     ssl: process.env.NODE_ENV === 'production' && process.env.DB_NO_SSL !== 'true' ? { rejectUnauthorized: false } : false
 });
+
+// Inicialização Automática do Banco de Dados
+async function initDb() {
+    try {
+        const sql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
+        await pool.query(sql);
+        console.log('[TEMPLUM] Database schema e tabelas criadas com sucesso!');
+    } catch (err) {
+        console.error('[TEMPLUM] Erro ao inicializar tabelas:', err);
+    }
+}
+initDb();
 
 app.use(cors());
 app.use(express.json());
