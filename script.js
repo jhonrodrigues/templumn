@@ -2,6 +2,9 @@
 let boardState = { columns: [] };
 
 async function loadStateFromServer() {
+    const boardCanvas = document.getElementById('board-canvas');
+    if (!boardCanvas) return; // Not on the Kanban page
+    
     try {
         const response = await fetch('/api/board');
         if (response.ok) {
@@ -77,7 +80,22 @@ function renderBoard() {
         const addBtn = document.createElement('button');
         addBtn.className = 'add-card-btn';
         addBtn.innerHTML = `<i class="fa-solid fa-plus"></i> Adicionar um cartão`;
-        addBtn.onclick = () => alert('Funcionalidade de criar "New Card" a ser implementada!');
+        addBtn.onclick = async () => {
+            const title = prompt('Qual o título do novo cartão?');
+            if (title && title.trim() !== '') {
+                addBtn.innerHTML = 'Criando...';
+                try {
+                    await fetch('/api/cards', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ title: title, column_id: column.id })
+                    });
+                    loadStateFromServer(); // re-fetch the entire board live!
+                } catch(err) {
+                    alert('Erro de conexão ao criar card');
+                }
+            }
+        };
         colEl.appendChild(addBtn);
         
         boardCanvas.appendChild(colEl);
@@ -190,11 +208,30 @@ function handleDrop(e) {
 }
 
 // --- Modal Logic --- //
+let activeCardId = null;
+
 function openModal(card, colId) {
+    activeCardId = card.id;
     const colName = boardState.columns.find(c => c.id === colId).title;
     document.getElementById('modal-list-name').innerText = colName;
     document.getElementById('modal-title').innerText = card.title;
     modalOverlay.classList.add('active');
+}
+
+const delBtn = document.getElementById('delete-card-btn');
+if (delBtn) {
+    delBtn.onclick = async () => {
+        if (!activeCardId) return;
+        if(confirm('Tem certeza que deseja excluir DEIFINITIVAMENTE este cartão do Banco de Dados?')) {
+            try {
+                await fetch('/api/cards/' + activeCardId, { method: 'DELETE' });
+                modalOverlay.classList.remove('active');
+                loadStateFromServer();
+            } catch(e) {
+                alert('Erro ao excluir card');
+            }
+        }
+    };
 }
 
 closeModalBtn.addEventListener('click', () => {

@@ -179,5 +179,33 @@
     </div>
 
     <script src="script.js"></script>
+    <script>
+        // Dashboard Engine
+        async function loadDashboard() {
+            try {
+                const res = await fetch('/api/dashboard');
+                const data = await res.json();
+                
+                // Update Total
+                const totalEls = document.querySelectorAll('.stat-value');
+                if(totalEls.length >= 3) {
+                    totalEls[0].innerText = data.total_cards; // Total Cards
+                    totalEls[2].innerText = data.taxa_entrega + '%'; // Entrega %
+                }
+                
+                // Update Circle
+                const circleInner = document.querySelector('.progress-inner span');
+                if(circleInner) {
+                    circleInner.innerText = data.taxa_entrega + '%';
+                    const progCircle = document.querySelector('.progress-circle');
+                    progCircle.style.background = `conic-gradient(var(--primary) ${data.taxa_entrega}%, var(--bg-app) 0deg)`;
+                }
+                
+            } catch(e) {
+                console.error('Falha ao carregar dashboard ao vivo');
+            }
+        }
+        loadDashboard();
+    </script>
 </body>
 </html>

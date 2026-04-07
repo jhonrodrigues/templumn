@@ -79,6 +79,55 @@ app.post('/api/board/move', async (req, res) => {
     }
 });
 
+// --- API: Create & Delete Cards ---
+app.post('/api/cards', async (req, res) => {
+    const { title, column_id } = req.body;
+    const id = 'card-' + Date.now() + Math.floor(Math.random()*1000);
+    try {
+        const maxRes = await pool.query('SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1', [column_id]);
+        const order = maxRes.rows[0].next_order;
+        await pool.query('INSERT INTO cards (id, column_id, title, card_order) VALUES ($1, $2, $3, $4)', [id, column_id, title, order]);
+        res.json({ success: true, id, title });
+    } catch (err) {
+        console.error('Insert error:', err);
+        res.status(500).json({ error: 'Erro ao criar card' });
+    }
+});
+
+app.delete('/api/cards/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM cards WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro na lixeira' });
+    }
+});
+
+// --- API: Dashboard Metrics ---
+app.get('/api/dashboard', async (req, res) => {
+    try {
+        const totalRes = await pool.query('SELECT COUNT(*) as t FROM cards');
+        const grouped = await pool.query('SELECT column_id, COUNT(*) as c FROM cards GROUP BY column_id');
+        
+        let total = parseInt(totalRes.rows[0].t) || 0;
+        let completed = 0; // Col-5 é o Concluido
+        
+        grouped.rows.forEach(r => {
+            if(r.column_id === 'col-5') completed = parseInt(r.c);
+        });
+        
+        let taxaDeEntrega = total > 0 ? Math.round((completed / total) * 100) : 100;
+
+        res.json({ 
+            total_cards: total, 
+            cards_concluidos: completed,
+            taxa_entrega: taxaDeEntrega
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed Dashboard' });
+    }
+});
+
 // --- API: Settings (Admin Master) ---
 app.get('/api/settings', async (req, res) => {
     try {
