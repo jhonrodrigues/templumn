@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Membros - Templum</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .members-container { max-width: 900px; }
+        .member-table { width: 100%; border-collapse: collapse; margin-top: 24px; background: var(--bg-surface); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm); }
+        .member-table th { background: rgba(0,0,0,0.2); padding: 16px; text-align: left; font-size: 13px; color: var(--text-muted); text-transform: uppercase;}
+        .member-table td { padding: 16px; border-bottom: 1px solid var(--border); color: var(--text-main); font-weight: 500;}
+        .member-table tr:last-child td { border-bottom: none; }
+        
+        .role-badge { 
+            padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+        }
+        .role-master { background: rgba(79, 70, 229, 0.2); color: #818cf8; }
+        .role-gestor { background: rgba(52, 211, 153, 0.2); color: #34d399; }
+        .role-membro { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
+        
+        .add-user-card { background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--primary); border-radius: 12px; padding: 24px; margin-bottom: 32px; display: flex; gap: 16px; align-items: flex-end;}
+        .input-group { flex: 1; }
+        .input-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; }
+        .input-group input, .input-group select { width: 100%; padding: 12px; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; outline:none; font-family:var(--font); }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <div class="logo">
+                <div class="logo-icon"><i class="fa-solid fa-shapes"></i></div>
+                Templum
+            </div>
+            <div class="menu-section" style="margin-top:20px;">
+                <span class="section-title" style="margin-left: 12px;">Contas / Workspaces</span>
+                <ul id="sidebar-ws-list"></ul>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Kanban</a></li>
+                <li><a href="mesa.html" class="nav-link"><i class="fa-solid fa-user-check"></i> Minha Mesa</a></li>
+                <li><a href="calendario.html" class="nav-link"><i class="fa-regular fa-calendar-days"></i> Calendário</a></li>
+                <li><a href="usuarios.html" class="nav-link active"><i class="fa-solid fa-users"></i> Equipe e Membros</a></li>
+                <li><a href="admin-settings.html" class="nav-link"><i class="fa-solid fa-gear"></i> Admin Master</a></li>
+            </ul>
+        </div>
+        <div class="user-profile">
+            <img src="https://ui-avatars.com/api/?name=Admin&background=random" class="avatar-sm">
+            <span>Gestão Operacional</span>
+        </div>
+    </div>
+
+    <div class="main-content" style="padding: 32px 48px;">
+        <header class="app-header">
+            <div>
+                <h1 class="board-title">Painel de Usuários</h1>
+                <p style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Governança de acessos e delegação de tarefas na Agência.</p>
+            </div>
+        </header>
+
+        <div class="members-container" style="margin-top: 32px;">
+            
+            <div class="add-user-card" id="add-user-box" style="display:none;">
+                <div class="input-group">
+                    <label>E-mail (Login Oficial)</label>
+                    <input type="email" id="nu-email" placeholder="nome@templum.com">
+                </div>
+                <div class="input-group">
+                    <label>Senha Provisória</label>
+                    <input type="text" id="nu-pass" placeholder="A1!b2C3">
+                </div>
+                <div class="input-group">
+                    <label>Hierarquia</label>
+                    <select id="nu-role">
+                        <option value="membro">Membro (Operacional)</option>
+                        <option value="gestor">Gestor de Célula</option>
+                        <option value="master">Poder de Master Admin</option>
+                    </select>
+                </div>
+                <button class="btn" id="nu-btn" style="height: 44px; padding: 0 24px;"><i class="fa-solid fa-user-plus"></i></button>
+            </div>
+
+            <h3 style="color:var(--text-main); font-weight:600;"><i class="fa-solid fa-address-card"></i> Pessoas Ativas na Base</h3>
+            
+            <table class="member-table">
+                <thead>
+                    <tr>
+                        <th>E-mail</th>
+                        <th>Perfil (Role)</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody">
+                    <tr><td colspan="4" style="text-align:center;">Carregando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const TEMPLUM_TOKEN = localStorage.getItem('templum-auth-token');
+        if (!TEMPLUM_TOKEN) window.location.href='/login.html';
+        const getAuthHeaders = () => ({ 'Authorization': 'Bearer ' + TEMPLUM_TOKEN });
+        
+        async function loadUsers() {
+            try {
+                const r = await fetch('/api/users', { headers: getAuthHeaders() });
+                if(r.status === 403 || r.status === 401) {
+                     document.getElementById('users-tbody').innerHTML = '<tr><td colspan="4">Falha Fatal de Permissão: Apenas Masters/Gestores visualizam o RH.</td></tr>';
+                     return;
+                }
+                const users = await r.json();
+                
+                // Show create tool safely if token valid role
+                document.getElementById('add-user-box').style.display = 'flex';
+
+                let h = '';
+                users.forEach(u => {
+                    let badge = 'role-membro';
+                    let rName = 'Operação';
+                    if(u.role === 'master') { badge = 'role-master'; rName = 'Master Supremo'; }
+                    if(u.role === 'gestor') { badge = 'role-gestor'; rName = 'Líder Executivo'; }
+                    
+                    h += `<tr>
+                        <td>
+                            <div style="display:flex; align-items:center; gap: 12px;">
+                                <img src="https://ui-avatars.com/api/?name=${u.email.charAt(0)}&background=random" class="avatar-sm" style="width:32px; height:32px;">
+                                <span>${u.email}</span>
+                            </div>
+                        </td>
+                        <td><span class="role-badge ${badge}">${rName}</span></td>
+                        <td><span style="color:#10b981; font-size:13px; font-weight:600;"><i class="fa-solid fa-circle" style="font-size:8px; margin-right:4px;"></i>Ativo</span></td>
+                        <td><button class="btn" style="background:transparent; color:red; padding:4px;" onclick="delUser(${u.id})"><i class="fa-solid fa-trash"></i></button></td>
+                    </tr>`;
+                });
+                document.getElementById('users-tbody').innerHTML = h;
+            } catch(e) {}
+        }
+
+        async function delUser(id) {
+            if(confirm("Tirar acesso desta pessoa da plataforma?")) {
+                const r = await fetch('/api/users/'+id, { method: 'DELETE', headers: getAuthHeaders()});
+                if(r.ok) loadUsers();
+                else alert('Nível Incompatível. Apenas Supremo.');
+            }
+        }
+
+        document.getElementById('nu-btn').onclick = async () => {
+             const email = document.getElementById('nu-email').value;
+             const password = document.getElementById('nu-pass').value;
+             const role = document.getElementById('nu-role').value;
+             if(!email || !password) return alert("Preencha Login e Senha!");
+
+             const r = await fetch('/api/users', { 
+                 method:'POST', headers: {'Content-Type':'application/json', ...getAuthHeaders()},
+                 body: JSON.stringify({ email, password, role })
+             });
+             if(r.ok) {
+                 document.getElementById('nu-email').value = ''; document.getElementById('nu-pass').value = '';
+                 loadUsers();
+             } else alert('Não foi possível gravar membro. Talvez email já exista ou você não tenha nível.');
+        };
+        
+        loadUsers();
+    </script>
+</body>
+</html>

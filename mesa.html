@@ -27,10 +27,16 @@
         .day-number { font-weight: 700; font-size: 16px; color: var(--text-main); margin-bottom: 4px; }
         
         .cal-item {
-            background: var(--bg-surface); border: 1px solid var(--border); padding: 16px; border-radius: 12px;
-            font-size: 14px; font-weight: 500; display: flex; align-items:center; gap:16px; cursor:default;
-            margin-bottom: 12px; box-shadow: var(--shadow-sm); justify-content: space-between;
+            background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 20px 24px; border-radius: 16px;
+            font-size: 15px; font-weight: 600; display: flex; align-items:center; gap:16px; cursor:pointer;
+            margin-bottom: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); justify-content: space-between; backdrop-filter: blur(20px);
+            transition: all 0.3s; position:relative; overflow:hidden;
         }
+        .cal-item:before {
+            content: ''; position:absolute; left:0; top:0; height:100%; width:4px;
+            background: var(--primary); opacity: 0.8;
+        }
+        .cal-item:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
         .cal-item .platform-icon {
             width: 32px; height: 32px; min-width: 32px; border-radius: 8px; color: white;
             display: inline-flex; align-items: center; justify-content: center; font-size: 16px;
@@ -47,6 +53,10 @@
             <div class="logo">
                 <div class="logo-icon"><i class="fa-solid fa-shapes"></i></div>
                 Templum
+            </div>
+            <div class="menu-section" style="margin-top:20px;">
+                <span class="section-title" style="margin-left: 12px;">Contas / Workspaces</span>
+                <ul id="sidebar-ws-list"></ul>
             </div>
             <ul class="nav-links">
                 <li><a href="index.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Kanban</a></li>

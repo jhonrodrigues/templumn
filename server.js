@@ -67,9 +67,9 @@ app.post('/api/login', async (req, res) => {
         if (uRes.rows.length === 0) return res.status(401).json({error: 'Usuário não encontrado. Fale com a gestão.'});
         const user = uRes.rows[0];
         const valid = await bcrypt.compare(password, user.password_hash);
-        if (!valid) return res.status(401).json({error: 'Senha master incorreta.'});
-        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-        res.json({ token, email: user.email });
+        if (!valid) return res.status(401).json({error: 'Senha incorreta.'});
+        const token = jwt.sign({ id: user.id, role: user.role, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+        res.json({ token, email: user.email, role: user.role });
     } catch(err) {
         res.status(500).json({error: 'Erro de validação.'});
     }
@@ -105,6 +105,30 @@ app.post('/api/workspaces', authGuard, async (req, res) => {
         await pool.query('INSERT INTO workspaces (id, name) VALUES ($1, $2)', [id, req.body.name]);
         res.json({ success: true });
     } catch(err) { res.status(500).json({ error: 'Erro ao criar' }); }
+});
+
+// --- API: Users Governance ---
+app.get('/api/users', authGuard, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, email, role FROM users ORDER BY id ASC');
+        res.json(result.rows);
+    } catch(err) { res.status(500).send('Error loading users'); }
+});
+app.post('/api/users', authGuard, async (req, res) => {
+    if(req.user.role !== 'master' && req.user.role !== 'gestor') return res.status(403).json({ error: 'Permissão Negada' });
+    const { email, password, role } = req.body;
+    try {
+        const hash = await bcrypt.hash(password, 8);
+        await pool.query('INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3)', [email, hash, role || 'membro']);
+        res.json({ success: true });
+    } catch(err) { res.status(500).json({ error: 'Erro ao criar membro.' }); }
+});
+app.delete('/api/users/:id', authGuard, async (req, res) => {
+    if(req.user.role !== 'master') return res.status(403).json({ error: 'Permissão Negada' });
+    try {
+        await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch(err) { res.status(500).json({ error: 'Erro na exclusão.' }); }
 });
 
 // --- API: Board API (Columns & Cards) ---

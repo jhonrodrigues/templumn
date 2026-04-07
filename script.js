@@ -35,6 +35,27 @@ async function initWorkspaces() {
                 loadStateFromServer();
             };
         }
+        
+        const sideWs = document.getElementById('sidebar-ws-list');
+        if(sideWs) {
+            sideWs.innerHTML = '';
+            wss.forEach(w => {
+                 const li = document.createElement('li');
+                 const isActive = (w.id === activeWorkspaceId && (window.location.pathname === '/' || window.location.pathname.includes('index.html')));
+                 li.style.cursor = 'pointer';
+                 if(isActive) li.style.background = 'rgba(79, 70, 229, 0.1)';
+                 if(isActive) li.style.color = 'var(--primary)';
+                 if(isActive) li.style.fontWeight = '600';
+                 if(isActive) li.style.borderRadius = '8px';
+                 
+                 li.innerHTML = `<i class="fa-solid fa-layer-group"></i> ${w.name}`;
+                 li.onclick = () => {
+                     localStorage.setItem('templum-active-ws', w.id);
+                     window.location.href = '/index.html';
+                 };
+                 sideWs.appendChild(li);
+            });
+        }
     } catch(err) { console.error('WS Load Error', err) }
 }
 initWorkspaces();
