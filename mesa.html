@@ -106,16 +106,16 @@
 
     <!-- Security Import -->
     <script>
-        const TEMPLUM_TOKEN = localStorage.getItem('templum-auth-token');
-        if (!TEMPLUM_TOKEN) window.location.href='/login.html';
-        const getAuthHeaders = () => ({ 'Authorization': 'Bearer ' + TEMPLUM_TOKEN });
+        const pageToken = localStorage.getItem('templum-auth-token');
+        if (!pageToken) window.location.href='/login.html';
+        const getPageAuthHeaders = () => ({ 'Authorization': 'Bearer ' + pageToken });
         
         document.getElementById('logout-btn').onclick = () => { localStorage.clear(); window.location.href='/login.html'; };
         
         async function renderList() {
             try {
-                const userEmail = localStorage.getItem('templum-auth-user') || '';
-                const res = await fetch('/api/my-cards?email=' + encodeURIComponent(userEmail), { headers: getAuthHeaders() });
+                const activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
+                const res = await fetch('/api/my-cards?workspace=' + encodeURIComponent(activeWorkspaceId), { headers: getPageAuthHeaders() });
                 const data = await res.json();
                 
                 const grid = document.getElementById('list-grid');

@@ -346,7 +346,8 @@ function handleDrop(e) {
             body: JSON.stringify({
                 cardId: draggedCardId,
                 targetColId: targetColId,
-                newOrder: targetCol.cards.length // roughly the end of the new list
+                newOrder: targetCol.cards.length, // roughly the end of the new list
+                workspace_id: activeWorkspaceId
             })
         }).catch(err => console.error('Failed pushing move to DB', err));
     }
@@ -369,7 +370,7 @@ if (delBtn) {
         if (!activeCardId) return;
         if(confirm('Tem certeza que deseja excluir DEIFINITIVAMENTE este cartão do Banco de Dados?')) {
             try {
-                await fetch('/api/cards/' + activeCardId, { method: 'DELETE', headers: authHeaders });
+                await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), { method: 'DELETE', headers: authHeaders });
                 modalOverlay.classList.remove('active');
                 loadStateFromServer();
             } catch(e) {
@@ -379,15 +380,17 @@ if (delBtn) {
     };
 }
 
-closeModalBtn.addEventListener('click', () => {
-    modalOverlay.classList.remove('active');
-});
-
-modalOverlay.addEventListener('click', (e) => {
-    if (e.target === modalOverlay) {
+if (closeModalBtn && modalOverlay) {
+    closeModalBtn.addEventListener('click', () => {
         modalOverlay.classList.remove('active');
-    }
-});
+    });
+
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            modalOverlay.classList.remove('active');
+        }
+    });
+}
 
 
 // --- Theme Toggle Logic --- //
@@ -395,25 +398,27 @@ function initTheme() {
     const savedTheme = localStorage.getItem('templum-theme');
     if (savedTheme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
-        themeToggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+        if (themeToggleBtn) themeToggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
     } else {
         document.documentElement.removeAttribute('data-theme');
-        themeToggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
+        if (themeToggleBtn) themeToggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
     }
 }
 
-themeToggleBtn.addEventListener('click', () => {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    if (isDark) {
-        document.documentElement.removeAttribute('data-theme');
-        localStorage.setItem('templum-theme', 'light');
-        themeToggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
-    } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('templum-theme', 'dark');
-        themeToggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
-    }
-});
+if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (isDark) {
+            document.documentElement.removeAttribute('data-theme');
+            localStorage.setItem('templum-theme', 'light');
+            themeToggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('templum-theme', 'dark');
+            themeToggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+        }
+    });
+}
 
 // Initialization is now managed by async loadStateFromServer()
 initTheme();

@@ -106,16 +106,16 @@
 
     <!-- Security Import -->
     <script>
-        const TEMPLUM_TOKEN = localStorage.getItem('templum-auth-token');
-        if (!TEMPLUM_TOKEN) window.location.href='/login.html';
-        const getAuthHeaders = () => ({ 'Authorization': 'Bearer ' + TEMPLUM_TOKEN });
+        const pageToken = localStorage.getItem('templum-auth-token');
+        if (!pageToken) window.location.href='/login.html';
+        const getPageAuthHeaders = () => ({ 'Authorization': 'Bearer ' + pageToken });
         
         document.getElementById('logout-btn').onclick = () => { localStorage.clear(); window.location.href='/login.html'; };
         
         async function renderCalendar() {
             try {
                 // Fetch all data
-                const res = await fetch('/api/board', { headers: getAuthHeaders() });
+                const res = await fetch('/api/board', { headers: getPageAuthHeaders() });
                 const data = await res.json();
                 
                 // Extract all cards with post_date

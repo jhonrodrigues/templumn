@@ -196,7 +196,8 @@
         // Dashboard Engine
         async function loadDashboard() {
             try {
-                const res = await fetch('/api/dashboard', { headers: getAuthHeaders() });
+                const activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
+                const res = await fetch('/api/dashboard?workspace=' + encodeURIComponent(activeWorkspaceId), { headers: getAuthHeaders() });
                 if (res.status === 401 || res.status === 403) return window.location.href='/login.html';
                 
                 const data = await res.json();

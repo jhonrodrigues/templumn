@@ -117,13 +117,13 @@
     </div>
 
     <script>
-        const TEMPLUM_TOKEN = localStorage.getItem('templum-auth-token');
-        if (!TEMPLUM_TOKEN) window.location.href='/login.html';
-        const getAuthHeaders = () => ({ 'Authorization': 'Bearer ' + TEMPLUM_TOKEN });
+        const pageToken = localStorage.getItem('templum-auth-token');
+        if (!pageToken) window.location.href='/login.html';
+        const getPageAuthHeaders = () => ({ 'Authorization': 'Bearer ' + pageToken });
         
         async function loadUsers() {
             try {
-                const r = await fetch('/api/users', { headers: getAuthHeaders() });
+                const r = await fetch('/api/users', { headers: getPageAuthHeaders() });
                 if(r.status === 403 || r.status === 401) {
                      document.getElementById('users-tbody').innerHTML = '<tr><td colspan="4">Falha Fatal de Permissão: Apenas Masters/Gestores visualizam o RH.</td></tr>';
                      return;
@@ -158,7 +158,7 @@
 
         async function delUser(id) {
             if(confirm("Tirar acesso desta pessoa da plataforma?")) {
-                const r = await fetch('/api/users/'+id, { method: 'DELETE', headers: getAuthHeaders()});
+                const r = await fetch('/api/users/'+id, { method: 'DELETE', headers: getPageAuthHeaders()});
                 if(r.ok) loadUsers();
                 else alert('Nível Incompatível. Apenas Supremo.');
             }
@@ -171,7 +171,7 @@
              if(!email || !password) return alert("Preencha Login e Senha!");
 
              const r = await fetch('/api/users', { 
-                 method:'POST', headers: {'Content-Type':'application/json', ...getAuthHeaders()},
+                 method:'POST', headers: {'Content-Type':'application/json', ...getPageAuthHeaders()},
                  body: JSON.stringify({ email, password, role })
              });
              if(r.ok) {
@@ -182,5 +182,6 @@
         
         loadUsers();
     </script>
+    <script src="script.js"></script>
 </body>
 </html>

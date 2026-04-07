@@ -87,6 +87,15 @@ function authGuard(req, res, next) {
     });
 }
 
+function requireRole(roles) {
+    return (req, res, next) => {
+        if (!req.user || !roles.includes(req.user.role)) {
+            return res.status(403).json({ error: 'Permissão Negada' });
+        }
+        next();
+    };
+}
+
 // =======================
 //   ROUTES OVERVIEW
 // =======================
@@ -99,7 +108,7 @@ app.get('/api/workspaces', authGuard, async (req, res) => {
     } catch(err) { res.status(500).send('Error'); }
 });
 
-app.post('/api/workspaces', authGuard, async (req, res) => {
+app.post('/api/workspaces', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
         const id = req.body.name.toLowerCase().replace(/[^a-z0-9]/g, '');
         await pool.query('INSERT INTO workspaces (id, name) VALUES ($1, $2)', [id, req.body.name]);
@@ -108,16 +117,16 @@ app.post('/api/workspaces', authGuard, async (req, res) => {
 });
 
 // --- API: Users Governance ---
-app.get('/api/users', authGuard, async (req, res) => {
+app.get('/api/users', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
         const result = await pool.query('SELECT id, email, role FROM users ORDER BY id ASC');
         res.json(result.rows);
     } catch(err) { res.status(500).send('Error loading users'); }
 });
 app.post('/api/users', authGuard, async (req, res) => {
-    if(req.user.role !== 'master' && req.user.role !== 'gestor') return res.status(403).json({ error: 'Permissão Negada' });
     const { email, password, role } = req.body;
     try {
+        if(req.user.role !== 'master' && req.user.role !== 'gestor') return res.status(403).json({ error: 'Permissão Negada' });
         const hash = await bcrypt.hash(password, 8);
         await pool.query('INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3)', [email, hash, role || 'membro']);
         res.json({ success: true });
@@ -167,9 +176,14 @@ app.get('/api/board', authGuard, async (req, res) => {
 });
 
 app.post('/api/board/move', authGuard, async (req, res) => {
-    const { cardId, targetColId, newOrder } = req.body;
+    const { cardId, targetColId, newOrder, workspace_id } = req.body;
+    const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     try {
-        await pool.query('UPDATE cards SET column_id = $1, card_order = $2 WHERE id = $3', [targetColId, newOrder, cardId]);
+        const result = await pool.query(
+            'UPDATE cards SET column_id = $1, card_order = $2 WHERE id = $3 AND workspace_id = $4',
+            [targetColId, newOrder, cardId, resolvedWS]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to update card location' });
@@ -193,8 +207,10 @@ app.post('/api/cards', authGuard, async (req, res) => {
 });
 
 app.delete('/api/cards/:id', authGuard, async (req, res) => {
+    const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
     try {
-        await pool.query('DELETE FROM cards WHERE id = $1', [req.params.id]);
+        const result = await pool.query('DELETE FROM cards WHERE id = $1 AND workspace_id = $2', [req.params.id, workspace]);
+        if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Erro na lixeira' });
@@ -203,7 +219,17 @@ app.delete('/api/cards/:id', authGuard, async (req, res) => {
 
 app.get('/api/my-cards', authGuard, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM cards WHERE assignee = $1 ORDER BY post_date ASC', [req.query.email]);
+        const workspace = req.query.workspace;
+        const params = [req.user.email];
+        let query = 'SELECT * FROM cards WHERE assignee = $1';
+
+        if (workspace) {
+            params.push(workspace);
+            query += ' AND workspace_id = $2';
+        }
+
+        query += ' ORDER BY post_date ASC';
+        const result = await pool.query(query, params);
         res.json(result.rows);
     } catch(err) {
         res.status(500).json({ error: 'Erro de Mesa' });
@@ -213,8 +239,13 @@ app.get('/api/my-cards', authGuard, async (req, res) => {
 // --- API: Dashboard Metrics ---
 app.get('/api/dashboard', authGuard, async (req, res) => {
     try {
-        const totalRes = await pool.query('SELECT COUNT(*) as t FROM cards');
-        const grouped = await pool.query('SELECT column_id, COUNT(*) as c FROM cards GROUP BY column_id');
+        const workspace = req.query.workspace;
+        const totalRes = workspace
+            ? await pool.query('SELECT COUNT(*) as t FROM cards WHERE workspace_id = $1', [workspace])
+            : await pool.query('SELECT COUNT(*) as t FROM cards');
+        const grouped = workspace
+            ? await pool.query('SELECT column_id, COUNT(*) as c FROM cards WHERE workspace_id = $1 GROUP BY column_id', [workspace])
+            : await pool.query('SELECT column_id, COUNT(*) as c FROM cards GROUP BY column_id');
         
         let total = parseInt(totalRes.rows[0].t) || 0;
         let completed = 0; // Col-5 é o Concluido
@@ -250,7 +281,7 @@ app.get('/api/settings', async (req, res) => {
     }
 });
 
-app.post('/api/settings', authGuard, async (req, res) => {
+app.post('/api/settings', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     const { primary_color } = req.body;
     try {
         await pool.query(`
