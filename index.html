@@ -154,6 +154,12 @@
                     </div>
 
                     <div class="modal-section">
+                        <h3><i class="fa-solid fa-layer-group"></i> Contas / Collab</h3>
+                        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Escolha em quais workspaces a demanda deve aparecer.</p>
+                        <div id="edit-card-workspaces" class="workspace-selector"></div>
+                    </div>
+
+                    <div class="modal-section">
                         <h3><i class="fa-solid fa-tag"></i> Etiquetas</h3>
                         <div class="inline-form-row">
                             <input type="text" id="label-input" class="modal-text-input" placeholder="Nome da etiqueta">
@@ -176,6 +182,14 @@
                             <button type="button" class="sidebar-btn compact-btn" id="add-checklist-btn"><i class="fa-solid fa-plus"></i> Adicionar</button>
                         </div>
                         <ul class="checklist-items" id="checklist-items"></ul>
+                    </div>
+
+                    <div class="modal-section">
+                        <h3><i class="fa-regular fa-image"></i> Imagens da Demanda</h3>
+                        <div class="inline-form-row">
+                            <input type="file" id="image-input" class="modal-text-input" accept="image/*" multiple>
+                        </div>
+                        <div id="images-list" class="image-grid"></div>
                     </div>
 
                     <div class="modal-section">
@@ -229,7 +243,12 @@
                 <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">ATRIBUIR PARA (MEU EMAIL)</label>
                 <input type="text" id="nc-assignee" placeholder="Deixe em branco ou email do membro" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
             </div>
-            
+
+            <div style="margin-bottom: 24px;">
+                <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">ONDE ESSA DEMANDA APARECE</label>
+                <div id="new-card-workspaces" class="workspace-selector"></div>
+            </div>
+             
             <button id="submit-new-card" style="width: 100%; padding: 14px; border-radius: 8px; background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px;">Criar Cartão <i class="fa-solid fa-check" style="margin-left: 6px;"></i></button>
         </div>
     </div>

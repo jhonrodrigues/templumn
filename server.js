@@ -35,6 +35,8 @@ async function initDb() {
         try { await pool.query("ALTER TABLE cards ADD COLUMN members JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN checklist JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN comments JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
+        try { await pool.query("ALTER TABLE cards ADD COLUMN images JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
+        try { await pool.query("ALTER TABLE cards ADD COLUMN visible_workspaces JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         
         // Dynamic Workspaces Table
         await pool.query(`
@@ -100,6 +102,20 @@ function requireRole(roles) {
     };
 }
 
+function normalizeWorkspaceList(primaryWorkspace, workspaces) {
+    const unique = new Set([primaryWorkspace]);
+    if (Array.isArray(workspaces)) {
+        workspaces.forEach((workspaceId) => {
+            if (workspaceId && typeof workspaceId === 'string') unique.add(workspaceId);
+        });
+    }
+    return Array.from(unique);
+}
+
+function workspaceVisibilityClause(paramIndex) {
+    return `(workspace_id = $${paramIndex} OR COALESCE(visible_workspaces, '[]'::jsonb) ? $${paramIndex})`;
+}
+
 // =======================
 //   ROUTES OVERVIEW
 // =======================
@@ -155,12 +171,15 @@ app.get('/api/board', authGuard, async (req, res) => {
                     json_agg(
                         json_build_object(
                             'id', k.id,
+                            'workspace_id', k.workspace_id,
                             'title', k.title,
                             'description', k.description,
                             'labels', k.labels,
                             'members', k.members,
                             'checklist', k.checklist,
                             'comments_data', k.comments,
+                            'images', k.images,
+                            'visible_workspaces', k.visible_workspaces,
                             'comments', k.comments_count,
                             'attachments', k.attachments_count,
                             'card_order', k.card_order,
@@ -171,7 +190,7 @@ app.get('/api/board', authGuard, async (req, res) => {
                     ) FILTER (WHERE k.id IS NOT NULL), '[]'
                 ) as cards
             FROM columns c
-            LEFT JOIN cards k ON c.id = k.column_id AND k.workspace_id = $1
+            LEFT JOIN cards k ON c.id = k.column_id AND ${workspaceVisibilityClause(1)}
             GROUP BY c.id
             ORDER BY c.col_order ASC;
         `;
@@ -188,7 +207,7 @@ app.post('/api/board/move', authGuard, async (req, res) => {
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     try {
         const result = await pool.query(
-            'UPDATE cards SET column_id = $1, card_order = $2 WHERE id = $3 AND workspace_id = $4',
+            `UPDATE cards SET column_id = $1, card_order = $2 WHERE id = $3 AND ${workspaceVisibilityClause(4)}`,
             [targetColId, newOrder, cardId, resolvedWS]
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
@@ -200,13 +219,19 @@ app.post('/api/board/move', authGuard, async (req, res) => {
 
 // --- API: Create & Delete Cards ---
 app.post('/api/cards', authGuard, async (req, res) => {
-    const { title, column_id, platform, post_date, workspace_id, assignee } = req.body;
+    const { title, column_id, platform, post_date, workspace_id, assignee, visible_workspaces, images } = req.body;
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
+    const visibleWorkspaces = normalizeWorkspaceList(resolvedWS, visible_workspaces);
+    const serializedVisibleWorkspaces = JSON.stringify(visibleWorkspaces);
+    const serializedImages = JSON.stringify(Array.isArray(images) ? images : []);
     const id = 'card-' + Date.now() + Math.floor(Math.random()*1000);
     try {
-        const maxRes = await pool.query('SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND workspace_id = $2', [column_id, resolvedWS]);
+        const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND ${workspaceVisibilityClause(2)}`, [column_id, resolvedWS]);
         const order = maxRes.rows[0].next_order;
-        await pool.query('INSERT INTO cards (id, column_id, title, card_order, platform, post_date, workspace_id, assignee) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [id, column_id, title, order, platform, post_date, resolvedWS, assignee]);
+        await pool.query(
+            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, workspace_id, assignee, visible_workspaces, images, attachments_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11)',
+            [id, column_id, title, order, platform, post_date, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, Array.isArray(images) ? images.length : 0]
+        );
         res.json({ success: true, id, title });
     } catch (err) {
         console.error('Insert error:', err);
@@ -216,19 +241,24 @@ app.post('/api/cards', authGuard, async (req, res) => {
 
 app.put('/api/cards/:id', authGuard, async (req, res) => {
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
-    const { title, description, platform, post_date, assignee, labels, members, checklist, comments } = req.body;
+    const { title, description, platform, post_date, assignee, labels, members, checklist, comments, images, visible_workspaces, primary_workspace_id } = req.body;
     try {
         const serializedLabels = Array.isArray(labels) ? JSON.stringify(labels) : '[]';
         const serializedMembers = Array.isArray(members) ? JSON.stringify(members) : '[]';
         const serializedChecklist = Array.isArray(checklist) ? JSON.stringify(checklist) : '[]';
         const serializedComments = Array.isArray(comments) ? JSON.stringify(comments) : '[]';
+        const serializedImages = JSON.stringify(Array.isArray(images) ? images : []);
+        const primaryWorkspace = primary_workspace_id || workspace;
+        const serializedVisibleWorkspaces = JSON.stringify(normalizeWorkspaceList(primaryWorkspace, visible_workspaces));
         const commentsCount = Array.isArray(comments) ? comments.length : 0;
+        const attachmentsCount = Array.isArray(images) ? images.length : 0;
         const result = await pool.query(
             `UPDATE cards
              SET title = $1, description = $2, platform = $3, post_date = $4, assignee = $5,
-                 labels = $6::jsonb, members = $7::jsonb, checklist = $8::jsonb, comments = $9::jsonb, comments_count = $10
-             WHERE id = $11 AND workspace_id = $12`,
-            [title, description || '', platform || null, post_date || null, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, req.params.id, workspace]
+                 labels = $6::jsonb, members = $7::jsonb, checklist = $8::jsonb, comments = $9::jsonb, comments_count = $10,
+                 images = $11::jsonb, visible_workspaces = $12::jsonb, attachments_count = $13
+             WHERE id = $14 AND ${workspaceVisibilityClause(15)}`,
+            [title, description || '', platform || null, post_date || null, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedVisibleWorkspaces, attachmentsCount, req.params.id, workspace]
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
         res.json({ success: true });
@@ -240,7 +270,7 @@ app.put('/api/cards/:id', authGuard, async (req, res) => {
 app.delete('/api/cards/:id', authGuard, async (req, res) => {
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
     try {
-        const result = await pool.query('DELETE FROM cards WHERE id = $1 AND workspace_id = $2', [req.params.id, workspace]);
+        const result = await pool.query(`DELETE FROM cards WHERE id = $1 AND ${workspaceVisibilityClause(2)}`, [req.params.id, workspace]);
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
         res.json({ success: true });
     } catch (err) {
@@ -256,7 +286,7 @@ app.get('/api/my-cards', authGuard, async (req, res) => {
 
         if (workspace) {
             params.push(workspace);
-            query += ' AND workspace_id = $2';
+            query += ` AND ${workspaceVisibilityClause(2)}`;
         }
 
         query += ' ORDER BY post_date ASC';
@@ -272,10 +302,10 @@ app.get('/api/dashboard', authGuard, async (req, res) => {
     try {
         const workspace = req.query.workspace;
         const totalRes = workspace
-            ? await pool.query('SELECT COUNT(*) as t FROM cards WHERE workspace_id = $1', [workspace])
+            ? await pool.query(`SELECT COUNT(*) as t FROM cards WHERE ${workspaceVisibilityClause(1)}`, [workspace])
             : await pool.query('SELECT COUNT(*) as t FROM cards');
         const grouped = workspace
-            ? await pool.query('SELECT column_id, COUNT(*) as c FROM cards WHERE workspace_id = $1 GROUP BY column_id', [workspace])
+            ? await pool.query(`SELECT column_id, COUNT(*) as c FROM cards WHERE ${workspaceVisibilityClause(1)} GROUP BY column_id`, [workspace])
             : await pool.query('SELECT column_id, COUNT(*) as c FROM cards GROUP BY column_id');
         
         let total = parseInt(totalRes.rows[0].t) || 0;

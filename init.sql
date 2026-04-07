@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS cards (
     members JSONB DEFAULT '[]'::jsonb,
     checklist JSONB DEFAULT '[]'::jsonb,
     comments JSONB DEFAULT '[]'::jsonb,
+    images JSONB DEFAULT '[]'::jsonb,
+    visible_workspaces JSONB DEFAULT '[]'::jsonb,
     comments_count INTEGER DEFAULT 0,
     attachments_count INTEGER DEFAULT 0,
     card_order INTEGER NOT NULL,

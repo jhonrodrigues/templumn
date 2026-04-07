@@ -38,6 +38,13 @@
         .cal-item.tiktok .platform-icon { background: #000; }
         .cal-item.youtube .platform-icon { background: #FF0000; }
         .cal-item.facebook .platform-icon { background: #1877F2; }
+        .calendar-toolbar {
+            display: flex; align-items: center; gap: 12px; margin-top: 24px; margin-bottom: 24px;
+        }
+        .calendar-month-input {
+            padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+            background: var(--bg-surface); color: var(--text-main); font-family: var(--font);
+        }
     </style>
 </head>
 <body>
@@ -88,10 +95,12 @@
                 <h1 class="board-title">Calendário Editorial</h1>
                 <p style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Planejamento Geral de Produção do Mês em Vigor</p>
             </div>
-            <div>
-                <button class="btn" id="logout-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-            </div>
         </header>
+
+        <div class="calendar-toolbar">
+            <label for="calendar-month" style="color: var(--text-muted); font-size: 13px; font-weight: 600;">MÊS EXIBIDO</label>
+            <input type="month" id="calendar-month" class="calendar-month-input">
+        </div>
 
         <div class="calendar-container" id="cal-grid">
             <div class="calendar-header">Domingo</div>
@@ -111,51 +120,63 @@
         const pageToken = localStorage.getItem('templum-auth-token');
         if (!pageToken) window.location.href='/login.html';
         const getPageAuthHeaders = () => ({ 'Authorization': 'Bearer ' + pageToken });
-        
-        document.getElementById('logout-btn').onclick = () => { localStorage.clear(); window.location.href='/login.html'; };
+        const monthInput = document.getElementById('calendar-month');
+        const activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
+
+        function getPlatformIcon(platform) {
+            if (platform === 'instagram') return 'fa-instagram';
+            if (platform === 'tiktok') return 'fa-tiktok';
+            if (platform === 'youtube') return 'fa-youtube';
+            if (platform === 'facebook') return 'fa-facebook';
+            return 'fa-globe';
+        }
+
+        function buildCalendarHeaders() {
+            return `
+                <div class="calendar-header">Domingo</div>
+                <div class="calendar-header">Segunda</div>
+                <div class="calendar-header">Terça</div>
+                <div class="calendar-header">Quarta</div>
+                <div class="calendar-header">Quinta</div>
+                <div class="calendar-header">Sexta</div>
+                <div class="calendar-header">Sábado</div>
+            `;
+        }
         
         async function renderCalendar() {
             try {
-                // Fetch all data
-                const res = await fetch('/api/board', { headers: getPageAuthHeaders() });
+                const selectedMonth = monthInput.value;
+                if (!selectedMonth) return;
+
+                const [year, month] = selectedMonth.split('-').map(Number);
+                const res = await fetch('/api/board?workspace=' + encodeURIComponent(activeWorkspaceId), { headers: getPageAuthHeaders() });
                 const data = await res.json();
                 
-                // Extract all cards with post_date
                 const scheduledCards = [];
                 data.columns.forEach(col => {
                     col.cards.forEach(card => {
-                        if (card.post_date) {
+                        if (card.post_date && card.post_date.startsWith(selectedMonth + '-')) {
                             scheduledCards.push(card);
                         }
                     });
                 });
 
-                // Generate Calendar Grid (Mock current month)
                 const grid = document.getElementById('cal-grid');
-                const daysInMonth = 30; // Simulando 30 dias para view clean MVP
+                const daysInMonth = new Date(year, month, 0).getDate();
+                const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
+                grid.innerHTML = buildCalendarHeaders();
                 
-                // Simulando dia 1 = Terca (2 empty boxes)
-                grid.innerHTML += `<div class="calendar-day empty"></div><div class="calendar-day empty"></div>`;
+                for (let i = 0; i < firstDayOfWeek; i++) {
+                    grid.innerHTML += `<div class="calendar-day empty"></div>`;
+                }
                 
                 for(let i=1; i<=daysInMonth; i++) {
-                    // Try to format i to match YYYY-MM-DD
                     const dayStr = i.toString().padStart(2, '0');
-                    const matchRegex = new RegExp(`-${dayStr}$`); // ends with this day
+                    const dateKey = `${selectedMonth}-${dayStr}`;
                     
-                    const dayCards = scheduledCards.filter(c => matchRegex.test(c.post_date));
+                    const dayCards = scheduledCards.filter(c => c.post_date === dateKey);
                     
-                    let cardsHtml = dayCards.map(c => {
-                        let iconClass = 'fa-globe';
-                        if(c.platform==='instagram') iconClass = 'fa-instagram';
-                        if(c.platform==='tiktok') iconClass = 'fa-tiktok';
-                        if(c.platform==='youtube') iconClass = 'fa-youtube';
-                        if(c.platform==='facebook') iconClass = 'fa-facebook';
-                        
-                        return `<div class="cal-item ${c.platform || ''}">
-                                    <span class="platform-icon"><i class="fa-brands ${iconClass}"></i></span>
-                                    <span>${c.title}</span>
-                                </div>`;
-                    }).join('');
+                    const cardsHtml = dayCards.map(c => `<div class="cal-item ${c.platform || ''}"><span class="platform-icon"><i class="fa-brands ${getPlatformIcon(c.platform)}"></i></span><span>${c.title}</span></div>`).join('');
 
                     grid.innerHTML += `
                         <div class="calendar-day">
@@ -165,10 +186,18 @@
                     `;
                 }
 
+                const usedCells = firstDayOfWeek + daysInMonth;
+                const trailing = usedCells % 7 === 0 ? 0 : 7 - (usedCells % 7);
+                for (let i = 0; i < trailing; i++) {
+                    grid.innerHTML += `<div class="calendar-day empty"></div>`;
+                }
+
             } catch (err) {
             }
         }
         
+        monthInput.value = new Date().toISOString().slice(0, 7);
+        monthInput.addEventListener('change', renderCalendar);
         renderCalendar();
     </script>
     <script src="script.js"></script>

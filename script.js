@@ -13,11 +13,13 @@ const getAuthHeaders = () => ({ 'Authorization': 'Bearer ' + localStorage.getIte
 let boardState = { columns: [] };
 let activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
 let activeCardData = null;
+let availableWorkspaces = [];
 
 async function initWorkspaces() {
     try {
         const res = await fetch('/api/workspaces', { headers: getAuthHeaders() });
         const wss = await res.json();
+        availableWorkspaces = Array.isArray(wss) ? wss : [];
         const sw = document.getElementById('ws-switcher');
         if(sw) {
             sw.innerHTML = '';
@@ -57,6 +59,11 @@ async function initWorkspaces() {
                  sideWs.appendChild(li);
             });
         }
+
+        renderWorkspaceSelector('new-card-workspaces', [activeWorkspaceId]);
+        if (activeCardData) {
+            renderWorkspaceSelector('edit-card-workspaces', activeCardData.visible_workspaces || [activeWorkspaceId]);
+        }
     } catch(err) { console.error('WS Load Error', err) }
 }
 initWorkspaces();
@@ -79,6 +86,37 @@ async function loadStateFromServer() {
     } catch(err) {
         console.error('Failed to load board state, fallback to empty', err);
     }
+}
+
+function renderWorkspaceSelector(containerId, selectedIds) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const selected = new Set(Array.isArray(selectedIds) ? selectedIds : [activeWorkspaceId]);
+    selected.add(activeWorkspaceId);
+
+    container.innerHTML = availableWorkspaces.map((workspace) => `
+        <label class="workspace-option">
+            <input type="checkbox" value="${workspace.id}" ${selected.has(workspace.id) ? 'checked' : ''}>
+            <span>${workspace.name}</span>
+        </label>
+    `).join('');
+}
+
+function getSelectedWorkspaceIds(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return [activeWorkspaceId];
+    const selected = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
+    if (!selected.includes(activeWorkspaceId)) selected.push(activeWorkspaceId);
+    return selected;
+}
+
+function resetNewCardModal() {
+    document.getElementById('nc-title').value = '';
+    document.getElementById('nc-date').value = '';
+    document.getElementById('nc-platform').value = '';
+    const aField = document.getElementById('nc-assignee');
+    if (aField) aField.value = '';
+    renderWorkspaceSelector('new-card-workspaces', [activeWorkspaceId]);
 }
 
 async function initBranding() {
@@ -147,9 +185,7 @@ function renderBoard() {
         addBtn.onclick = () => {
             const m = document.getElementById('new-card-modal');
             m.classList.add('active');
-            document.getElementById('nc-title').value = '';
-            document.getElementById('nc-date').value = '';
-            document.getElementById('nc-platform').value = '';
+            resetNewCardModal();
             
             document.getElementById('submit-new-card').onclick = async () => {
                 const title = document.getElementById('nc-title').value;
@@ -157,6 +193,7 @@ function renderBoard() {
                 const post_date = document.getElementById('nc-date').value;
                 const aField = document.getElementById('nc-assignee');
                 const assignee = aField ? aField.value : '';
+                const visible_workspaces = getSelectedWorkspaceIds('new-card-workspaces');
                 
                 if (!title || title.trim() === '') return alert('Preencha a pauta!');
                 
@@ -165,7 +202,7 @@ function renderBoard() {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
-                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, workspace_id: activeWorkspaceId, assignee })
+                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [] })
                     });
                     m.classList.remove('active');
                     loadStateFromServer();
@@ -193,17 +230,15 @@ if (fabBtn) {
         
         const m = document.getElementById('new-card-modal');
         m.classList.add('active');
-        document.getElementById('nc-title').value = '';
-        document.getElementById('nc-date').value = '';
-        document.getElementById('nc-platform').value = '';
+        resetNewCardModal();
         const aField = document.getElementById('nc-assignee');
-        if(aField) aField.value = '';
         
         document.getElementById('submit-new-card').onclick = async () => {
             const title = document.getElementById('nc-title').value;
             const platform = document.getElementById('nc-platform').value;
             const post_date = document.getElementById('nc-date').value;
             const assignee = aField ? aField.value : '';
+            const visible_workspaces = getSelectedWorkspaceIds('new-card-workspaces');
             
             if (!title || title.trim() === '') return alert('Preencha a pauta!');
             
@@ -212,7 +247,7 @@ if (fabBtn) {
                 await fetch('/api/cards', {
                     method: 'POST',
                     headers: authHeaders,
-                    body: JSON.stringify({ title, column_id: colId, platform, post_date, workspace_id: activeWorkspaceId, assignee })
+                    body: JSON.stringify({ title, column_id: colId, platform, post_date, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [] })
                 });
                 m.classList.remove('active');
                 loadStateFromServer();
@@ -377,6 +412,8 @@ const addChecklistBtn = document.getElementById('add-checklist-btn');
 const commentInput = document.getElementById('comment-input');
 const commentsList = document.getElementById('comments-list');
 const addCommentBtn = document.getElementById('add-comment-btn');
+const imageInput = document.getElementById('image-input');
+const imagesList = document.getElementById('images-list');
 
 function normalizeArray(value) {
     if (!value) return [];
@@ -398,6 +435,16 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+function readFilesAsDataUrls(fileList) {
+    const files = Array.from(fileList || []);
+    return Promise.all(files.map((file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    })));
 }
 
 function renderMembersEditor() {
@@ -475,15 +522,37 @@ function renderCommentsEditor() {
     });
 }
 
+function renderImagesEditor() {
+    if (!imagesList || !activeCardData) return;
+    imagesList.innerHTML = activeCardData.images.length
+        ? activeCardData.images.map((imageSrc, index) => `
+            <div class="image-card">
+                <img src="${imageSrc}" alt="Imagem da demanda ${index + 1}">
+                <button type="button" class="image-remove" data-image-index="${index}"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        `).join('')
+        : '<div style="color: var(--text-muted); font-size: 13px;">Nenhuma imagem anexada.</div>';
+
+    imagesList.querySelectorAll('[data-image-index]').forEach((btn) => {
+        btn.onclick = () => {
+            activeCardData.images.splice(Number(btn.dataset.imageIndex), 1);
+            renderImagesEditor();
+        };
+    });
+}
+
 function openModal(card, colId) {
     activeCardId = card.id;
     activeCardColId = colId;
     activeCardData = {
         ...card,
+        workspace_id: card.workspace_id || activeWorkspaceId,
         labels: normalizeArray(card.labels),
         members: normalizeArray(card.members),
         checklist: normalizeArray(card.checklist),
-        comments: normalizeArray(card.comments_data)
+        comments: normalizeArray(card.comments_data),
+        images: normalizeArray(card.images),
+        visible_workspaces: Array.from(new Set([card.workspace_id || activeWorkspaceId, ...normalizeArray(card.visible_workspaces)]))
     };
     const colName = boardState.columns.find(c => c.id === colId).title;
     document.getElementById('modal-list-name').innerText = colName;
@@ -497,10 +566,13 @@ function openModal(card, colId) {
     if (labelInput) labelInput.value = '';
     if (checklistInput) checklistInput.value = '';
     if (commentInput) commentInput.value = '';
+    if (imageInput) imageInput.value = '';
+    renderWorkspaceSelector('edit-card-workspaces', activeCardData.visible_workspaces);
     renderMembersEditor();
     renderLabelsEditor();
     renderChecklistEditor();
     renderCommentsEditor();
+    renderImagesEditor();
     modalOverlay.classList.add('active');
 }
 
@@ -548,6 +620,20 @@ if (addCommentBtn) {
     };
 }
 
+if (imageInput) {
+    imageInput.onchange = async () => {
+        if (!activeCardData) return;
+        try {
+            const loadedImages = await readFilesAsDataUrls(imageInput.files);
+            activeCardData.images.push(...loadedImages);
+            renderImagesEditor();
+            imageInput.value = '';
+        } catch (e) {
+            alert('Erro ao carregar imagem');
+        }
+    };
+}
+
 if (saveCardBtn) {
     saveCardBtn.onclick = async () => {
         if (!activeCardId || !activeCardData) return;
@@ -556,6 +642,8 @@ if (saveCardBtn) {
         const platform = editPlatformInput ? editPlatformInput.value : '';
         const post_date = editDateInput ? editDateInput.value : '';
         const assignee = editAssigneeInput ? editAssigneeInput.value.trim() : '';
+        const visible_workspaces = getSelectedWorkspaceIds('edit-card-workspaces');
+        activeCardData.visible_workspaces = visible_workspaces;
 
         if (!title) return alert('Preencha o titulo do card.');
 
@@ -566,7 +654,7 @@ if (saveCardBtn) {
             const response = await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), {
                 method: 'PUT',
                 headers: authHeaders,
-                body: JSON.stringify({ title, description, platform, post_date, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments })
+                body: JSON.stringify({ title, description, platform, post_date, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, visible_workspaces, primary_workspace_id: activeCardData.workspace_id })
             });
 
             if (!response.ok) throw new Error('save failed');
@@ -583,7 +671,10 @@ if (saveCardBtn) {
                 activeCard.members = activeCardData.members;
                 activeCard.checklist = activeCardData.checklist;
                 activeCard.comments_data = activeCardData.comments;
+                activeCard.images = activeCardData.images;
+                activeCard.visible_workspaces = visible_workspaces;
                 activeCard.comments = activeCardData.comments.length;
+                activeCard.attachments = activeCardData.images.length;
             }
 
             document.getElementById('modal-title').innerText = title;
