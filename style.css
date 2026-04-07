@@ -383,6 +383,15 @@ body {
 
 .card-title { font-size: 14px; font-weight: 500; margin-bottom: 12px; line-height: 1.4; }
 
+.card-thumbnail {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+}
+
 .card-footer { display: flex; justify-content: space-between; align-items: center; }
 .card-badges { display: flex; gap: 12px; color: var(--text-muted); font-size: 12px; }
 .card-badges span { display: flex; align-items: center; gap: 4px; }
@@ -521,8 +530,14 @@ body {
 .progress-bar { height: 100%; background: var(--primary); transition: 0.3s; }
 
 .checklist-items { list-style: none; }
-.checklist-items li { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 14px; }
+.checklist-items li { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 14px; background: var(--bg-app); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
 .checklist-items li span { flex: 1; }
+.checklist-items li.dragging { opacity: 0.5; }
+
+.checklist-handle {
+    color: var(--text-muted);
+    cursor: grab;
+}
 
 .comment-box { display: flex; gap: 12px; }
 .comment-box input {

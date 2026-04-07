@@ -293,12 +293,16 @@ function createCardElement(card, colId) {
         if(spl.length === 3) dateHtml = `<span style="font-size: 11px; margin-left: 8px; color: var(--text-main); font-weight: 600;"><i class="fa-regular fa-calendar"></i> ${spl[2]}/${spl[1]}</span>`;
     }
 
+    const cardImages = normalizeArray(card.images);
+    const thumbnailHtml = cardImages.length > 0 ? `<img src="${cardImages[0]}" alt="Preview da demanda" class="card-thumbnail">` : '';
+
     cardEl.innerHTML = `
         ${(platformHtml || dateHtml || labelsHTML) ? `<div class="card-labels" style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
             ${platformHtml}
             ${dateHtml}
             ${labelsHTML ? `<div style="margin-left:4px;">${labelsHTML}</div>` : ''}
         </div>` : ''}
+        ${thumbnailHtml}
         <div class="card-title">${card.title}</div>
         <div class="card-footer">
             <div class="card-badges">
@@ -392,6 +396,7 @@ function handleDrop(e) {
 // --- Modal Logic --- //
 let activeCardId = null;
 let activeCardColId = null;
+let draggedChecklistIndex = null;
 
 const editTitleInput = document.getElementById('edit-card-title');
 const editDescriptionInput = document.getElementById('edit-card-description');
@@ -414,6 +419,7 @@ const commentsList = document.getElementById('comments-list');
 const addCommentBtn = document.getElementById('add-comment-btn');
 const imageInput = document.getElementById('image-input');
 const imagesList = document.getElementById('images-list');
+const removeCardFromWorkspaceBtn = document.getElementById('remove-card-from-workspace-btn');
 
 function normalizeArray(value) {
     if (!value) return [];
@@ -479,7 +485,8 @@ function renderChecklistEditor() {
     if (!checklistItems || !activeCardData) return;
     checklistItems.innerHTML = activeCardData.checklist.length
         ? activeCardData.checklist.map((item, index) => `
-            <li>
+            <li draggable="true" data-check-item-index="${index}">
+                <span class="checklist-handle"><i class="fa-solid fa-grip-vertical"></i></span>
                 <input type="checkbox" data-check-index="${index}" ${item.done ? 'checked' : ''}>
                 <span>${escapeHtml(item.text || '')}</span>
                 <button type="button" class="checklist-delete" data-check-delete="${index}"><i class="fa-solid fa-trash"></i></button>
@@ -497,6 +504,27 @@ function renderChecklistEditor() {
             activeCardData.checklist.splice(Number(btn.dataset.checkDelete), 1);
             renderChecklistEditor();
         };
+    });
+    checklistItems.querySelectorAll('[data-check-item-index]').forEach((itemEl) => {
+        itemEl.addEventListener('dragstart', () => {
+            draggedChecklistIndex = Number(itemEl.dataset.checkItemIndex);
+            itemEl.classList.add('dragging');
+        });
+        itemEl.addEventListener('dragend', () => {
+            itemEl.classList.remove('dragging');
+            draggedChecklistIndex = null;
+        });
+        itemEl.addEventListener('dragover', (event) => {
+            event.preventDefault();
+        });
+        itemEl.addEventListener('drop', (event) => {
+            event.preventDefault();
+            const targetIndex = Number(itemEl.dataset.checkItemIndex);
+            if (draggedChecklistIndex === null || draggedChecklistIndex === targetIndex) return;
+            const [movedItem] = activeCardData.checklist.splice(draggedChecklistIndex, 1);
+            activeCardData.checklist.splice(targetIndex, 0, movedItem);
+            renderChecklistEditor();
+        });
     });
 }
 
@@ -568,6 +596,9 @@ function openModal(card, colId) {
     if (commentInput) commentInput.value = '';
     if (imageInput) imageInput.value = '';
     renderWorkspaceSelector('edit-card-workspaces', activeCardData.visible_workspaces);
+    if (removeCardFromWorkspaceBtn) {
+        removeCardFromWorkspaceBtn.style.display = activeCardData.visible_workspaces.length > 1 ? 'flex' : 'none';
+    }
     renderMembersEditor();
     renderLabelsEditor();
     renderChecklistEditor();
@@ -630,6 +661,28 @@ if (imageInput) {
             imageInput.value = '';
         } catch (e) {
             alert('Erro ao carregar imagem');
+        }
+    };
+}
+
+if (removeCardFromWorkspaceBtn) {
+    removeCardFromWorkspaceBtn.onclick = async () => {
+        if (!activeCardId || !activeCardData) return;
+        if ((activeCardData.visible_workspaces || []).length <= 1) {
+            return alert('Esse card so aparece nesta conta. Use excluir para apagar de vez.');
+        }
+        if (!confirm('Remover esta demanda apenas da conta atual? Ela continuara visivel nas outras contas selecionadas.')) return;
+
+        try {
+            const response = await fetch('/api/cards/' + activeCardId + '/remove-workspace?workspace=' + encodeURIComponent(activeWorkspaceId), {
+                method: 'POST',
+                headers: authHeaders
+            });
+            if (!response.ok) throw new Error('remove workspace failed');
+            modalOverlay.classList.remove('active');
+            loadStateFromServer();
+        } catch (e) {
+            alert('Erro ao remover card desta conta');
         }
     };
 }

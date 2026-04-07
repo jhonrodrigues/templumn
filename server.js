@@ -267,6 +267,38 @@ app.put('/api/cards/:id', authGuard, async (req, res) => {
     }
 });
 
+app.post('/api/cards/:id/remove-workspace', authGuard, async (req, res) => {
+    const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
+    try {
+        const cardRes = await pool.query(
+            `SELECT id, workspace_id, visible_workspaces FROM cards WHERE id = $1 AND ${workspaceVisibilityClause(2)}`,
+            [req.params.id, workspace]
+        );
+
+        if (cardRes.rows.length === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
+
+        const card = cardRes.rows[0];
+        const visibleWorkspaces = normalizeWorkspaceList(card.workspace_id, card.visible_workspaces || []);
+        const nextVisible = visibleWorkspaces.filter((workspaceId) => workspaceId !== workspace);
+
+        if (nextVisible.length === 0) {
+            return res.status(400).json({ error: 'Nao e possivel remover a ultima conta visivel do card' });
+        }
+
+        const nextPrimaryWorkspace = card.workspace_id === workspace ? nextVisible[0] : card.workspace_id;
+        const serializedVisible = JSON.stringify(normalizeWorkspaceList(nextPrimaryWorkspace, nextVisible));
+
+        await pool.query(
+            'UPDATE cards SET workspace_id = $1, visible_workspaces = $2::jsonb WHERE id = $3',
+            [nextPrimaryWorkspace, serializedVisible, req.params.id]
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao remover card deste workspace' });
+    }
+});
+
 app.delete('/api/cards/:id', authGuard, async (req, res) => {
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
     try {
