@@ -538,6 +538,16 @@ body {
 .checklist-items li span { flex: 1; }
 .checklist-items li.dragging { opacity: 0.5; }
 
+.checklist-edit-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    font-family: var(--font);
+    font-size: 14px;
+    outline: none;
+}
+
 .checklist-handle {
     color: var(--text-muted);
     cursor: grab;
@@ -642,6 +652,10 @@ body {
     border: none; border-radius: 6px; margin-bottom: 8px; color: var(--text-main);
     font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;
     transition: 0.2s;
+}
+
+.column-menu-btn.active {
+    color: var(--primary);
 }
 .sidebar-btn:hover { background: rgba(79,70,229,0.1); color: var(--primary); }
 .sidebar-btn.danger:hover { background: #fee2e2; color: #b91c1c; }

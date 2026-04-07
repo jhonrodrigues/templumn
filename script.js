@@ -170,25 +170,14 @@ function renderBoard() {
         headerEl.className = 'column-header';
         headerEl.innerHTML = `
             <div>${column.title} <span class="count">${column.cards.length}</span></div>
-            <button><i class="fa-solid fa-ellipsis"></i></button>
+            <button class="column-menu-btn"><i class="fa-solid fa-ellipsis"></i></button>
         `;
         const menuBtn = headerEl.querySelector('button');
         if (menuBtn) {
-            menuBtn.onclick = async () => {
-                const nextTitle = prompt('Novo nome do quadro:', column.title);
-                if (!nextTitle || nextTitle.trim() === '' || nextTitle.trim() === column.title) return;
-                try {
-                    const response = await fetch('/api/columns/' + column.id, {
-                        method: 'PUT',
-                        headers: authHeaders,
-                        body: JSON.stringify({ title: nextTitle.trim() })
-                    });
-                    if (!response.ok) throw new Error('column update failed');
-                    column.title = nextTitle.trim();
-                    renderBoard();
-                } catch (err) {
-                    alert('Nao foi possivel editar esse quadro.');
-                }
+            menuBtn.onclick = () => {
+                activeColumnId = column.id;
+                if (editColumnTitleInput) editColumnTitleInput.value = column.title;
+                if (columnModal) columnModal.classList.add('active');
             };
         }
         
@@ -431,6 +420,7 @@ function handleDrop(e) {
 let activeCardId = null;
 let activeCardColId = null;
 let draggedChecklistIndex = null;
+let activeColumnId = null;
 
 const editTitleInput = document.getElementById('edit-card-title');
 const editDescriptionInput = document.getElementById('edit-card-description');
@@ -455,6 +445,10 @@ const imagesList = document.getElementById('images-list');
 const fileInput = document.getElementById('file-input');
 const filesList = document.getElementById('files-list');
 const removeCardFromWorkspaceBtn = document.getElementById('remove-card-from-workspace-btn');
+const columnModal = document.getElementById('column-modal');
+const closeColumnModalBtn = document.getElementById('close-column-modal');
+const editColumnTitleInput = document.getElementById('edit-column-title');
+const saveColumnBtn = document.getElementById('save-column-btn');
 
 function normalizeArray(value) {
     if (!value) return [];
@@ -532,7 +526,7 @@ function renderChecklistEditor() {
             <li draggable="true" data-check-item-index="${index}">
                 <span class="checklist-handle"><i class="fa-solid fa-grip-vertical"></i></span>
                 <input type="checkbox" data-check-index="${index}" ${item.done ? 'checked' : ''}>
-                <span>${escapeHtml(item.text || '')}</span>
+                <input type="text" class="checklist-edit-input" data-check-text-index="${index}" value="${escapeHtml(item.text || '')}">
                 <button type="button" class="checklist-delete" data-check-delete="${index}"><i class="fa-solid fa-trash"></i></button>
             </li>
         `).join('')
@@ -541,6 +535,11 @@ function renderChecklistEditor() {
     checklistItems.querySelectorAll('[data-check-index]').forEach((input) => {
         input.onchange = () => {
             activeCardData.checklist[Number(input.dataset.checkIndex)].done = input.checked;
+        };
+    });
+    checklistItems.querySelectorAll('[data-check-text-index]').forEach((input) => {
+        input.oninput = () => {
+            activeCardData.checklist[Number(input.dataset.checkTextIndex)].text = input.value;
         };
     });
     checklistItems.querySelectorAll('[data-check-delete]').forEach((btn) => {
@@ -775,6 +774,45 @@ if (removeCardFromWorkspaceBtn) {
             alert('Erro ao remover card desta conta');
         }
     };
+}
+
+if (saveColumnBtn) {
+    saveColumnBtn.onclick = async () => {
+        if (!activeColumnId || !editColumnTitleInput) return;
+        const nextTitle = editColumnTitleInput.value.trim();
+        if (!nextTitle) return alert('Preencha o nome do quadro.');
+
+        const originalText = saveColumnBtn.innerHTML;
+        saveColumnBtn.innerHTML = 'Salvando...';
+        try {
+            const response = await fetch('/api/columns/' + activeColumnId, {
+                method: 'PUT',
+                headers: authHeaders,
+                body: JSON.stringify({ title: nextTitle })
+            });
+            if (!response.ok) throw new Error('column update failed');
+
+            const column = boardState.columns.find((item) => item.id === activeColumnId);
+            if (column) column.title = nextTitle;
+            if (columnModal) columnModal.classList.remove('active');
+            renderBoard();
+        } catch (err) {
+            alert('Nao foi possivel editar esse quadro.');
+        } finally {
+            saveColumnBtn.innerHTML = originalText;
+        }
+    };
+}
+
+if (closeColumnModalBtn && columnModal) {
+    closeColumnModalBtn.onclick = () => {
+        columnModal.classList.remove('active');
+    };
+    columnModal.addEventListener('click', (event) => {
+        if (event.target === columnModal) {
+            columnModal.classList.remove('active');
+        }
+    });
 }
 
 if (saveCardBtn) {
