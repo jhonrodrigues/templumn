@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendário Editorial - Templum</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .calendar-container {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .calendar-header {
+            text-align: center; font-weight: 700; font-size: 13px; color: var(--text-muted);
+            text-transform: uppercase; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+        }
+        .calendar-day {
+            background: var(--glass-bg); backdrop-filter: blur(10px);
+            border: 1px solid var(--border); border-radius: 12px;
+            min-height: 120px; padding: 12px; display: flex; flex-direction: column; gap: 8px;
+        }
+        .calendar-day.empty { background: rgba(0,0,0,0.02); border: 1px dashed var(--border); opacity: 0.5; }
+        .day-number { font-weight: 700; font-size: 16px; color: var(--text-main); margin-bottom: 4px; }
+        
+        .cal-item {
+            background: var(--bg-app); border: 1px solid var(--border); padding: 8px; border-radius: 8px;
+            font-size: 11px; font-weight: 500; display: flex; align-items:flex-start; gap:6px; cursor:default;
+        }
+        .cal-item .platform-icon {
+            width: 16px; height: 16px; min-width: 16px; border-radius: 4px; color: white;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 10px;
+        }
+        .cal-item.instagram .platform-icon { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+        .cal-item.tiktok .platform-icon { background: #000; }
+        .cal-item.youtube .platform-icon { background: #FF0000; }
+        .cal-item.facebook .platform-icon { background: #1877F2; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <div class="logo">
+                <div class="logo-icon"><i class="fa-solid fa-shapes"></i></div>
+                Templum
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Kanban</a></li>
+                <li><a href="gestao.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> Gestão do Mês</a></li>
+                <li><a href="calendario.html" class="nav-link active"><i class="fa-regular fa-calendar-days"></i> Calendário</a></li>
+                <li><a href="admin-settings.html" class="nav-link"><i class="fa-solid fa-gear"></i> Admin Master</a></li>
+            </ul>
+        </div>
+        <div class="user-profile">
+            <img src="https://ui-avatars.com/api/?name=Admin&background=random" class="avatar-sm">
+            <span>Agência Master</span>
+        </div>
+    </div>
+
+    <div class="main-content" style="padding: 32px 48px;">
+        <header class="app-header">
+            <div>
+                <h1 class="board-title">Calendário Editorial</h1>
+                <p style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Planejamento Geral de Produção do Mês em Vigor</p>
+            </div>
+            <div>
+                <button class="btn" id="logout-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+            </div>
+        </header>
+
+        <div class="calendar-container" id="cal-grid">
+            <div class="calendar-header">Domingo</div>
+            <div class="calendar-header">Segunda</div>
+            <div class="calendar-header">Terça</div>
+            <div class="calendar-header">Quarta</div>
+            <div class="calendar-header">Quinta</div>
+            <div class="calendar-header">Sexta</div>
+            <div class="calendar-header">Sábado</div>
+            <!-- Gerado via JS -->
+        </div>
+    </div>
+
+    <!-- Security Import -->
+    <script>
+        const TEMPLUM_TOKEN = localStorage.getItem('templum-auth-token');
+        if (!TEMPLUM_TOKEN) window.location.href='/login.html';
+        const getAuthHeaders = () => ({ 'Authorization': 'Bearer ' + TEMPLUM_TOKEN });
+        
+        document.getElementById('logout-btn').onclick = () => { localStorage.clear(); window.location.href='/login.html'; };
+        
+        async function renderCalendar() {
+            try {
+                // Fetch all data
+                const res = await fetch('/api/board', { headers: getAuthHeaders() });
+                const data = await res.json();
+                
+                // Extract all cards with post_date
+                const scheduledCards = [];
+                data.columns.forEach(col => {
+                    col.cards.forEach(card => {
+                        if (card.post_date) {
+                            scheduledCards.push(card);
+                        }
+                    });
+                });
+
+                // Generate Calendar Grid (Mock current month)
+                const grid = document.getElementById('cal-grid');
+                const daysInMonth = 30; // Simulando 30 dias para view clean MVP
+                
+                // Simulando dia 1 = Terca (2 empty boxes)
+                grid.innerHTML += `<div class="calendar-day empty"></div><div class="calendar-day empty"></div>`;
+                
+                for(let i=1; i<=daysInMonth; i++) {
+                    // Try to format i to match YYYY-MM-DD
+                    const dayStr = i.toString().padStart(2, '0');
+                    const matchRegex = new RegExp(`-${dayStr}$`); // ends with this day
+                    
+                    const dayCards = scheduledCards.filter(c => matchRegex.test(c.post_date));
+                    
+                    let cardsHtml = dayCards.map(c => {
+                        let iconClass = 'fa-globe';
+                        if(c.platform==='instagram') iconClass = 'fa-instagram';
+                        if(c.platform==='tiktok') iconClass = 'fa-tiktok';
+                        if(c.platform==='youtube') iconClass = 'fa-youtube';
+                        if(c.platform==='facebook') iconClass = 'fa-facebook';
+                        
+                        return `<div class="cal-item ${c.platform || ''}">
+                                    <span class="platform-icon"><i class="fa-brands ${iconClass}"></i></span>
+                                    <span>${c.title}</span>
+                                </div>`;
+                    }).join('');
+
+                    grid.innerHTML += `
+                        <div class="calendar-day">
+                            <div class="day-number">${i}</div>
+                            ${cardsHtml}
+                        </div>
+                    `;
+                }
+
+            } catch (err) {
+            }
+        }
+        
+        renderCalendar();
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS cards (
     labels JSONB DEFAULT '[]'::jsonb,
     comments_count INTEGER DEFAULT 0,
     attachments_count INTEGER DEFAULT 0,
-    card_order INTEGER NOT NULL
+    card_order INTEGER NOT NULL,
+    platform VARCHAR(50),
+    post_date VARCHAR(50)
 );
 
 -- Configurações Globais (Primary Color)

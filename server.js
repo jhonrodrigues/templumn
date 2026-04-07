@@ -28,6 +28,10 @@ async function initDb() {
         const hash = await bcrypt.hash('123456', 8);
         await pool.query('INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING', ['admin@templum.com', hash, 'master']);
         
+        // Auto Migration para fase 6 (Não apaga os campos se existirem, só tenta injetar)
+        try { await pool.query('ALTER TABLE cards ADD COLUMN platform VARCHAR(50);'); } catch(e){}
+        try { await pool.query('ALTER TABLE cards ADD COLUMN post_date VARCHAR(50);'); } catch(e){}
+
         console.log('[TEMPLUM] Database schema e tabelas criadas com sucesso!');
     } catch (err) {
         console.error('[TEMPLUM] Erro ao inicializar tabelas:', err);
@@ -119,12 +123,12 @@ app.post('/api/board/move', authGuard, async (req, res) => {
 
 // --- API: Create & Delete Cards ---
 app.post('/api/cards', authGuard, async (req, res) => {
-    const { title, column_id } = req.body;
+    const { title, column_id, platform, post_date } = req.body;
     const id = 'card-' + Date.now() + Math.floor(Math.random()*1000);
     try {
         const maxRes = await pool.query('SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1', [column_id]);
         const order = maxRes.rows[0].next_order;
-        await pool.query('INSERT INTO cards (id, column_id, title, card_order) VALUES ($1, $2, $3, $4)', [id, column_id, title, order]);
+        await pool.query('INSERT INTO cards (id, column_id, title, card_order, platform, post_date) VALUES ($1, $2, $3, $4, $5, $6)', [id, column_id, title, order, platform, post_date]);
         res.json({ success: true, id, title });
     } catch (err) {
         console.error('Insert error:', err);

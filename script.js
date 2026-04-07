@@ -95,21 +95,37 @@ function renderBoard() {
         const addBtn = document.createElement('button');
         addBtn.className = 'add-card-btn';
         addBtn.innerHTML = `<i class="fa-solid fa-plus"></i> Adicionar um cartão`;
-        addBtn.onclick = async () => {
-            const title = prompt('Qual o título do novo cartão?');
-            if (title && title.trim() !== '') {
-                addBtn.innerHTML = 'Criando...';
+        addBtn.onclick = () => {
+            const m = document.getElementById('new-card-modal');
+            m.classList.add('active');
+            document.getElementById('nc-title').value = '';
+            document.getElementById('nc-date').value = '';
+            document.getElementById('nc-platform').value = '';
+            
+            document.getElementById('submit-new-card').onclick = async () => {
+                const title = document.getElementById('nc-title').value;
+                const platform = document.getElementById('nc-platform').value;
+                const post_date = document.getElementById('nc-date').value;
+                
+                if (!title || title.trim() === '') return alert('Preencha a pauta!');
+                
+                document.getElementById('submit-new-card').innerHTML = 'Gravando...';
                 try {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
-                        body: JSON.stringify({ title: title, column_id: column.id })
+                        body: JSON.stringify({ title, column_id: column.id, platform, post_date })
                     });
-                    loadStateFromServer(); // re-fetch the entire board live!
+                    m.classList.remove('active');
+                    loadStateFromServer();
                 } catch(err) {
                     alert('Erro de conexão ao criar card');
+                } finally {
+                    document.getElementById('submit-new-card').innerHTML = 'Criar Cartão <i class="fa-solid fa-check" style="margin-left: 6px;"></i>';
                 }
-            }
+            };
+            
+            document.getElementById('close-new-modal').onclick = () => m.classList.remove('active');
         };
         colEl.appendChild(addBtn);
         
@@ -126,13 +142,35 @@ function createCardElement(card, colId) {
     
     let labelsHTML = '';
     if (card.labels && card.labels.length > 0) {
+        if (typeof card.labels === 'string') card.labels = JSON.parse(card.labels);
         labelsHTML = `<div class="card-labels">
             ${card.labels.map(l => `<span class="label ${l.color}">${l.text}</span>`).join('')}
         </div>`;
     }
     
+    let platformHtml = '';
+    if (card.platform) {
+        let pcolor = 'var(--text-muted)';
+        let picon = 'fa-globe';
+        if(card.platform === 'instagram') { pcolor = 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)'; picon = 'fa-instagram'; }
+        if(card.platform === 'tiktok') { pcolor = '#000000'; picon = 'fa-tiktok'; }
+        if(card.platform === 'youtube') { pcolor = '#FF0000'; picon = 'fa-youtube'; }
+        if(card.platform === 'facebook') { pcolor = '#1877F2'; picon = 'fa-facebook'; }
+        platformHtml = `<span class="card-label" style="background: ${pcolor}; color: white; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px;"><i class="fa-brands ${picon}"></i></span>`;
+    }
+    
+    let dateHtml = '';
+    if (card.post_date) {
+        const spl = card.post_date.split('-');
+        if(spl.length === 3) dateHtml = `<span style="font-size: 11px; margin-left: 8px; color: var(--text-main); font-weight: 600;"><i class="fa-regular fa-calendar"></i> ${spl[2]}/${spl[1]}</span>`;
+    }
+
     cardEl.innerHTML = `
-        ${labelsHTML}
+        ${(platformHtml || dateHtml || labelsHTML) ? `<div class="card-labels" style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+            ${platformHtml}
+            ${dateHtml}
+            ${labelsHTML ? `<div style="margin-left:4px;">${labelsHTML}</div>` : ''}
+        </div>` : ''}
         <div class="card-title">${card.title}</div>
         <div class="card-footer">
             <div class="card-badges">
