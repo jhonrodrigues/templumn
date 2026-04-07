@@ -23,7 +23,9 @@ CREATE TABLE IF NOT EXISTS cards (
     attachments_count INTEGER DEFAULT 0,
     card_order INTEGER NOT NULL,
     platform VARCHAR(50),
-    post_date VARCHAR(50)
+    post_date VARCHAR(50),
+    workspace_id VARCHAR(50) DEFAULT 'igreja',
+    assignee VARCHAR(100)
 );
 
 -- Configurações Globais (Primary Color)

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Mesa - Templum</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .calendar-container {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .calendar-header {
+            text-align: center; font-weight: 700; font-size: 13px; color: var(--text-muted);
+            text-transform: uppercase; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+        }
+        .calendar-day {
+            background: var(--glass-bg); backdrop-filter: blur(10px);
+            border: 1px solid var(--border); border-radius: 12px;
+            min-height: 120px; padding: 12px; display: flex; flex-direction: column; gap: 8px;
+        }
+        .calendar-day.empty { background: rgba(0,0,0,0.02); border: 1px dashed var(--border); opacity: 0.5; }
+        .day-number { font-weight: 700; font-size: 16px; color: var(--text-main); margin-bottom: 4px; }
+        
+        .cal-item {
+            background: var(--bg-surface); border: 1px solid var(--border); padding: 16px; border-radius: 12px;
+            font-size: 14px; font-weight: 500; display: flex; align-items:center; gap:16px; cursor:default;
+            margin-bottom: 12px; box-shadow: var(--shadow-sm); justify-content: space-between;
+        }
+        .cal-item .platform-icon {
+            width: 32px; height: 32px; min-width: 32px; border-radius: 8px; color: white;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 16px;
+        }
+        .cal-item.instagram .platform-icon { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+        .cal-item.tiktok .platform-icon { background: #000; }
+        .cal-item.youtube .platform-icon { background: #FF0000; }
+        .cal-item.facebook .platform-icon { background: #1877F2; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <div class="logo">
+                <div class="logo-icon"><i class="fa-solid fa-shapes"></i></div>
+                Templum
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Kanban</a></li>
+                <li><a href="mesa.html" class="nav-link active"><i class="fa-solid fa-user-check"></i> Minha Mesa</a></li>
+                <li><a href="gestao.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i> Gestão do Mês</a></li>
+                <li><a href="calendario.html" class="nav-link"><i class="fa-regular fa-calendar-days"></i> Calendário</a></li>
+                <li><a href="admin-settings.html" class="nav-link"><i class="fa-solid fa-gear"></i> Admin Master</a></li>
+            </ul>
+        </div>
+        <div class="user-profile">
+            <img src="https://ui-avatars.com/api/?name=Admin&background=random" class="avatar-sm">
+            <span>Agência Master</span>
+        </div>
+    </div>
+
+    <div class="main-content" style="padding: 32px 48px;">
+        <header class="app-header">
+            <div>
+                <h1 class="board-title">Minha Mesa</h1>
+                <p style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Minhas Responsabilidades na Agência</p>
+            </div>
+            <div>
+                <button class="btn" id="logout-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+            </div>
+        </header>
+
+        <div style="margin-top: 32px; max-width: 800px;" id="list-grid">
+            <!-- Gerado via JS -->
+        </div>
+    </div>
+
+    <!-- Security Import -->
+    <script>
+        const TEMPLUM_TOKEN = localStorage.getItem('templum-auth-token');
+        if (!TEMPLUM_TOKEN) window.location.href='/login.html';
+        const getAuthHeaders = () => ({ 'Authorization': 'Bearer ' + TEMPLUM_TOKEN });
+        
+        document.getElementById('logout-btn').onclick = () => { localStorage.clear(); window.location.href='/login.html'; };
+        
+        async function renderList() {
+            try {
+                const userEmail = localStorage.getItem('templum-auth-user') || '';
+                const res = await fetch('/api/my-cards?email=' + encodeURIComponent(userEmail), { headers: getAuthHeaders() });
+                const data = await res.json();
+                
+                const grid = document.getElementById('list-grid');
+                if(data.length === 0) {
+                     grid.innerHTML = '<div style="background:var(--bg-surface); padding: 32px; text-align:center; border-radius:12px; color:var(--text-muted);">Sua mesa está limpa. Nenhum card atribuído a você no momento.</div>';
+                     return;
+                }
+                
+                data.forEach(c => {
+                    let iconClass = 'fa-globe';
+                    if(c.platform==='instagram') iconClass = 'fa-instagram';
+                    if(c.platform==='tiktok') iconClass = 'fa-tiktok';
+                    if(c.platform==='youtube') iconClass = 'fa-youtube';
+                    if(c.platform==='facebook') iconClass = 'fa-facebook';
+                    
+                    grid.innerHTML += `<div class="cal-item ${c.platform || ''}">
+                        <div style="display:flex; align-items:center; gap: 16px;">
+                            <span class="platform-icon"><i class="fa-brands ${iconClass}"></i></span>
+                            <span style="font-weight: 700; font-size: 16px; color: var(--text-main);">${c.title}</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="display:block; font-size: 12px; color: var(--text-muted);">Prazo: <strong style="color:var(--text-main);">${c.post_date || 'N/A'}</strong></span>
+                            <span style="display:block; font-size: 12px; color: var(--text-muted); margin-top:4px;">Conta: ${c.workspace_id || 'Principal'}</span>
+                        </div>
+                    </div>`;
+                });
+
+            } catch (err) {
+            }
+        }
+        
+        renderList();
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>

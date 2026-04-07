@@ -119,6 +119,17 @@
 
                     <button class="btn-save" id="save-settings-btn"><i class="fa-solid fa-save"></i> Salvar Identidade</button>
                 </div>
+                
+                <div class="settings-card" style="margin-top: 24px;">
+                    <div class="form-group">
+                        <label>Gerenciar Contas (Workspaces)</label>
+                        <p>Crie novas mesas para outros Ministérios terem seu próprio ambiente (Kanban/Calendário) isolados aqui dentro da Agência.</p>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="new-ws-name" class="text-input" placeholder="Ex: Ministério Louvor" style="flex:1;">
+                            <button class="btn-save" id="create-ws-btn"><i class="fa-solid fa-plus"></i> Abrir Workspace</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -165,6 +176,21 @@
             } finally {
                 saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Identidade';
             }
+        });
+        
+        document.getElementById('create-ws-btn').addEventListener('click', async () => {
+            const name = document.getElementById('new-ws-name').value;
+            if(!name) return alert('Digite um nome para o workspace!');
+            try {
+                const r = await fetch('/api/workspaces', {
+                    method: 'POST', headers: authHeaders,
+                    body: JSON.stringify({ name })
+                });
+                if(r.ok) {
+                    alert('Workspace criado!');
+                    document.getElementById('new-ws-name').value = '';
+                } else alert('Erro na criação.');
+            }catch(e){ alert('Erro de conexao workspace'); }
         });
     </script>
 </body>

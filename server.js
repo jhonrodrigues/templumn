@@ -28,9 +28,22 @@ async function initDb() {
         const hash = await bcrypt.hash('123456', 8);
         await pool.query('INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING', ['admin@templum.com', hash, 'master']);
         
-        // Auto Migration para fase 6 (Não apaga os campos se existirem, só tenta injetar)
+        // Auto Migration para fase 6 e 7
         try { await pool.query('ALTER TABLE cards ADD COLUMN platform VARCHAR(50);'); } catch(e){}
         try { await pool.query('ALTER TABLE cards ADD COLUMN post_date VARCHAR(50);'); } catch(e){}
+        
+        // Dynamic Workspaces Table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS workspaces (
+                id VARCHAR(50) PRIMARY KEY,
+                name VARCHAR(255) NOT NULL
+            )
+        `);
+        // Inserir os 3 iniciais pedidos sob demanda
+        await pool.query("INSERT INTO workspaces (id, name) VALUES ('lagoinhaalphaville.sp', 'Lagoinha Alphaville Principal'), ('heroalphaville', 'Hero Alphaville'), ('shinealphaville', 'Shine Alphaville') ON CONFLICT DO NOTHING;");
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN workspace_id VARCHAR(50) DEFAULT 'lagoinhaalphaville.sp';"); } catch(e){}
+        try { await pool.query("ALTER TABLE cards ADD COLUMN assignee VARCHAR(100);"); } catch(e){}
 
         console.log('[TEMPLUM] Database schema e tabelas criadas com sucesso!');
     } catch (err) {
@@ -78,10 +91,26 @@ function authGuard(req, res, next) {
 //   ROUTES OVERVIEW
 // =======================
 
+// --- API: Workspaces ---
+app.get('/api/workspaces', authGuard, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM workspaces ORDER BY id ASC');
+        res.json(result.rows);
+    } catch(err) { res.status(500).send('Error'); }
+});
+
+app.post('/api/workspaces', authGuard, async (req, res) => {
+    try {
+        const id = req.body.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        await pool.query('INSERT INTO workspaces (id, name) VALUES ($1, $2)', [id, req.body.name]);
+        res.json({ success: true });
+    } catch(err) { res.status(500).json({ error: 'Erro ao criar' }); }
+});
+
 // --- API: Board API (Columns & Cards) ---
 app.get('/api/board', authGuard, async (req, res) => {
     try {
-        // Query to get all columns and nest their cards using Postgres JSON aggregation
+        const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
         const query = `
             SELECT 
                 c.id, c.title, c.col_order,
@@ -93,17 +122,19 @@ app.get('/api/board', authGuard, async (req, res) => {
                             'labels', k.labels,
                             'comments', k.comments_count,
                             'attachments', k.attachments_count,
-                            'card_order', k.card_order
+                            'card_order', k.card_order,
+                            'platform', k.platform,
+                            'post_date', k.post_date,
+                            'assignee', k.assignee
                         ) ORDER BY k.card_order ASC
                     ) FILTER (WHERE k.id IS NOT NULL), '[]'
                 ) as cards
             FROM columns c
-            LEFT JOIN cards k ON c.id = k.column_id
+            LEFT JOIN cards k ON c.id = k.column_id AND k.workspace_id = $1
             GROUP BY c.id
             ORDER BY c.col_order ASC;
         `;
-        const result = await pool.query(query);
-        
+        const result = await pool.query(query, [workspace]);
         res.json({ columns: result.rows });
     } catch (err) {
         console.error('Error fetching board state', err);
@@ -123,12 +154,13 @@ app.post('/api/board/move', authGuard, async (req, res) => {
 
 // --- API: Create & Delete Cards ---
 app.post('/api/cards', authGuard, async (req, res) => {
-    const { title, column_id, platform, post_date } = req.body;
+    const { title, column_id, platform, post_date, workspace_id, assignee } = req.body;
+    const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     const id = 'card-' + Date.now() + Math.floor(Math.random()*1000);
     try {
-        const maxRes = await pool.query('SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1', [column_id]);
+        const maxRes = await pool.query('SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND workspace_id = $2', [column_id, resolvedWS]);
         const order = maxRes.rows[0].next_order;
-        await pool.query('INSERT INTO cards (id, column_id, title, card_order, platform, post_date) VALUES ($1, $2, $3, $4, $5, $6)', [id, column_id, title, order, platform, post_date]);
+        await pool.query('INSERT INTO cards (id, column_id, title, card_order, platform, post_date, workspace_id, assignee) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [id, column_id, title, order, platform, post_date, resolvedWS, assignee]);
         res.json({ success: true, id, title });
     } catch (err) {
         console.error('Insert error:', err);
@@ -142,6 +174,15 @@ app.delete('/api/cards/:id', authGuard, async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Erro na lixeira' });
+    }
+});
+
+app.get('/api/my-cards', authGuard, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM cards WHERE assignee = $1 ORDER BY post_date ASC', [req.query.email]);
+        res.json(result.rows);
+    } catch(err) {
+        res.status(500).json({ error: 'Erro de Mesa' });
     }
 });
 

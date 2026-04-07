@@ -11,13 +11,40 @@ const getAuthHeaders = () => ({ 'Authorization': 'Bearer ' + localStorage.getIte
 
 // State Object to track the dynamic state
 let boardState = { columns: [] };
+let activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
+
+async function initWorkspaces() {
+    try {
+        const res = await fetch('/api/workspaces', { headers: getAuthHeaders() });
+        const wss = await res.json();
+        const sw = document.getElementById('ws-switcher');
+        if(sw) {
+            sw.innerHTML = '';
+            wss.forEach(w => {
+                const opt = document.createElement('option');
+                opt.value = w.id;
+                opt.innerText = w.name;
+                if(w.id === activeWorkspaceId) opt.selected = true;
+                sw.appendChild(opt);
+            });
+            document.getElementById('dyn-board-title').innerText = wss.find(w => w.id === activeWorkspaceId)?.name || 'Board';
+            sw.onchange = (e) => {
+                activeWorkspaceId = e.target.value;
+                localStorage.setItem('templum-active-ws', activeWorkspaceId);
+                document.getElementById('dyn-board-title').innerText = e.target.options[e.target.selectedIndex].text;
+                loadStateFromServer();
+            };
+        }
+    } catch(err) { console.error('WS Load Error', err) }
+}
+initWorkspaces();
 
 async function loadStateFromServer() {
     const boardCanvas = document.getElementById('board-canvas');
     if (!boardCanvas) return; // Not on the Kanban page
     
     try {
-        const response = await fetch('/api/board', { headers: getAuthHeaders() });
+        const response = await fetch('/api/board?workspace=' + activeWorkspaceId, { headers: getAuthHeaders() });
         if (response.status === 401 || response.status === 403) {
             window.location.href = '/login.html';
             return;
@@ -106,6 +133,8 @@ function renderBoard() {
                 const title = document.getElementById('nc-title').value;
                 const platform = document.getElementById('nc-platform').value;
                 const post_date = document.getElementById('nc-date').value;
+                const aField = document.getElementById('nc-assignee');
+                const assignee = aField ? aField.value : '';
                 
                 if (!title || title.trim() === '') return alert('Preencha a pauta!');
                 
@@ -114,7 +143,7 @@ function renderBoard() {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
-                        body: JSON.stringify({ title, column_id: column.id, platform, post_date })
+                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, workspace_id: activeWorkspaceId, assignee })
                     });
                     m.classList.remove('active');
                     loadStateFromServer();
@@ -131,6 +160,48 @@ function renderBoard() {
         
         boardCanvas.appendChild(colEl);
     });
+}
+
+// --- FAB CREATE LOGIC ---
+const fabBtn = document.getElementById('fab-global-create');
+if (fabBtn) {
+    fabBtn.onclick = () => {
+        // Find default col (col-1 or first)
+        const colId = boardState.columns.length > 0 ? boardState.columns[0].id : 'col-1';
+        
+        const m = document.getElementById('new-card-modal');
+        m.classList.add('active');
+        document.getElementById('nc-title').value = '';
+        document.getElementById('nc-date').value = '';
+        document.getElementById('nc-platform').value = '';
+        const aField = document.getElementById('nc-assignee');
+        if(aField) aField.value = '';
+        
+        document.getElementById('submit-new-card').onclick = async () => {
+            const title = document.getElementById('nc-title').value;
+            const platform = document.getElementById('nc-platform').value;
+            const post_date = document.getElementById('nc-date').value;
+            const assignee = aField ? aField.value : '';
+            
+            if (!title || title.trim() === '') return alert('Preencha a pauta!');
+            
+            document.getElementById('submit-new-card').innerHTML = 'Gravando...';
+            try {
+                await fetch('/api/cards', {
+                    method: 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify({ title, column_id: colId, platform, post_date, workspace_id: activeWorkspaceId, assignee })
+                });
+                m.classList.remove('active');
+                loadStateFromServer();
+            } catch(err) {
+                alert('Erro de conexão ao criar card');
+            } finally {
+                document.getElementById('submit-new-card').innerHTML = 'Criar Cartão <i class="fa-solid fa-check" style="margin-left: 6px;"></i>';
+            }
+        };
+        document.getElementById('close-new-modal').onclick = () => m.classList.remove('active');
+    };
 }
 
 function createCardElement(card, colId) {
