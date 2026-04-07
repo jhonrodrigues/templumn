@@ -111,47 +111,86 @@
             </div>
             
             <div class="modal-body-layout">
-                
                 <div class="modal-main">
                     <div class="modal-section">
-                        <h3><i class="fa-solid fa-align-left"></i> Descrição</h3>
-                        <textarea class="desc-editor" placeholder="Adicione uma descrição mais detalhada..."></textarea>
+                        <h3><i class="fa-solid fa-pen-to-square"></i> Editar Card</h3>
+                        <div style="display:flex; flex-direction:column; gap:16px; margin-top:16px;">
+                            <div>
+                                <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">TÍTULO / PAUTA</label>
+                                <input type="text" id="edit-card-title" autocomplete="off" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">REDE SOCIAL</label>
+                                <select id="edit-card-platform" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                    <option value="">Nenhuma / Geral</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="tiktok">TikTok</option>
+                                    <option value="youtube">YouTube</option>
+                                    <option value="facebook">Facebook</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DATA DO POST</label>
+                                <input type="date" id="edit-card-date" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DESCRIÇÃO</label>
+                                <textarea id="edit-card-description" class="desc-editor" placeholder="Detalhes da demanda, briefing e observacoes..."></textarea>
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">ATRIBUIR PARA</label>
+                                <input type="text" id="edit-card-assignee" placeholder="Email do membro" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-section">
+                        <h3><i class="fa-regular fa-user"></i> Membros</h3>
+                        <div class="inline-form-row">
+                            <input type="text" id="member-input" class="modal-text-input" placeholder="Email do membro">
+                            <button type="button" class="sidebar-btn compact-btn" id="add-member-btn"><i class="fa-solid fa-plus"></i> Adicionar</button>
+                        </div>
+                        <div id="members-list" class="pill-list"></div>
+                    </div>
+
+                    <div class="modal-section">
+                        <h3><i class="fa-solid fa-tag"></i> Etiquetas</h3>
+                        <div class="inline-form-row">
+                            <input type="text" id="label-input" class="modal-text-input" placeholder="Nome da etiqueta">
+                            <select id="label-color" class="modal-text-input compact-select">
+                                <option value="blue">Azul</option>
+                                <option value="purple">Roxa</option>
+                                <option value="green">Verde</option>
+                                <option value="yellow">Amarela</option>
+                                <option value="red">Vermelha</option>
+                            </select>
+                            <button type="button" class="sidebar-btn compact-btn" id="add-label-btn"><i class="fa-solid fa-plus"></i> Adicionar</button>
+                        </div>
+                        <div id="labels-editor" class="pill-list"></div>
                     </div>
 
                     <div class="modal-section">
                         <h3><i class="fa-solid fa-list-check"></i> Checklist</h3>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar" style="width: 30%"></div>
+                        <div class="inline-form-row">
+                            <input type="text" id="checklist-input" class="modal-text-input" placeholder="Novo item do checklist">
+                            <button type="button" class="sidebar-btn compact-btn" id="add-checklist-btn"><i class="fa-solid fa-plus"></i> Adicionar</button>
                         </div>
-                        <ul class="checklist-items">
-                            <li><input type="checkbox" checked> Aprovação do Copy</li>
-                            <li><input type="checkbox"> Criação do KV no Photoshop</li>
-                            <li><input type="checkbox"> Exportar formatos finais</li>
-                        </ul>
+                        <ul class="checklist-items" id="checklist-items"></ul>
                     </div>
 
                     <div class="modal-section">
                         <h3><i class="fa-regular fa-comments"></i> Atividade</h3>
-                        <div class="comment-box">
-                            <img src="https://ui-avatars.com/api/?name=Admin+Master&background=6366f1&color=fff" class="avatar-sm">
-                            <input type="text" placeholder="Escreva um comentário...">
+                        <div id="comments-list" class="comments-list"></div>
+                        <div class="inline-form-row" style="margin-top:12px;">
+                            <input type="text" id="comment-input" class="modal-text-input" placeholder="Escreva um comentario...">
+                            <button type="button" class="sidebar-btn compact-btn" id="add-comment-btn"><i class="fa-solid fa-paper-plane"></i> Publicar</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="modal-sidebar">
-                    <span class="sidebar-title">Adicionar</span>
-                    <button class="sidebar-btn"><i class="fa-regular fa-user"></i> Membros</button>
-                    <button class="sidebar-btn"><i class="fa-solid fa-tag"></i> Etiquetas</button>
-                    <button class="sidebar-btn"><i class="fa-solid fa-check-square"></i> Checklist</button>
-                    <button class="sidebar-btn"><i class="fa-regular fa-clock"></i> Datas</button>
-                    <button class="sidebar-btn"><i class="fa-solid fa-paperclip"></i> Anexo</button>
-
-                    <div class="spacer"></div>
-
                     <span class="sidebar-title">Ações</span>
-                    <button class="sidebar-btn"><i class="fa-solid fa-arrow-right"></i> Mover</button>
-                    <button class="sidebar-btn"><i class="fa-solid fa-copy"></i> Copiar</button>
+                    <button class="sidebar-btn" id="save-card-btn"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
                     <button class="sidebar-btn danger" id="delete-card-btn"><i class="fa-solid fa-trash"></i> Excluir</button>
                 </div>
 

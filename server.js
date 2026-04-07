@@ -31,6 +31,10 @@ async function initDb() {
         // Auto Migration para fase 6 e 7
         try { await pool.query('ALTER TABLE cards ADD COLUMN platform VARCHAR(50);'); } catch(e){}
         try { await pool.query('ALTER TABLE cards ADD COLUMN post_date VARCHAR(50);'); } catch(e){}
+        try { await pool.query("ALTER TABLE cards ADD COLUMN description TEXT DEFAULT '';"); } catch(e){}
+        try { await pool.query("ALTER TABLE cards ADD COLUMN members JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
+        try { await pool.query("ALTER TABLE cards ADD COLUMN checklist JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
+        try { await pool.query("ALTER TABLE cards ADD COLUMN comments JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         
         // Dynamic Workspaces Table
         await pool.query(`
@@ -152,7 +156,11 @@ app.get('/api/board', authGuard, async (req, res) => {
                         json_build_object(
                             'id', k.id,
                             'title', k.title,
+                            'description', k.description,
                             'labels', k.labels,
+                            'members', k.members,
+                            'checklist', k.checklist,
+                            'comments_data', k.comments,
                             'comments', k.comments_count,
                             'attachments', k.attachments_count,
                             'card_order', k.card_order,
@@ -203,6 +211,29 @@ app.post('/api/cards', authGuard, async (req, res) => {
     } catch (err) {
         console.error('Insert error:', err);
         res.status(500).json({ error: 'Erro ao criar card' });
+    }
+});
+
+app.put('/api/cards/:id', authGuard, async (req, res) => {
+    const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
+    const { title, description, platform, post_date, assignee, labels, members, checklist, comments } = req.body;
+    try {
+        const serializedLabels = Array.isArray(labels) ? JSON.stringify(labels) : '[]';
+        const serializedMembers = Array.isArray(members) ? JSON.stringify(members) : '[]';
+        const serializedChecklist = Array.isArray(checklist) ? JSON.stringify(checklist) : '[]';
+        const serializedComments = Array.isArray(comments) ? JSON.stringify(comments) : '[]';
+        const commentsCount = Array.isArray(comments) ? comments.length : 0;
+        const result = await pool.query(
+            `UPDATE cards
+             SET title = $1, description = $2, platform = $3, post_date = $4, assignee = $5,
+                 labels = $6::jsonb, members = $7::jsonb, checklist = $8::jsonb, comments = $9::jsonb, comments_count = $10
+             WHERE id = $11 AND workspace_id = $12`,
+            [title, description || '', platform || null, post_date || null, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, req.params.id, workspace]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao atualizar card' });
     }
 });
 

@@ -12,6 +12,7 @@ const getAuthHeaders = () => ({ 'Authorization': 'Bearer ' + localStorage.getIte
 // State Object to track the dynamic state
 let boardState = { columns: [] };
 let activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
+let activeCardData = null;
 
 async function initWorkspaces() {
     try {
@@ -355,13 +356,245 @@ function handleDrop(e) {
 
 // --- Modal Logic --- //
 let activeCardId = null;
+let activeCardColId = null;
+
+const editTitleInput = document.getElementById('edit-card-title');
+const editDescriptionInput = document.getElementById('edit-card-description');
+const editPlatformInput = document.getElementById('edit-card-platform');
+const editDateInput = document.getElementById('edit-card-date');
+const editAssigneeInput = document.getElementById('edit-card-assignee');
+const saveCardBtn = document.getElementById('save-card-btn');
+const memberInput = document.getElementById('member-input');
+const membersList = document.getElementById('members-list');
+const addMemberBtn = document.getElementById('add-member-btn');
+const labelInput = document.getElementById('label-input');
+const labelColorInput = document.getElementById('label-color');
+const labelsEditor = document.getElementById('labels-editor');
+const addLabelBtn = document.getElementById('add-label-btn');
+const checklistInput = document.getElementById('checklist-input');
+const checklistItems = document.getElementById('checklist-items');
+const addChecklistBtn = document.getElementById('add-checklist-btn');
+const commentInput = document.getElementById('comment-input');
+const commentsList = document.getElementById('comments-list');
+const addCommentBtn = document.getElementById('add-comment-btn');
+
+function normalizeArray(value) {
+    if (!value) return [];
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+        try {
+            return JSON.parse(value);
+        } catch {
+            return [];
+        }
+    }
+    return [];
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderMembersEditor() {
+    if (!membersList || !activeCardData) return;
+    membersList.innerHTML = activeCardData.members.length
+        ? activeCardData.members.map((member, index) => `<span class="editor-pill">${escapeHtml(member)} <button type="button" data-member-index="${index}"><i class="fa-solid fa-xmark"></i></button></span>`).join('')
+        : '<span style="color: var(--text-muted); font-size: 13px;">Nenhum membro vinculado.</span>';
+
+    membersList.querySelectorAll('[data-member-index]').forEach((btn) => {
+        btn.onclick = () => {
+            activeCardData.members.splice(Number(btn.dataset.memberIndex), 1);
+            renderMembersEditor();
+        };
+    });
+}
+
+function renderLabelsEditor() {
+    if (!labelsEditor || !activeCardData) return;
+    labelsEditor.innerHTML = activeCardData.labels.length
+        ? activeCardData.labels.map((label, index) => `<span class="editor-pill"><span class="label ${escapeHtml(label.color || 'blue')}">${escapeHtml(label.text || '')}</span><button type="button" data-label-index="${index}"><i class="fa-solid fa-xmark"></i></button></span>`).join('')
+        : '<span style="color: var(--text-muted); font-size: 13px;">Nenhuma etiqueta criada.</span>';
+
+    labelsEditor.querySelectorAll('[data-label-index]').forEach((btn) => {
+        btn.onclick = () => {
+            activeCardData.labels.splice(Number(btn.dataset.labelIndex), 1);
+            renderLabelsEditor();
+        };
+    });
+}
+
+function renderChecklistEditor() {
+    if (!checklistItems || !activeCardData) return;
+    checklistItems.innerHTML = activeCardData.checklist.length
+        ? activeCardData.checklist.map((item, index) => `
+            <li>
+                <input type="checkbox" data-check-index="${index}" ${item.done ? 'checked' : ''}>
+                <span>${escapeHtml(item.text || '')}</span>
+                <button type="button" class="checklist-delete" data-check-delete="${index}"><i class="fa-solid fa-trash"></i></button>
+            </li>
+        `).join('')
+        : '<li style="color: var(--text-muted);">Nenhum item no checklist.</li>';
+
+    checklistItems.querySelectorAll('[data-check-index]').forEach((input) => {
+        input.onchange = () => {
+            activeCardData.checklist[Number(input.dataset.checkIndex)].done = input.checked;
+        };
+    });
+    checklistItems.querySelectorAll('[data-check-delete]').forEach((btn) => {
+        btn.onclick = () => {
+            activeCardData.checklist.splice(Number(btn.dataset.checkDelete), 1);
+            renderChecklistEditor();
+        };
+    });
+}
+
+function renderCommentsEditor() {
+    if (!commentsList || !activeCardData) return;
+    commentsList.innerHTML = activeCardData.comments.length
+        ? activeCardData.comments.map((comment, index) => `
+            <div class="comment-item">
+                <div class="comment-meta">
+                    <span>${escapeHtml(comment.author || 'Sistema')}</span>
+                    <span>${escapeHtml(comment.created_at || '')} <button type="button" class="comment-delete" data-comment-delete="${index}"><i class="fa-solid fa-trash"></i></button></span>
+                </div>
+                <div>${escapeHtml(comment.text || '')}</div>
+            </div>
+        `).join('')
+        : '<div style="color: var(--text-muted); font-size: 13px;">Nenhum comentario ainda.</div>';
+
+    commentsList.querySelectorAll('[data-comment-delete]').forEach((btn) => {
+        btn.onclick = () => {
+            activeCardData.comments.splice(Number(btn.dataset.commentDelete), 1);
+            renderCommentsEditor();
+        };
+    });
+}
 
 function openModal(card, colId) {
     activeCardId = card.id;
+    activeCardColId = colId;
+    activeCardData = {
+        ...card,
+        labels: normalizeArray(card.labels),
+        members: normalizeArray(card.members),
+        checklist: normalizeArray(card.checklist),
+        comments: normalizeArray(card.comments_data)
+    };
     const colName = boardState.columns.find(c => c.id === colId).title;
     document.getElementById('modal-list-name').innerText = colName;
     document.getElementById('modal-title').innerText = card.title;
+    if (editTitleInput) editTitleInput.value = card.title || '';
+    if (editDescriptionInput) editDescriptionInput.value = card.description || '';
+    if (editPlatformInput) editPlatformInput.value = card.platform || '';
+    if (editDateInput) editDateInput.value = card.post_date || '';
+    if (editAssigneeInput) editAssigneeInput.value = card.assignee || '';
+    if (memberInput) memberInput.value = '';
+    if (labelInput) labelInput.value = '';
+    if (checklistInput) checklistInput.value = '';
+    if (commentInput) commentInput.value = '';
+    renderMembersEditor();
+    renderLabelsEditor();
+    renderChecklistEditor();
+    renderCommentsEditor();
     modalOverlay.classList.add('active');
+}
+
+if (addMemberBtn) {
+    addMemberBtn.onclick = () => {
+        if (!activeCardData || !memberInput) return;
+        const member = memberInput.value.trim();
+        if (!member) return;
+        activeCardData.members.push(member);
+        memberInput.value = '';
+        renderMembersEditor();
+    };
+}
+
+if (addLabelBtn) {
+    addLabelBtn.onclick = () => {
+        if (!activeCardData || !labelInput || !labelColorInput) return;
+        const text = labelInput.value.trim();
+        if (!text) return;
+        activeCardData.labels.push({ text, color: labelColorInput.value || 'blue' });
+        labelInput.value = '';
+        renderLabelsEditor();
+    };
+}
+
+if (addChecklistBtn) {
+    addChecklistBtn.onclick = () => {
+        if (!activeCardData || !checklistInput) return;
+        const text = checklistInput.value.trim();
+        if (!text) return;
+        activeCardData.checklist.push({ text, done: false });
+        checklistInput.value = '';
+        renderChecklistEditor();
+    };
+}
+
+if (addCommentBtn) {
+    addCommentBtn.onclick = () => {
+        if (!activeCardData || !commentInput) return;
+        const text = commentInput.value.trim();
+        if (!text) return;
+        activeCardData.comments.push({ author: localStorage.getItem('templum-auth-user') || 'Usuario', text, created_at: new Date().toLocaleString('pt-BR') });
+        commentInput.value = '';
+        renderCommentsEditor();
+    };
+}
+
+if (saveCardBtn) {
+    saveCardBtn.onclick = async () => {
+        if (!activeCardId || !activeCardData) return;
+        const title = editTitleInput ? editTitleInput.value.trim() : '';
+        const description = editDescriptionInput ? editDescriptionInput.value.trim() : '';
+        const platform = editPlatformInput ? editPlatformInput.value : '';
+        const post_date = editDateInput ? editDateInput.value : '';
+        const assignee = editAssigneeInput ? editAssigneeInput.value.trim() : '';
+
+        if (!title) return alert('Preencha o titulo do card.');
+
+        const originalText = saveCardBtn.innerHTML;
+        saveCardBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Salvando';
+
+        try {
+            const response = await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), {
+                method: 'PUT',
+                headers: authHeaders,
+                body: JSON.stringify({ title, description, platform, post_date, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments })
+            });
+
+            if (!response.ok) throw new Error('save failed');
+
+            const activeColumn = boardState.columns.find(c => c.id === activeCardColId);
+            const activeCard = activeColumn && activeColumn.cards.find(c => c.id === activeCardId);
+            if (activeCard) {
+                activeCard.title = title;
+                activeCard.description = description;
+                activeCard.platform = platform;
+                activeCard.post_date = post_date;
+                activeCard.assignee = assignee;
+                activeCard.labels = activeCardData.labels;
+                activeCard.members = activeCardData.members;
+                activeCard.checklist = activeCardData.checklist;
+                activeCard.comments_data = activeCardData.comments;
+                activeCard.comments = activeCardData.comments.length;
+            }
+
+            document.getElementById('modal-title').innerText = title;
+            modalOverlay.classList.remove('active');
+            loadStateFromServer();
+        } catch (e) {
+            alert('Erro ao salvar card');
+        } finally {
+            saveCardBtn.innerHTML = originalText;
+        }
+    };
 }
 
 const delBtn = document.getElementById('delete-card-btn');
