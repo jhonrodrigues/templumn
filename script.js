@@ -130,12 +130,10 @@ async function initWorkspaces() {
                     <div class="workspace-switcher-box">
                         <label class="workspace-switcher-label" for="sidebar-workspace-select">Conta ativa</label>
                         <select id="sidebar-workspace-select" class="workspace-switcher-select"></select>
-                        <div id="sidebar-workspace-preview" class="workspace-switcher-preview"></div>
                     </div>
                 </li>
             `;
             const sideSelect = document.getElementById('sidebar-workspace-select');
-            const sidePreview = document.getElementById('sidebar-workspace-preview');
             if (sideSelect) {
                 wss.forEach((workspace) => {
                     const opt = document.createElement('option');
@@ -155,11 +153,6 @@ async function initWorkspaces() {
                         window.location.reload();
                     }
                 };
-            }
-            if (sidePreview) {
-                sidePreview.innerHTML = wss.length
-                    ? wss.slice(0, 4).map((workspace) => `<span class="workspace-preview-pill ${workspace.id === activeWorkspaceId ? 'active' : ''}">${workspace.name}</span>`).join('')
-                    : '<span class="workspace-switcher-empty">Nenhuma conta carregada.</span>';
             }
         }
 
