@@ -104,6 +104,14 @@ async function initWorkspaces() {
         const sw = document.getElementById('ws-switcher');
         if(sw) {
             sw.innerHTML = '';
+            const includeAllOption = sw.dataset.includeAll === 'true';
+            if (includeAllOption) {
+                const allOpt = document.createElement('option');
+                allOpt.value = '__all__';
+                allOpt.innerText = 'Todas as contas';
+                if (activeWorkspaceId === '__all__') allOpt.selected = true;
+                sw.appendChild(allOpt);
+            }
             wss.forEach(w => {
                 const opt = document.createElement('option');
                 opt.value = w.id;
@@ -112,10 +120,12 @@ async function initWorkspaces() {
                 sw.appendChild(opt);
             });
             const dynamicTitle = document.getElementById('dyn-board-title');
-            if (dynamicTitle) dynamicTitle.innerText = wss.find(w => w.id === activeWorkspaceId)?.name || 'Board';
+            if (dynamicTitle) dynamicTitle.innerText = activeWorkspaceId === '__all__' ? 'Todas as contas' : (wss.find(w => w.id === activeWorkspaceId)?.name || 'Board');
             sw.onchange = (e) => {
                 activeWorkspaceId = e.target.value;
-                localStorage.setItem('templum-active-ws', activeWorkspaceId);
+                if (activeWorkspaceId !== '__all__') {
+                    localStorage.setItem('templum-active-ws', activeWorkspaceId);
+                }
                 if (dynamicTitle) dynamicTitle.innerText = e.target.options[e.target.selectedIndex].text;
                 loadStateFromServer();
                 loadNotifications();

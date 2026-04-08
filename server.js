@@ -233,6 +233,9 @@ app.delete('/api/users/:id', authGuard, async (req, res) => {
 app.get('/api/board', authGuard, async (req, res) => {
     try {
         const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
+        const isAllWorkspaces = workspace === '__all__';
+        const cardVisibilityCondition = isAllWorkspaces ? '1=1' : workspaceVisibilityClause(1);
+        const params = isAllWorkspaces ? [] : [workspace];
         const query = `
             SELECT 
                 c.id, c.title, c.col_order,
@@ -241,6 +244,7 @@ app.get('/api/board', authGuard, async (req, res) => {
                         json_build_object(
                             'id', k.id,
                             'workspace_id', k.workspace_id,
+                            'workspace_name', ws.name,
                             'title', k.title,
                             'description', k.description,
                             'labels', k.labels,
@@ -260,11 +264,12 @@ app.get('/api/board', authGuard, async (req, res) => {
                     ) FILTER (WHERE k.id IS NOT NULL), '[]'
                 ) as cards
             FROM columns c
-            LEFT JOIN cards k ON c.id = k.column_id AND ${workspaceVisibilityClause(1)}
+            LEFT JOIN cards k ON c.id = k.column_id AND ${cardVisibilityCondition}
+            LEFT JOIN workspaces ws ON ws.id = k.workspace_id
             GROUP BY c.id
             ORDER BY c.col_order ASC;
         `;
-        const result = await pool.query(query, [workspace]);
+        const result = await pool.query(query, params);
         res.json({ columns: result.rows });
     } catch (err) {
         console.error('Error fetching board state', err);
