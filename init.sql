@@ -53,7 +53,8 @@ INSERT INTO columns (id, title, col_order) VALUES
 ('col-2', 'To Do (Fazer)', 2),
 ('col-3', 'In Progress (Fazendo)', 3),
 ('col-4', 'Aprovação', 4),
-('col-5', 'Concluído', 5)
+('col-5', 'Concluído', 5),
+('col-6', 'Postados', 6)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO cards (id, column_id, title, labels, comments_count, attachments_count, card_order) VALUES

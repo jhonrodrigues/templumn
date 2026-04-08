@@ -38,6 +38,7 @@ async function initDb() {
         try { await pool.query("ALTER TABLE cards ADD COLUMN images JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN visible_workspaces JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN files JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
+        await pool.query("INSERT INTO columns (id, title, col_order) VALUES ('col-6', 'Postados', 6) ON CONFLICT (id) DO NOTHING;");
         
         // Dynamic Workspaces Table
         await pool.query(`
@@ -367,6 +368,20 @@ app.post('/api/cards/:id/remove-workspace', authGuard, async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao remover card deste workspace' });
+    }
+});
+
+app.post('/api/cards/:id/mark-posted', authGuard, async (req, res) => {
+    const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
+    try {
+        const result = await pool.query(
+            `UPDATE cards SET column_id = 'col-6' WHERE id = $1 AND ${workspaceVisibilityClause(2)}`,
+            [req.params.id, workspace]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao marcar card como postado' });
     }
 });
 

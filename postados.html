@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Templum - Checklist de Postagem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .posted-page {
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .posted-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        .posted-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        .posted-panel h2 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        .posted-panel p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .posted-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .posted-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--bg-app);
+        }
+        .posted-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-top: 2px;
+            accent-color: var(--primary);
+        }
+        .posted-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+        .posted-empty {
+            color: var(--text-muted);
+            font-size: 14px;
+            padding: 16px 4px;
+        }
+        .posted-filter-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .posted-filter-row input,
+        .posted-filter-row select {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-surface);
+            color: var(--text-main);
+            font-family: var(--font);
+        }
+        @media (max-width: 900px) {
+            .posted-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 768px) {
+            .posted-page {
+                padding: 20px;
+            }
+        }
+        @media (max-width: 480px) {
+            .posted-page {
+                padding: 14px;
+            }
+            .posted-item {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon"><i class="fa-solid fa-shapes"></i></div>
+                    <span class="logo-text">Templum</span>
+                </div>
+            </div>
+
+            <div class="sidebar-menu">
+                <div class="menu-section">
+                    <span class="section-title">Contas / Workspaces</span>
+                    <ul id="sidebar-ws-list"></ul>
+                </div>
+
+                <div class="menu-section">
+                    <span class="section-title">Minha Mesa</span>
+                    <ul>
+                        <li onclick="window.location.href='index.html'"><i class="fa-solid fa-table-columns"></i> Kanban Central</li>
+                        <li onclick="window.location.href='mesa.html'"><i class="fa-solid fa-user-check"></i> Minhas Tarefas</li>
+                        <li onclick="window.location.href='calendario.html'"><i class="fa-regular fa-calendar-days"></i> Calendário do Mês</li>
+                        <li class="active" onclick="window.location.href='postados.html'"><i class="fa-solid fa-square-check"></i> Checklist de Postagem</li>
+                    </ul>
+                </div>
+
+                <div class="menu-section">
+                    <span class="section-title">Gestão e Liderança</span>
+                    <ul>
+                        <li onclick="window.location.href='gestao.html'"><i class="fa-solid fa-chart-pie"></i> Relatórios da Agência</li>
+                        <li onclick="window.location.href='usuarios.html'"><i class="fa-solid fa-users"></i> Equipe e Acessos</li>
+                        <li onclick="window.location.href='admin-settings.html'"><i class="fa-solid fa-cogs"></i> Master Configurações</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="user-profile">
+                <div class="user-info" style="width:100%;">
+                    <button onclick="localStorage.clear(); window.location.href='/login.html';" style="width:100%; padding: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border:none; border-radius:8px; cursor:pointer; font-weight: 600;"><i class="fa-solid fa-right-from-bracket"></i> Sair do Sistema</button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content" style="overflow-y:auto;">
+            <header class="topbar">
+                <div class="search-container">
+                    <i class="fa-solid fa-square-check"></i>
+                    <input type="text" value="Marque aqui o que já foi publicado" readonly>
+                </div>
+                <div class="topbar-actions">
+                    <button class="icon-btn theme-toggle" id="theme-toggle"><i class="fa-solid fa-moon"></i></button>
+                </div>
+            </header>
+
+            <div class="board-header">
+                <div class="board-title" style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <h1 id="dyn-board-title">Checklist de Postagem</h1>
+                        <span class="tag-status">Conferência</span>
+                    </div>
+                    <p>Marque os conteúdos já publicados para enviá-los automaticamente ao quadro de `Postados`.</p>
+                </div>
+                <div class="board-filters posted-filter-row">
+                    <select id="ws-switcher"></select>
+                    <input type="month" id="posted-month-filter">
+                </div>
+            </div>
+
+            <section class="posted-page">
+                <div class="posted-grid">
+                    <div class="posted-panel">
+                        <h2>Para Marcar</h2>
+                        <p>Demandas com data de postagem que ainda não foram enviadas para `Postados`.</p>
+                        <div id="pending-posts" class="posted-list"></div>
+                    </div>
+                    <div class="posted-panel">
+                        <h2>Já Postados</h2>
+                        <p>Itens que já estão no quadro `Postados`.</p>
+                        <div id="done-posts" class="posted-list"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const postedMonthFilter = document.getElementById('posted-month-filter');
+
+        function cardMetaHtml(card) {
+            const bits = [];
+            if (card.post_date) bits.push(`<span><i class="fa-regular fa-calendar"></i> ${card.post_date}</span>`);
+            if (card.platform) bits.push(`<span><i class="fa-brands fa-${card.platform === 'youtube' ? 'youtube' : card.platform === 'instagram' ? 'instagram' : card.platform === 'facebook' ? 'facebook' : card.platform === 'tiktok' ? 'tiktok' : 'globe'}"></i> ${card.platform}</span>`);
+            return bits.join('');
+        }
+
+        function renderPostedLists(cards) {
+            const pendingContainer = document.getElementById('pending-posts');
+            const doneContainer = document.getElementById('done-posts');
+            const selectedMonth = postedMonthFilter.value;
+            const filtered = cards.filter((card) => !selectedMonth || (card.post_date && card.post_date.startsWith(selectedMonth)));
+            const pending = filtered.filter((card) => card.column_id !== 'col-6');
+            const done = filtered.filter((card) => card.column_id === 'col-6');
+
+            pendingContainer.innerHTML = pending.length ? pending.map((card) => `
+                <label class="posted-item">
+                    <input type="checkbox" data-card-id="${card.id}">
+                    <div>
+                        <strong>${card.title}</strong>
+                        <div class="posted-meta">${cardMetaHtml(card)}</div>
+                    </div>
+                </label>
+            `).join('') : '<div class="posted-empty">Nenhuma demanda pendente para este período.</div>';
+
+            doneContainer.innerHTML = done.length ? done.map((card) => `
+                <div class="posted-item">
+                    <input type="checkbox" checked disabled>
+                    <div>
+                        <strong>${card.title}</strong>
+                        <div class="posted-meta">${cardMetaHtml(card)}</div>
+                    </div>
+                </div>
+            `).join('') : '<div class="posted-empty">Nenhuma demanda marcada como postada ainda.</div>';
+
+            pendingContainer.querySelectorAll('[data-card-id]').forEach((checkbox) => {
+                checkbox.addEventListener('change', async () => {
+                    if (!checkbox.checked) return;
+                    checkbox.disabled = true;
+                    try {
+                        const response = await fetch('/api/cards/' + checkbox.dataset.cardId + '/mark-posted?workspace=' + encodeURIComponent(localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp'), {
+                            method: 'POST',
+                            headers: authHeaders
+                        });
+                        if (!response.ok) throw new Error('mark posted failed');
+                        loadPostedChecklist();
+                    } catch (err) {
+                        checkbox.disabled = false;
+                        checkbox.checked = false;
+                        alert('Não foi possível marcar essa demanda como postada.');
+                    }
+                });
+            });
+        }
+
+        async function loadPostedChecklist() {
+            try {
+                const workspace = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
+                const response = await fetch('/api/board?workspace=' + encodeURIComponent(workspace), { headers: getAuthHeaders() });
+                const data = await response.json();
+                const cards = [];
+                (data.columns || []).forEach((column) => {
+                    (column.cards || []).forEach((card) => cards.push({ ...card, column_id: column.id }));
+                });
+                const sorted = cards.filter((card) => card.post_date).sort((a, b) => (a.post_date || '').localeCompare(b.post_date || ''));
+                renderPostedLists(sorted);
+            } catch (err) {
+                document.getElementById('pending-posts').innerHTML = '<div class="posted-empty">Erro ao carregar demandas.</div>';
+                document.getElementById('done-posts').innerHTML = '<div class="posted-empty">Erro ao carregar demandas.</div>';
+            }
+        }
+
+        postedMonthFilter.value = new Date().toISOString().slice(0, 7);
+        postedMonthFilter.addEventListener('change', loadPostedChecklist);
+        window.renderCalendarPage = loadPostedChecklist;
+        loadPostedChecklist();
+    </script>
+</body>
+</html>
