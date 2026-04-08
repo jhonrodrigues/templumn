@@ -97,6 +97,10 @@ async function initWorkspaces() {
         const res = await fetch('/api/workspaces', { headers: getAuthHeaders() });
         const wss = await res.json();
         availableWorkspaces = Array.isArray(wss) ? wss : [];
+        if (availableWorkspaces.length > 0 && !availableWorkspaces.some((workspace) => workspace.id === activeWorkspaceId)) {
+            activeWorkspaceId = availableWorkspaces[0].id;
+            localStorage.setItem('templum-active-ws', activeWorkspaceId);
+        }
         const sw = document.getElementById('ws-switcher');
         if(sw) {
             sw.innerHTML = '';
@@ -126,10 +130,12 @@ async function initWorkspaces() {
                     <div class="workspace-switcher-box">
                         <label class="workspace-switcher-label" for="sidebar-workspace-select">Conta ativa</label>
                         <select id="sidebar-workspace-select" class="workspace-switcher-select"></select>
+                        <div id="sidebar-workspace-preview" class="workspace-switcher-preview"></div>
                     </div>
                 </li>
             `;
             const sideSelect = document.getElementById('sidebar-workspace-select');
+            const sidePreview = document.getElementById('sidebar-workspace-preview');
             if (sideSelect) {
                 wss.forEach((workspace) => {
                     const opt = document.createElement('option');
@@ -150,13 +156,24 @@ async function initWorkspaces() {
                     }
                 };
             }
+            if (sidePreview) {
+                sidePreview.innerHTML = wss.length
+                    ? wss.slice(0, 4).map((workspace) => `<span class="workspace-preview-pill ${workspace.id === activeWorkspaceId ? 'active' : ''}">${workspace.name}</span>`).join('')
+                    : '<span class="workspace-switcher-empty">Nenhuma conta carregada.</span>';
+            }
         }
 
         renderWorkspaceSelector('new-card-workspaces', [activeWorkspaceId]);
         if (activeCardData) {
             renderWorkspaceSelector('edit-card-workspaces', activeCardData.visible_workspaces || [activeWorkspaceId]);
         }
-    } catch(err) { console.error('WS Load Error', err) }
+    } catch(err) {
+        console.error('WS Load Error', err);
+        const sideWs = document.getElementById('sidebar-ws-list');
+        if (sideWs) {
+            sideWs.innerHTML = '<li style="padding: 0; margin: 0 12px; background: transparent;"><div class="workspace-switcher-box"><span class="workspace-switcher-empty">Nao foi possivel carregar as contas.</span></div></li>';
+        }
+    }
 }
 initWorkspaces();
 initMobileMenu();
