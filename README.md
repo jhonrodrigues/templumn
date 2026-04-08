@@ -37,7 +37,9 @@ Todas as telas compartilham a mesma tag de `style.css` com variáveis de Thema E
 * **`index.html`**: Painel Kanban Mestre onde a operação acontece ("cards", "tags", "colunas") e onde o modal permite editar, apagar e manter a estrutura interna do card (descricao, membros com autocomplete, etiquetas, checklist, comentarios, imagens, arquivos e collab entre workspaces), alem de renomear quadros pelo menu de tres pontos.
 * **`mesa.html`**: A "Minha Mesa". Interface tipo Dashboard Pessoal que filtra apenas as tarefas de quem tá "logado" na tela.
 * **`calendario.html`**: Painel Editorial. Usa o mesmo shell visual do sistema, permite escolher a conta/workspace e o mes, e monta a grade mensal real a partir da `post_date`.
+  * Abre por padrao na visao `Todas as contas`.
 * **`postados.html`**: Tela operacional de checklist de postagem. Permite marcar demandas como publicadas, movendo-as automaticamente para o quadro `Postados`.
+* **`etiquetas.html`**: Tela dedicada para criar, editar e excluir etiquetas padrao reutilizaveis que ficam disponiveis no modal das demandas.
 * **`usuarios.html`**: O "RH Digital". Tela focada na aba de Gestão de Permissões. Traz a API para criar acessos, remover cargos e listar funcionários.
 * **`gestao.html`**: Relatórios de entrega de cards em pizza/estatísticas.
 * **`admin-settings.html`**: Espaço de configurações mestre operacionais, onde hoje os diretores podem Injetar Novos Workspaces (Novas filiais de igrejas) no banco de dados.

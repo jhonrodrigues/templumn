@@ -94,6 +94,7 @@
                 <ul>
                     <li onclick="window.location.href='gestao.html'"><i class="fa-solid fa-chart-pie"></i> Relatórios da Agência</li>
                     <li onclick="window.location.href='usuarios.html'"><i class="fa-solid fa-users"></i> Equipe e Acessos</li>
+                    <li onclick="window.location.href='etiquetas.html'"><i class="fa-solid fa-tags"></i> Etiquetas Padrão</li>
                     <li onclick="window.location.href='admin-settings.html'"><i class="fa-solid fa-cogs"></i> Master Configurações</li>
                 </ul>
             </div>
@@ -130,7 +131,7 @@
             </div>
 
             <div class="board-filters" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                <select id="ws-switcher" class="calendar-month-input" data-include-all="true">
+                <select id="ws-switcher" class="calendar-month-input" data-include-all="true" data-default-all="true">
                     <option>Carregando contas...</option>
                 </select>
                 <input type="month" id="calendar-month" class="calendar-month-input">

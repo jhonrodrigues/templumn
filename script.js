@@ -104,6 +104,9 @@ async function initWorkspaces() {
         }
         const sw = document.getElementById('ws-switcher');
         if(sw) {
+            if (sw.dataset.defaultAll === 'true') {
+                activeWorkspaceId = '__all__';
+            }
             sw.innerHTML = '';
             const includeAllOption = sw.dataset.includeAll === 'true';
             if (includeAllOption) {
