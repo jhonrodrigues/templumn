@@ -119,6 +119,20 @@ function workspaceVisibilityClause(paramIndex) {
     return `(workspace_id = $${paramIndex} OR COALESCE(visible_workspaces, '[]'::jsonb) ? $${paramIndex})`;
 }
 
+async function ensureWorkspaceSchema() {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS workspaces (
+            id VARCHAR(50) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            priority INTEGER DEFAULT 100
+        )
+    `);
+    try { await pool.query('ALTER TABLE workspaces ADD COLUMN priority INTEGER DEFAULT 100;'); } catch (e) {}
+    await pool.query(
+        "INSERT INTO workspaces (id, name, priority) VALUES ('lagoinhaalphaville.sp', 'Lagoinha Alphaville Principal', 1), ('heroalphaville', 'Hero Alphaville', 2), ('shinealphaville', 'Shine Alphaville', 3) ON CONFLICT (id) DO NOTHING;"
+    );
+}
+
 // =======================
 //   ROUTES OVERVIEW
 // =======================
@@ -126,22 +140,35 @@ function workspaceVisibilityClause(paramIndex) {
 // --- API: Workspaces ---
 app.get('/api/workspaces', authGuard, async (req, res) => {
     try {
+        await ensureWorkspaceSchema();
         const result = await pool.query('SELECT * FROM workspaces ORDER BY priority ASC, name ASC');
         res.json(result.rows);
-    } catch(err) { res.status(500).send('Error'); }
+    } catch(err) {
+        console.error('Workspace load error:', err);
+        res.status(500).json({ error: 'Erro ao carregar workspaces' });
+    }
 });
 
 app.post('/api/workspaces', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
-        const id = req.body.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        await ensureWorkspaceSchema();
+        const name = (req.body.name || '').trim();
+        if (!name) return res.status(400).json({ error: 'Nome obrigatorio' });
+        const id = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+        if (!id) return res.status(400).json({ error: 'Nome invalido para gerar identificador' });
         const priority = Number.isFinite(Number(req.body.priority)) ? Number(req.body.priority) : 100;
-        await pool.query('INSERT INTO workspaces (id, name, priority) VALUES ($1, $2, $3)', [id, req.body.name, priority]);
+        await pool.query('INSERT INTO workspaces (id, name, priority) VALUES ($1, $2, $3)', [id, name, priority]);
         res.json({ success: true });
-    } catch(err) { res.status(500).json({ error: 'Erro ao criar' }); }
+    } catch(err) {
+        console.error('Workspace create error:', err);
+        if (err.code === '23505') return res.status(409).json({ error: 'Ja existe um workspace com esse identificador' });
+        res.status(500).json({ error: 'Erro ao criar workspace' });
+    }
 });
 
 app.put('/api/workspaces/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
+        await ensureWorkspaceSchema();
         const name = (req.body.name || '').trim();
         const priority = Number.isFinite(Number(req.body.priority)) ? Number(req.body.priority) : 100;
         if (!name) return res.status(400).json({ error: 'Nome obrigatorio' });
@@ -154,6 +181,7 @@ app.put('/api/workspaces/:id', authGuard, requireRole(['master', 'gestor']), asy
 
 app.delete('/api/workspaces/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
+        await ensureWorkspaceSchema();
         const cardsRes = await pool.query(`SELECT COUNT(*) as total FROM cards WHERE workspace_id = $1 OR COALESCE(visible_workspaces, '[]'::jsonb) ? $1`, [req.params.id]);
         if (Number(cardsRes.rows[0].total) > 0) {
             return res.status(400).json({ error: 'Existem cards vinculados a este workspace. Remova ou mova as demandas antes de excluir.' });

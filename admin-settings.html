@@ -318,7 +318,10 @@
                     document.getElementById('new-ws-name').value = '';
                     document.getElementById('new-ws-priority').value = '100';
                     loadWorkspaceAdmin();
-                } else alert('Erro na criação.');
+                } else {
+                    const data = await r.json().catch(() => ({}));
+                    alert(data.error || 'Erro na criação.');
+                }
             }catch(e){ alert('Erro de conexao workspace'); }
         });
 
