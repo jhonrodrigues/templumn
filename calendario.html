@@ -52,6 +52,19 @@
             text-transform: uppercase;
             letter-spacing: 0.3px;
         }
+        .calendar-status-tag {
+            display: inline-flex;
+            margin-top: 4px;
+            margin-right: 4px;
+            padding: 3px 6px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.08);
+            color: var(--text-main);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
         .cal-item.instagram .platform-icon { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
         .cal-item.tiktok .platform-icon { background: #000; }
         .cal-item.youtube .platform-icon { background: #FF0000; }
@@ -197,7 +210,7 @@
                 data.columns.forEach(col => {
                     col.cards.forEach(card => {
                         if (card.post_date && card.post_date.startsWith(selectedMonth + '-')) {
-                            scheduledCards.push({ ...card, column_id: col.id });
+                            scheduledCards.push({ ...card, column_id: col.id, column_title: col.title });
                         }
                     });
                 });
@@ -223,6 +236,7 @@
                             <span>
                                 <div>${c.title}</div>
                                 ${c.post_time ? `<div style="font-size:10px; color: var(--text-muted); margin-top: 2px;">${c.post_time}</div>` : ''}
+                                ${c.column_title ? `<span class="calendar-status-tag">${c.column_title}</span>` : ''}
                                 ${isGeneralView ? `<span class="calendar-account-tag">${c.workspace_name || c.workspace_id || 'Conta'}</span>` : ''}
                             </span>
                         </div>

@@ -87,7 +87,9 @@
                         <!-- JS INJECT -->
                     </select>
                 </div>
-                <div class="board-filters"></div>
+                <div class="board-filters">
+                    <button id="create-column-btn" class="new-btn" style="display:none;"><i class="fa-solid fa-table-columns"></i> Novo Quadro</button>
+                </div>
             </div>
 
             <!-- Kanban Canvas -->
@@ -275,6 +277,7 @@
                 <input type="text" id="edit-column-title" class="modal-text-input" autocomplete="off">
             </div>
             <button id="save-column-btn" style="width: 100%; padding: 14px; border-radius: 8px; background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px;">Salvar Quadro</button>
+            <button id="delete-column-btn" style="width: 100%; padding: 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.18); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; margin-top: 12px; display:none;">Excluir Quadro</button>
         </div>
     </div>
 

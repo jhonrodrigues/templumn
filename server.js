@@ -520,6 +520,33 @@ app.put('/api/columns/:id', authGuard, requireRole(['master', 'gestor']), async 
     }
 });
 
+app.post('/api/columns', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const title = (req.body.title || '').trim();
+        if (!title) return res.status(400).json({ error: 'Titulo obrigatorio' });
+        const nextOrderRes = await pool.query('SELECT COALESCE(MAX(col_order), 0) + 1 AS next_order FROM columns');
+        const nextOrder = Number(nextOrderRes.rows[0].next_order || 1);
+        const id = `col-${Date.now()}`;
+        await pool.query('INSERT INTO columns (id, title, col_order) VALUES ($1, $2, $3)', [id, title, nextOrder]);
+        res.json({ success: true, id, title, col_order: nextOrder });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao criar quadro' });
+    }
+});
+
+app.delete('/api/columns/:id', authGuard, requireRole(['master']), async (req, res) => {
+    try {
+        const cardsRes = await pool.query('SELECT COUNT(*) AS total FROM cards WHERE column_id = $1', [req.params.id]);
+        if (Number(cardsRes.rows[0].total) > 0) {
+            return res.status(400).json({ error: 'Esvazie o quadro antes de excluir' });
+        }
+        await pool.query('DELETE FROM columns WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao excluir quadro' });
+    }
+});
+
 app.delete('/api/cards/:id', authGuard, async (req, res) => {
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
     try {

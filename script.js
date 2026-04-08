@@ -26,6 +26,10 @@ function updateRoleBasedNavigation(role) {
     document.querySelectorAll('li[onclick*="admin-settings.html"]').forEach((item) => {
         item.style.display = role === 'master' ? '' : 'none';
     });
+    const createColumnBtn = document.getElementById('create-column-btn');
+    if (createColumnBtn) {
+        createColumnBtn.style.display = role === 'master' || role === 'gestor' ? 'inline-flex' : 'none';
+    }
 }
 
 // State Object to track the dynamic state
@@ -379,9 +383,7 @@ function renderBoard() {
         const menuBtn = headerEl.querySelector('button');
         if (menuBtn) {
             menuBtn.onclick = () => {
-                activeColumnId = column.id;
-                if (editColumnTitleInput) editColumnTitleInput.value = column.title;
-                if (columnModal) columnModal.classList.add('active');
+                openColumnModal(column);
             };
         }
         
@@ -765,6 +767,8 @@ const columnModal = document.getElementById('column-modal');
 const closeColumnModalBtn = document.getElementById('close-column-modal');
 const editColumnTitleInput = document.getElementById('edit-column-title');
 const saveColumnBtn = document.getElementById('save-column-btn');
+const deleteColumnBtn = document.getElementById('delete-column-btn');
+const createColumnBtn = document.getElementById('create-column-btn');
 
 function normalizeArray(value) {
     if (!value) return [];
@@ -1008,6 +1012,19 @@ function openModal(card, colId) {
     modalOverlay.classList.add('active');
 }
 
+function openColumnModal(column = null) {
+    activeColumnId = column ? column.id : null;
+    if (editColumnTitleInput) editColumnTitleInput.value = column ? column.title : '';
+    const titleEl = columnModal ? columnModal.querySelector('h2') : null;
+    if (titleEl) titleEl.innerText = column ? 'Editar Quadro' : 'Novo Quadro';
+    if (saveColumnBtn) saveColumnBtn.innerText = column ? 'Salvar Quadro' : 'Criar Quadro';
+    if (deleteColumnBtn) {
+        const role = localStorage.getItem('templum-auth-role');
+        deleteColumnBtn.style.display = column && role === 'master' ? 'block' : 'none';
+    }
+    if (columnModal) columnModal.classList.add('active');
+}
+
 if (addMemberBtn) {
     addMemberBtn.onclick = () => {
         if (!activeCardData || !memberInput) return;
@@ -1103,28 +1120,60 @@ if (removeCardFromWorkspaceBtn) {
 
 if (saveColumnBtn) {
     saveColumnBtn.onclick = async () => {
-        if (!activeColumnId || !editColumnTitleInput) return;
+        if (!editColumnTitleInput) return;
         const nextTitle = editColumnTitleInput.value.trim();
         if (!nextTitle) return alert('Preencha o nome do quadro.');
 
         const originalText = saveColumnBtn.innerHTML;
         saveColumnBtn.innerHTML = 'Salvando...';
         try {
-            const response = await fetch('/api/columns/' + activeColumnId, {
-                method: 'PUT',
+            const isEditing = Boolean(activeColumnId);
+            const response = await fetch(isEditing ? '/api/columns/' + activeColumnId : '/api/columns', {
+                method: isEditing ? 'PUT' : 'POST',
                 headers: authHeaders,
                 body: JSON.stringify({ title: nextTitle })
             });
             if (!response.ok) throw new Error('column update failed');
+            const data = await response.json().catch(() => ({}));
 
-            const column = boardState.columns.find((item) => item.id === activeColumnId);
-            if (column) column.title = nextTitle;
+            if (isEditing) {
+                const column = boardState.columns.find((item) => item.id === activeColumnId);
+                if (column) column.title = nextTitle;
+            } else if (data.id) {
+                boardState.columns.push({ id: data.id, title: data.title || nextTitle, col_order: data.col_order || (boardState.columns.length + 1), cards: [] });
+                boardState.columns.sort((a, b) => (a.col_order || 0) - (b.col_order || 0));
+            }
             if (columnModal) columnModal.classList.remove('active');
             renderBoard();
         } catch (err) {
             alert('Nao foi possivel editar esse quadro.');
         } finally {
             saveColumnBtn.innerHTML = originalText;
+        }
+    };
+}
+
+if (createColumnBtn) {
+    createColumnBtn.onclick = () => openColumnModal(null);
+}
+
+if (deleteColumnBtn) {
+    deleteColumnBtn.onclick = async () => {
+        if (!activeColumnId) return;
+        if (!confirm('Excluir este quadro? Ele precisa estar vazio para ser removido.')) return;
+        const originalText = deleteColumnBtn.innerHTML;
+        deleteColumnBtn.innerHTML = 'Excluindo...';
+        try {
+            const response = await fetch('/api/columns/' + activeColumnId, { method: 'DELETE', headers: authHeaders });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'delete failed');
+            boardState.columns = boardState.columns.filter((item) => item.id !== activeColumnId);
+            if (columnModal) columnModal.classList.remove('active');
+            renderBoard();
+        } catch (err) {
+            alert(err.message || 'Nao foi possivel excluir esse quadro.');
+        } finally {
+            deleteColumnBtn.innerHTML = originalText;
         }
     };
 }
