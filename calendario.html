@@ -196,10 +196,12 @@
         if (!pageToken) window.location.href='/login.html';
         const getPageAuthHeaders = () => ({ 'Authorization': 'Bearer ' + pageToken });
         const monthInput = document.getElementById('calendar-month');
+        const calendarGrid = document.getElementById('cal-grid');
         const calendarDayModal = document.getElementById('calendar-day-modal');
         const calendarDayModalTitle = document.getElementById('calendar-day-modal-title');
         const calendarDayModalSubtitle = document.getElementById('calendar-day-modal-subtitle');
         const calendarDayDetailList = document.getElementById('calendar-day-detail-list');
+        let calendarDayMap = {};
 
         function openCalendarDayModal(dateKey, cards, isGeneralView) {
             const [year, month, day] = dateKey.split('-');
@@ -262,6 +264,7 @@
                 });
 
                 const grid = document.getElementById('cal-grid');
+                calendarDayMap = {};
                 const daysInMonth = new Date(year, month, 0).getDate();
                 const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
                 grid.innerHTML = buildCalendarHeaders();
@@ -275,6 +278,7 @@
                     const dateKey = `${selectedMonth}-${dayStr}`;
                     
                     const dayCards = scheduledCards.filter(c => c.post_date === dateKey);
+                    calendarDayMap[dateKey] = dayCards;
                     
                     const cardsHtml = dayCards.map(c => `
                         <div class="cal-item ${c.platform || ''} ${c.column_id === 'col-6' ? 'posted' : ''}">
@@ -294,13 +298,6 @@
                             ${cardsHtml}
                         </div>
                     `;
-
-                    if (dayCards.length) {
-                        const dayEl = grid.querySelector(`[data-date-key="${dateKey}"]`);
-                        if (dayEl) {
-                            dayEl.addEventListener('click', () => openCalendarDayModal(dateKey, dayCards, isGeneralView));
-                        }
-                    }
                 }
 
                 const usedCells = firstDayOfWeek + daysInMonth;
@@ -319,6 +316,14 @@
         document.getElementById('close-calendar-day-modal').addEventListener('click', () => calendarDayModal.classList.remove('active'));
         calendarDayModal.addEventListener('click', (event) => {
             if (event.target === calendarDayModal) calendarDayModal.classList.remove('active');
+        });
+        calendarGrid.addEventListener('click', (event) => {
+            const dayEl = event.target.closest('.calendar-day.clickable');
+            if (!dayEl) return;
+            const dateKey = dayEl.dataset.dateKey;
+            const workspaceSelect = document.getElementById('ws-switcher');
+            const selectedWorkspace = workspaceSelect ? workspaceSelect.value : (localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp');
+            openCalendarDayModal(dateKey, calendarDayMap[dateKey] || [], selectedWorkspace === '__all__');
         });
         renderCalendar();
     </script>
