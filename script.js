@@ -123,6 +123,7 @@ async function initWorkspaces() {
                 if(w.id === activeWorkspaceId) opt.selected = true;
                 sw.appendChild(opt);
             });
+            sw.value = activeWorkspaceId;
             const dynamicTitle = document.getElementById('dyn-board-title');
             if (dynamicTitle) dynamicTitle.innerText = activeWorkspaceId === '__all__' ? 'Todas as contas' : (wss.find(w => w.id === activeWorkspaceId)?.name || 'Board');
             sw.onchange = (e) => {
@@ -135,6 +136,7 @@ async function initWorkspaces() {
                 loadNotifications();
                 if (window.renderCalendarPage) window.renderCalendarPage();
             };
+            if (window.renderCalendarPage) window.renderCalendarPage();
         }
         
         const sideWs = document.getElementById('sidebar-ws-list');
