@@ -146,6 +146,32 @@ body {
     list-style: none;
 }
 
+.workspace-switcher-box {
+    background: var(--bg-app);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.workspace-switcher-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.workspace-switcher-select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-main);
+    font-family: var(--font);
+}
+
 .sidebar-menu li {
     padding: 10px 24px;
     margin: 4px 12px;
@@ -265,6 +291,74 @@ body {
     display: flex; align-items: center; justify-content: center;
 }
 
+.notifications-panel {
+    position: fixed;
+    top: 82px;
+    right: 24px;
+    width: 340px;
+    max-width: calc(100vw - 32px);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    padding: 16px;
+    z-index: 140;
+    display: none;
+}
+
+.notifications-panel.active {
+    display: block;
+}
+
+.notifications-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    color: var(--text-main);
+}
+
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--bg-app);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.notification-item strong {
+    font-size: 14px;
+}
+
+.notification-item span,
+.notifications-empty {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.notification-overdue {
+    border-color: rgba(239, 68, 68, 0.35);
+}
+
+.notification-today {
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+.notification-comments {
+    border-color: rgba(79, 70, 229, 0.35);
+}
+
 .new-btn {
     background: var(--primary); color: white;
     border: none; padding: 10px 20px; border-radius: 8px;
@@ -318,6 +412,8 @@ body {
     overflow-x: auto;
     overflow-y: hidden;
     align-items: flex-start;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Coluna (Lista) */
@@ -827,6 +923,14 @@ body {
         z-index: 110;
     }
 
+    .notifications-panel {
+        right: 12px;
+        left: 12px;
+        top: 68px;
+        width: auto;
+        max-width: none;
+    }
+
     body.sidebar-open .mobile-sidebar-backdrop {
         opacity: 1;
         pointer-events: auto;
@@ -892,6 +996,14 @@ body {
     .add-member,
     .badge {
         display: none !important;
+    }
+
+    #fab-global-create {
+        width: 56px !important;
+        height: 56px !important;
+        right: 18px !important;
+        bottom: 18px !important;
+        font-size: 20px !important;
     }
 
     .card-modal-content,
@@ -1026,6 +1138,14 @@ body {
         border-radius: 10px;
     }
 
+    .notifications-panel {
+        left: 8px;
+        right: 8px;
+        top: 60px;
+        padding: 12px;
+        border-radius: 14px;
+    }
+
     .column {
         width: calc(100vw - 28px);
         min-width: calc(100vw - 28px);
@@ -1049,6 +1169,14 @@ body {
     .sidebar-title,
     .section-title {
         font-size: 12px;
+    }
+
+    #fab-global-create {
+        width: 50px !important;
+        height: 50px !important;
+        right: 12px !important;
+        bottom: 12px !important;
+        font-size: 18px !important;
     }
 
     .modal-section {

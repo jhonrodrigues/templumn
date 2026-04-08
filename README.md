@@ -26,10 +26,10 @@ Toda a lógica e os pilares de informações da plataforma estão organizados da
 
 ### 2. Lógica Visual de Tela (Frontend Scripts)
 * **`script.js`**: O motor vital do lado do usuário que roda no navegador.
-  * Captura do ID de Workspace via localStorage.
+  * Captura do ID de Workspace via localStorage e troca rapida por seletor no menu lateral.
   * Disparos das famosas requisições HTTP (`fetch()`) mandando `Bearer Token` para buscar colunas e usuários.
   * Sistema completo de Drag-and-Drop (DND) dos cards da tabela.
-  * Modais, menus esquerdo em tempo-real, edicao/exclusao direta de cards e persistencia de descricao, membros com sugestao automatica, etiquetas, checklist, comentarios, imagens, arquivos e visibilidade entre workspaces no modal principal.
+  * Modais, menus esquerdo em tempo-real, edicao/exclusao direta de cards, notificacoes no sino e persistencia de descricao, membros com sugestao automatica, etiquetas, checklist, comentarios, imagens, arquivos e visibilidade entre workspaces no modal principal.
 
 ### 3. Interface Visual Nativa (Telas HTML)
 Todas as telas compartilham a mesma tag de `style.css` com variáveis de Thema Escuro (Dark Mode).
@@ -40,6 +40,7 @@ Todas as telas compartilham a mesma tag de `style.css` com variáveis de Thema E
 * **`usuarios.html`**: O "RH Digital". Tela focada na aba de Gestão de Permissões. Traz a API para criar acessos, remover cargos e listar funcionários.
 * **`gestao.html`**: Relatórios de entrega de cards em pizza/estatísticas.
 * **`admin-settings.html`**: Espaço de configurações mestre operacionais, onde hoje os diretores podem Injetar Novos Workspaces (Novas filiais de igrejas) no banco de dados.
+  * Tambem permite priorizar, editar e excluir workspaces vazios.
 
 ---
 
@@ -47,7 +48,7 @@ Todas as telas compartilham a mesma tag de `style.css` com variáveis de Thema E
 
 Para quem for dar engenharia ou manutenção ao SQL contido no `server.js`, existem as tabelas fundamentais e interligadas:
 
-1. **Table `workspaces`**: IDs virtuais de agrupamento de clientes (Ex: `lagoinhaalphaville`). Tudo gravado no software pertence a um workspace.
+1. **Table `workspaces`**: IDs virtuais de agrupamento de clientes (Ex: `lagoinhaalphaville`). Tudo gravado no software pertence a um workspace e cada conta possui `priority` para ordenar sua exibicao no sistema.
 2. **Table `users`**: O painel de RH com Roles (Permissões: `master`, `gestor`, `membro`). Protegidos via check na rota `/api/users`.
 3. **Table `columns`**: A entidade coluna Kanban contendo arrays de posicionamento (Ordem 1, 2, 3), que recebem cards.
 4. **Table `cards`**: O ticket operacional em si, armazenando `title`, `description`, tags coloridas (JSON array), `members`, `checklist`, `comments`, `images`, `files`, `visible_workspaces`, datas, plataformas e o foreign id principal do Workspace. 

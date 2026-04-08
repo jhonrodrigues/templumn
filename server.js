@@ -43,11 +43,13 @@ async function initDb() {
         await pool.query(`
             CREATE TABLE IF NOT EXISTS workspaces (
                 id VARCHAR(50) PRIMARY KEY,
-                name VARCHAR(255) NOT NULL
+                name VARCHAR(255) NOT NULL,
+                priority INTEGER DEFAULT 100
             )
         `);
+        try { await pool.query('ALTER TABLE workspaces ADD COLUMN priority INTEGER DEFAULT 100;'); } catch(e){}
         // Inserir os 3 iniciais pedidos sob demanda
-        await pool.query("INSERT INTO workspaces (id, name) VALUES ('lagoinhaalphaville.sp', 'Lagoinha Alphaville Principal'), ('heroalphaville', 'Hero Alphaville'), ('shinealphaville', 'Shine Alphaville') ON CONFLICT DO NOTHING;");
+        await pool.query("INSERT INTO workspaces (id, name, priority) VALUES ('lagoinhaalphaville.sp', 'Lagoinha Alphaville Principal', 1), ('heroalphaville', 'Hero Alphaville', 2), ('shinealphaville', 'Shine Alphaville', 3) ON CONFLICT DO NOTHING;");
         
         try { await pool.query("ALTER TABLE cards ADD COLUMN workspace_id VARCHAR(50) DEFAULT 'lagoinhaalphaville.sp';"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN assignee VARCHAR(100);"); } catch(e){}
@@ -124,7 +126,7 @@ function workspaceVisibilityClause(paramIndex) {
 // --- API: Workspaces ---
 app.get('/api/workspaces', authGuard, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM workspaces ORDER BY id ASC');
+        const result = await pool.query('SELECT * FROM workspaces ORDER BY priority ASC, name ASC');
         res.json(result.rows);
     } catch(err) { res.status(500).send('Error'); }
 });
@@ -132,9 +134,35 @@ app.get('/api/workspaces', authGuard, async (req, res) => {
 app.post('/api/workspaces', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
         const id = req.body.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        await pool.query('INSERT INTO workspaces (id, name) VALUES ($1, $2)', [id, req.body.name]);
+        const priority = Number.isFinite(Number(req.body.priority)) ? Number(req.body.priority) : 100;
+        await pool.query('INSERT INTO workspaces (id, name, priority) VALUES ($1, $2, $3)', [id, req.body.name, priority]);
         res.json({ success: true });
     } catch(err) { res.status(500).json({ error: 'Erro ao criar' }); }
+});
+
+app.put('/api/workspaces/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const name = (req.body.name || '').trim();
+        const priority = Number.isFinite(Number(req.body.priority)) ? Number(req.body.priority) : 100;
+        if (!name) return res.status(400).json({ error: 'Nome obrigatorio' });
+        await pool.query('UPDATE workspaces SET name = $1, priority = $2 WHERE id = $3', [name, priority, req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao atualizar workspace' });
+    }
+});
+
+app.delete('/api/workspaces/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const cardsRes = await pool.query(`SELECT COUNT(*) as total FROM cards WHERE workspace_id = $1 OR COALESCE(visible_workspaces, '[]'::jsonb) ? $1`, [req.params.id]);
+        if (Number(cardsRes.rows[0].total) > 0) {
+            return res.status(400).json({ error: 'Existem cards vinculados a este workspace. Remova ou mova as demandas antes de excluir.' });
+        }
+        await pool.query('DELETE FROM workspaces WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao excluir workspace' });
+    }
 });
 
 // --- API: Users Governance ---
@@ -382,6 +410,42 @@ app.get('/api/dashboard', authGuard, async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ error: 'Failed Dashboard' });
+    }
+});
+
+app.get('/api/notifications', authGuard, async (req, res) => {
+    try {
+        const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
+        const result = await pool.query(
+            `SELECT id, title, post_date, column_id, assignee, members, comments_count
+             FROM cards
+             WHERE ${workspaceVisibilityClause(1)}
+             ORDER BY post_date ASC NULLS LAST, card_order ASC`,
+            [workspace]
+        );
+
+        const today = new Date().toISOString().slice(0, 10);
+        const notifications = [];
+
+        result.rows.forEach((card) => {
+            const members = Array.isArray(card.members) ? card.members : [];
+            const isAssignedToUser = card.assignee === req.user.email || members.includes(req.user.email);
+            if (!isAssignedToUser) return;
+
+            if (card.post_date && card.post_date < today && card.column_id !== 'col-5') {
+                notifications.push({ type: 'overdue', title: card.title, detail: `Atrasado desde ${card.post_date}`, card_id: card.id });
+            } else if (card.post_date === today) {
+                notifications.push({ type: 'today', title: card.title, detail: 'Entrega prevista para hoje', card_id: card.id });
+            }
+
+            if (Number(card.comments_count) > 0) {
+                notifications.push({ type: 'comments', title: card.title, detail: `${card.comments_count} comentario(s) na demanda`, card_id: card.id });
+            }
+        });
+
+        res.json({ notifications: notifications.slice(0, 12) });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao carregar notificacoes' });
     }
 });
 

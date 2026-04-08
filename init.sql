@@ -41,6 +41,12 @@ CREATE TABLE IF NOT EXISTS system_settings (
     primary_color VARCHAR(10) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS workspaces (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    priority INTEGER DEFAULT 100
+);
+
 -- Inserir dados mockados base para testes no primeiro deploy
 INSERT INTO columns (id, title, col_order) VALUES
 ('col-1', 'Backlog / Pedidos', 1),
@@ -59,4 +65,10 @@ INSERT INTO cards (id, column_id, title, labels, comments_count, attachments_cou
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO system_settings (id, primary_color) VALUES (1, '#4F46E5')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO workspaces (id, name, priority) VALUES
+('lagoinhaalphaville.sp', 'Lagoinha Alphaville Principal', 1),
+('heroalphaville', 'Hero Alphaville', 2),
+('shinealphaville', 'Shine Alphaville', 3)
 ON CONFLICT (id) DO NOTHING;

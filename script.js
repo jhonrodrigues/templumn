@@ -23,6 +23,8 @@ function setSidebarOpen(isOpen) {
 function initMobileMenu() {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
+    let gestureStartX = null;
+    let gestureStartY = null;
 
     let toggleBtn = document.querySelector('.mobile-menu-toggle');
     if (!toggleBtn) {
@@ -63,6 +65,31 @@ function initMobileMenu() {
     window.addEventListener('resize', () => {
         if (window.innerWidth > 768) setSidebarOpen(false);
     });
+
+    document.addEventListener('touchstart', (event) => {
+        if (event.touches.length !== 1) return;
+        gestureStartX = event.touches[0].clientX;
+        gestureStartY = event.touches[0].clientY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', (event) => {
+        if (gestureStartX === null || gestureStartY === null || window.innerWidth > 768) return;
+        const touch = event.changedTouches[0];
+        const deltaX = touch.clientX - gestureStartX;
+        const deltaY = touch.clientY - gestureStartY;
+
+        if (Math.abs(deltaY) < 80) {
+            if (!document.body.classList.contains('sidebar-open') && gestureStartX < 32 && deltaX > 70) {
+                setSidebarOpen(true);
+            }
+            if (document.body.classList.contains('sidebar-open') && deltaX < -70) {
+                setSidebarOpen(false);
+            }
+        }
+
+        gestureStartX = null;
+        gestureStartY = null;
+    }, { passive: true });
 }
 
 async function initWorkspaces() {
@@ -87,29 +114,42 @@ async function initWorkspaces() {
                 localStorage.setItem('templum-active-ws', activeWorkspaceId);
                 if (dynamicTitle) dynamicTitle.innerText = e.target.options[e.target.selectedIndex].text;
                 loadStateFromServer();
+                loadNotifications();
                 if (window.renderCalendarPage) window.renderCalendarPage();
             };
         }
         
         const sideWs = document.getElementById('sidebar-ws-list');
         if(sideWs) {
-            sideWs.innerHTML = '';
-            wss.forEach(w => {
-                 const li = document.createElement('li');
-                 const isActive = (w.id === activeWorkspaceId && (window.location.pathname === '/' || window.location.pathname.includes('index.html')));
-                 li.style.cursor = 'pointer';
-                 if(isActive) li.style.background = 'rgba(79, 70, 229, 0.1)';
-                 if(isActive) li.style.color = 'var(--primary)';
-                 if(isActive) li.style.fontWeight = '600';
-                 if(isActive) li.style.borderRadius = '8px';
-                 
-                 li.innerHTML = `<i class="fa-solid fa-layer-group"></i> ${w.name}`;
-                 li.onclick = () => {
-                     localStorage.setItem('templum-active-ws', w.id);
-                     window.location.href = '/index.html';
-                 };
-                 sideWs.appendChild(li);
-            });
+            sideWs.innerHTML = `
+                <li style="padding: 0; margin: 0 12px; background: transparent;">
+                    <div class="workspace-switcher-box">
+                        <label class="workspace-switcher-label" for="sidebar-workspace-select">Conta ativa</label>
+                        <select id="sidebar-workspace-select" class="workspace-switcher-select"></select>
+                    </div>
+                </li>
+            `;
+            const sideSelect = document.getElementById('sidebar-workspace-select');
+            if (sideSelect) {
+                wss.forEach((workspace) => {
+                    const opt = document.createElement('option');
+                    opt.value = workspace.id;
+                    opt.innerText = workspace.name;
+                    if (workspace.id === activeWorkspaceId) opt.selected = true;
+                    sideSelect.appendChild(opt);
+                });
+                sideSelect.onchange = (event) => {
+                    activeWorkspaceId = event.target.value;
+                    localStorage.setItem('templum-active-ws', activeWorkspaceId);
+                    if (sw) sw.value = activeWorkspaceId;
+                    loadNotifications();
+                    if (window.renderCalendarPage) {
+                        window.renderCalendarPage();
+                    } else if (window.location.pathname === '/' || window.location.pathname.endsWith('.html')) {
+                        window.location.reload();
+                    }
+                };
+            }
         }
 
         renderWorkspaceSelector('new-card-workspaces', [activeWorkspaceId]);
@@ -198,12 +238,42 @@ async function initBranding() {
 }
 initBranding();
 loadStateFromServer();
+loadNotifications();
+
+async function loadNotifications() {
+    const badge = document.getElementById('notifications-badge');
+    const list = document.getElementById('notifications-list');
+    const countLabel = document.getElementById('notifications-count-label');
+    if (!badge || !list || !countLabel) return;
+
+    try {
+        const response = await fetch('/api/notifications?workspace=' + encodeURIComponent(activeWorkspaceId), { headers: getAuthHeaders() });
+        if (!response.ok) return;
+        const data = await response.json();
+        const notifications = Array.isArray(data.notifications) ? data.notifications : [];
+        badge.innerText = String(notifications.length);
+        badge.style.display = notifications.length ? 'flex' : 'none';
+        countLabel.innerText = `${notifications.length} item(ns)`;
+        list.innerHTML = notifications.length
+            ? notifications.map((notification) => `
+                <div class="notification-item notification-${notification.type}">
+                    <strong>${notification.title}</strong>
+                    <span>${notification.detail}</span>
+                </div>
+            `).join('')
+            : '<div class="notifications-empty">Sem notificações no momento.</div>';
+    } catch (err) {
+        console.error('Notifications error', err);
+    }
+}
 
 // Reference to DOM elements
 const boardCanvas = document.getElementById('board-canvas');
 const themeToggleBtn = document.getElementById('theme-toggle');
 const modalOverlay = document.getElementById('card-modal');
 const closeModalBtn = document.querySelector('.close-modal');
+const notificationsBtn = document.getElementById('notifications-btn');
+const notificationsPanel = document.getElementById('notifications-panel');
 
 // --- Render Logic --- //
 
@@ -1081,6 +1151,20 @@ if (themeToggleBtn) {
             document.documentElement.setAttribute('data-theme', 'dark');
             localStorage.setItem('templum-theme', 'dark');
             themeToggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+        }
+    });
+}
+
+if (notificationsBtn && notificationsPanel) {
+    notificationsBtn.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        await loadNotifications();
+        notificationsPanel.classList.toggle('active');
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!notificationsPanel.contains(event.target) && !notificationsBtn.contains(event.target)) {
+            notificationsPanel.classList.remove('active');
         }
     });
 }

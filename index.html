@@ -67,8 +67,7 @@
                     <button class="icon-btn theme-toggle" id="theme-toggle" aria-label="Alternar Tema">
                         <i class="fa-solid fa-moon"></i>
                     </button>
-                    <button class="icon-btn"><i class="fa-regular fa-bell"></i><span class="badge">3</span></button>
-                    <button class="new-btn"><i class="fa-solid fa-plus"></i> Novo Card</button>
+                    <button class="icon-btn" id="notifications-btn" aria-label="Abrir notificações"><i class="fa-regular fa-bell"></i><span class="badge" id="notifications-badge">0</span></button>
                 </div>
             </header>
 
@@ -83,13 +82,7 @@
                         <!-- JS INJECT -->
                     </select>
                 </div>
-                <div class="board-filters">
-                    <div class="avatar-group">
-                        <img src="https://ui-avatars.com/api/?name=Designer+1&background=random" class="avatar-sm">
-                        <img src="https://ui-avatars.com/api/?name=Social+Media&background=random" class="avatar-sm">
-                        <button class="add-member"><i class="fa-solid fa-plus"></i></button>
-                    </div>
-                </div>
+                <div class="board-filters"></div>
             </div>
 
             <!-- Kanban Canvas -->
@@ -99,6 +92,16 @@
 
         </main>
 
+    </div>
+
+    <div class="notifications-panel" id="notifications-panel">
+        <div class="notifications-header">
+            <strong>Notificações</strong>
+            <span id="notifications-count-label">0 itens</span>
+        </div>
+        <div id="notifications-list" class="notifications-list">
+            <div class="notifications-empty">Sem notificações no momento.</div>
+        </div>
     </div>
 
     <!-- Card Detail Modal Overlay -->
