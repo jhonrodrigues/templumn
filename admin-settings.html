@@ -47,6 +47,12 @@
             background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.18);
             border-radius: 8px; padding: 12px 16px; font-weight: 600; cursor: pointer;
         }
+        .label-admin-list { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+        .label-admin-item {
+            background: var(--bg-app); border: 1px solid var(--border); border-radius: 12px;
+            padding: 16px; display: grid; grid-template-columns: 1.3fr 140px auto auto; gap: 12px; align-items: end;
+        }
+        .label-color-select { width: 100%; }
 
         @media (max-width: 768px) {
             .settings-container {
@@ -74,6 +80,10 @@
             }
 
             .workspace-admin-item {
+                grid-template-columns: 1fr;
+            }
+
+            .label-admin-item {
                 grid-template-columns: 1fr;
             }
         }
@@ -188,6 +198,25 @@
                     </div>
                     <div id="workspace-admin-list" class="workspace-admin-list"></div>
                 </div>
+
+                <div class="settings-card" style="margin-top: 24px;">
+                    <div class="form-group">
+                        <label>Etiquetas Padrão</label>
+                        <p>Crie etiquetas reutilizáveis para aplicar rapidamente em várias demandas.</p>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="new-label-name" class="text-input" placeholder="Ex: Urgente" style="flex:1;">
+                            <select id="new-label-color" class="text-input label-color-select" style="max-width: 180px;">
+                                <option value="blue">Azul</option>
+                                <option value="purple">Roxa</option>
+                                <option value="green">Verde</option>
+                                <option value="yellow">Amarela</option>
+                                <option value="red">Vermelha</option>
+                            </select>
+                            <button class="btn-save" id="create-label-btn"><i class="fa-solid fa-plus"></i> Criar Etiqueta</button>
+                        </div>
+                    </div>
+                    <div id="label-admin-list" class="label-admin-list"></div>
+                </div>
             </div>
         </main>
     </div>
@@ -199,6 +228,7 @@
         const hexInput = document.getElementById('primary-hex-input');
         const saveBtn = document.getElementById('save-settings-btn');
         const workspaceList = document.getElementById('workspace-admin-list');
+        const labelList = document.getElementById('label-admin-list');
         
         // Carregar valor atual via API
         fetch('/api/settings').then(r => r.json()).then(data => {
@@ -304,6 +334,77 @@
                 workspaceList.innerHTML = '<div style="color:var(--text-muted);">Nao foi possivel carregar os workspaces.</div>';
             }
         }
+
+        async function loadLabelAdmin() {
+            try {
+                const response = await fetch('/api/label-presets', { headers: getAuthHeaders() });
+                const labels = await response.json();
+                labelList.innerHTML = labels.length ? labels.map((label) => `
+                    <div class="label-admin-item" data-label-id="${label.id}">
+                        <div>
+                            <label style="display:block; margin-bottom:8px; font-size:12px; color:var(--text-muted); font-weight:600;">NOME</label>
+                            <input type="text" class="text-input lp-name" value="${label.name}">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:8px; font-size:12px; color:var(--text-muted); font-weight:600;">COR</label>
+                            <select class="text-input label-color-select lp-color">
+                                <option value="blue" ${label.color === 'blue' ? 'selected' : ''}>Azul</option>
+                                <option value="purple" ${label.color === 'purple' ? 'selected' : ''}>Roxa</option>
+                                <option value="green" ${label.color === 'green' ? 'selected' : ''}>Verde</option>
+                                <option value="yellow" ${label.color === 'yellow' ? 'selected' : ''}>Amarela</option>
+                                <option value="red" ${label.color === 'red' ? 'selected' : ''}>Vermelha</option>
+                            </select>
+                        </div>
+                        <button class="btn-save lp-save-btn"><i class="fa-solid fa-save"></i> Salvar</button>
+                        <button class="danger-btn lp-delete-btn"><i class="fa-solid fa-trash"></i> Excluir</button>
+                    </div>
+                `).join('') : '<div style="color:var(--text-muted);">Nenhuma etiqueta padrão criada ainda.</div>';
+
+                labelList.querySelectorAll('.lp-save-btn').forEach((button) => {
+                    button.addEventListener('click', async () => {
+                        const item = button.closest('[data-label-id]');
+                        const id = item.dataset.labelId;
+                        const name = item.querySelector('.lp-name').value.trim();
+                        const color = item.querySelector('.lp-color').value;
+                        if (!name) return alert('Digite o nome da etiqueta.');
+                        const original = button.innerHTML;
+                        button.innerHTML = 'Salvando...';
+                        try {
+                            const response = await fetch('/api/label-presets/' + id, {
+                                method: 'PUT',
+                                headers: authHeaders,
+                                body: JSON.stringify({ name, color })
+                            });
+                            const data = await response.json().catch(() => ({}));
+                            if (!response.ok) throw new Error(data.error || 'save failed');
+                            loadLabelAdmin();
+                        } catch (err) {
+                            alert(err.message || 'Nao foi possivel salvar a etiqueta.');
+                        } finally {
+                            button.innerHTML = original;
+                        }
+                    });
+                });
+
+                labelList.querySelectorAll('.lp-delete-btn').forEach((button) => {
+                    button.addEventListener('click', async () => {
+                        const item = button.closest('[data-label-id]');
+                        const id = item.dataset.labelId;
+                        if (!confirm('Excluir esta etiqueta padrão?')) return;
+                        try {
+                            const response = await fetch('/api/label-presets/' + id, { method: 'DELETE', headers: authHeaders });
+                            const data = await response.json().catch(() => ({}));
+                            if (!response.ok) throw new Error(data.error || 'delete failed');
+                            loadLabelAdmin();
+                        } catch (err) {
+                            alert(err.message || 'Nao foi possivel excluir a etiqueta.');
+                        }
+                    });
+                });
+            } catch (err) {
+                labelList.innerHTML = '<div style="color:var(--text-muted);">Nao foi possivel carregar as etiquetas padrão.</div>';
+            }
+        }
         
         document.getElementById('create-ws-btn').addEventListener('click', async () => {
             const name = document.getElementById('new-ws-name').value;
@@ -326,7 +427,28 @@
             }catch(e){ alert('Erro de conexao workspace'); }
         });
 
+        document.getElementById('create-label-btn').addEventListener('click', async () => {
+            const name = document.getElementById('new-label-name').value.trim();
+            const color = document.getElementById('new-label-color').value;
+            if (!name) return alert('Digite o nome da etiqueta.');
+            try {
+                const response = await fetch('/api/label-presets', {
+                    method: 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify({ name, color })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || 'create failed');
+                document.getElementById('new-label-name').value = '';
+                document.getElementById('new-label-color').value = 'blue';
+                loadLabelAdmin();
+            } catch (err) {
+                alert(err.message || 'Nao foi possivel criar a etiqueta.');
+            }
+        });
+
         loadWorkspaceAdmin();
+        loadLabelAdmin();
     </script>
 </body>
 </html>

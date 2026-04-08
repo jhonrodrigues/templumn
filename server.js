@@ -48,6 +48,14 @@ async function initDb() {
                 priority INTEGER DEFAULT 100
             )
         `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS label_presets (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                color VARCHAR(50) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
         try { await pool.query('ALTER TABLE workspaces ADD COLUMN priority INTEGER DEFAULT 100;'); } catch(e){}
         // Inserir os 3 iniciais pedidos sob demanda
         await pool.query("INSERT INTO workspaces (id, name, priority) VALUES ('lagoinhaalphaville.sp', 'Lagoinha Alphaville Principal', 1), ('heroalphaville', 'Hero Alphaville', 2), ('shinealphaville', 'Shine Alphaville', 3) ON CONFLICT DO NOTHING;");
@@ -200,6 +208,49 @@ app.get('/api/users', authGuard, requireRole(['master', 'gestor']), async (req, 
         const result = await pool.query('SELECT id, email, role FROM users ORDER BY id ASC');
         res.json(result.rows);
     } catch(err) { res.status(500).send('Error loading users'); }
+});
+
+// --- API: Label Presets ---
+app.get('/api/label-presets', authGuard, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, name, color FROM label_presets ORDER BY name ASC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao carregar etiquetas padrao' });
+    }
+});
+
+app.post('/api/label-presets', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const name = (req.body.name || '').trim();
+        const color = (req.body.color || '').trim();
+        if (!name || !color) return res.status(400).json({ error: 'Nome e cor obrigatorios' });
+        await pool.query('INSERT INTO label_presets (name, color) VALUES ($1, $2)', [name, color]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao criar etiqueta padrao' });
+    }
+});
+
+app.put('/api/label-presets/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const name = (req.body.name || '').trim();
+        const color = (req.body.color || '').trim();
+        if (!name || !color) return res.status(400).json({ error: 'Nome e cor obrigatorios' });
+        await pool.query('UPDATE label_presets SET name = $1, color = $2 WHERE id = $3', [name, color, req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao atualizar etiqueta padrao' });
+    }
+});
+
+app.delete('/api/label-presets/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        await pool.query('DELETE FROM label_presets WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao excluir etiqueta padrao' });
+    }
 });
 app.get('/api/users/options', authGuard, async (req, res) => {
     try {

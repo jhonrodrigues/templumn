@@ -29,7 +29,7 @@ Toda a lógica e os pilares de informações da plataforma estão organizados da
   * Captura do ID de Workspace via localStorage e troca rapida por seletor no menu lateral.
   * Disparos das famosas requisições HTTP (`fetch()`) mandando `Bearer Token` para buscar colunas e usuários.
   * Sistema completo de Drag-and-Drop (DND) dos cards da tabela.
-  * Modais, menus esquerdo em tempo-real, edicao/exclusao direta de cards, notificacoes no sino e persistencia de descricao, membros com sugestao automatica, etiquetas, checklist, comentarios, imagens, arquivos e visibilidade entre workspaces no modal principal.
+  * Modais, menus esquerdo em tempo-real, edicao/exclusao direta de cards, notificacoes no sino e persistencia de descricao, membros com sugestao automatica, etiquetas, etiquetas padrao reutilizaveis, checklist, comentarios, imagens, arquivos e visibilidade entre workspaces no modal principal.
 
 ### 3. Interface Visual Nativa (Telas HTML)
 Todas as telas compartilham a mesma tag de `style.css` com variáveis de Thema Escuro (Dark Mode).
@@ -41,7 +41,7 @@ Todas as telas compartilham a mesma tag de `style.css` com variáveis de Thema E
 * **`usuarios.html`**: O "RH Digital". Tela focada na aba de Gestão de Permissões. Traz a API para criar acessos, remover cargos e listar funcionários.
 * **`gestao.html`**: Relatórios de entrega de cards em pizza/estatísticas.
 * **`admin-settings.html`**: Espaço de configurações mestre operacionais, onde hoje os diretores podem Injetar Novos Workspaces (Novas filiais de igrejas) no banco de dados.
-  * Tambem permite priorizar, editar e excluir workspaces vazios.
+  * Tambem permite priorizar, editar e excluir workspaces vazios, alem de gerenciar etiquetas padrao reutilizaveis.
 
 ---
 

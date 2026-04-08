@@ -14,6 +14,7 @@ let boardState = { columns: [] };
 let activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
 let activeCardData = null;
 let availableWorkspaces = [];
+let labelPresets = [];
 let suppressCardClickOnce = false;
 
 function setSidebarOpen(isOpen) {
@@ -245,6 +246,17 @@ async function loadMemberSuggestions(search = '') {
     }
 }
 
+async function loadLabelPresets() {
+    try {
+        const response = await fetch('/api/label-presets', { headers: getAuthHeaders() });
+        if (!response.ok) return;
+        labelPresets = await response.json();
+        renderPresetLabels();
+    } catch (err) {
+        console.error('Label presets error', err);
+    }
+}
+
 async function initBranding() {
     try {
         const res = await fetch('/api/settings');
@@ -259,6 +271,7 @@ async function initBranding() {
 initBranding();
 loadStateFromServer();
 loadNotifications();
+loadLabelPresets();
 
 async function loadNotifications() {
     const badge = document.getElementById('notifications-badge');
@@ -682,6 +695,7 @@ const addMemberBtn = document.getElementById('add-member-btn');
 const labelInput = document.getElementById('label-input');
 const labelColorInput = document.getElementById('label-color');
 const labelsEditor = document.getElementById('labels-editor');
+const presetLabelsList = document.getElementById('preset-labels-list');
 const addLabelBtn = document.getElementById('add-label-btn');
 const checklistInput = document.getElementById('checklist-input');
 const checklistItems = document.getElementById('checklist-items');
@@ -763,6 +777,25 @@ function renderLabelsEditor() {
     labelsEditor.querySelectorAll('[data-label-index]').forEach((btn) => {
         btn.onclick = () => {
             activeCardData.labels.splice(Number(btn.dataset.labelIndex), 1);
+            renderLabelsEditor();
+        };
+    });
+}
+
+function renderPresetLabels() {
+    if (!presetLabelsList) return;
+    presetLabelsList.innerHTML = labelPresets.length
+        ? labelPresets.map((label) => `<button type="button" class="preset-label-chip ${label.color}" data-preset-label-id="${label.id}">${escapeHtml(label.name)}</button>`).join('')
+        : '<span style="color: var(--text-muted); font-size: 13px;">Nenhuma etiqueta padrão cadastrada.</span>';
+
+    presetLabelsList.querySelectorAll('[data-preset-label-id]').forEach((button) => {
+        button.onclick = () => {
+            if (!activeCardData) return;
+            const preset = labelPresets.find((item) => String(item.id) === button.dataset.presetLabelId);
+            if (!preset) return;
+            const alreadyExists = activeCardData.labels.some((label) => label.text === preset.name && label.color === preset.color);
+            if (alreadyExists) return;
+            activeCardData.labels.push({ text: preset.name, color: preset.color });
             renderLabelsEditor();
         };
     });
@@ -913,6 +946,7 @@ function openModal(card, colId) {
     }
     loadMemberSuggestions();
     renderMembersEditor();
+    renderPresetLabels();
     renderLabelsEditor();
     renderChecklistEditor();
     renderCommentsEditor();

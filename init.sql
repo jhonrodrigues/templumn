@@ -47,6 +47,13 @@ CREATE TABLE IF NOT EXISTS workspaces (
     priority INTEGER DEFAULT 100
 );
 
+CREATE TABLE IF NOT EXISTS label_presets (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    color VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Inserir dados mockados base para testes no primeiro deploy
 INSERT INTO columns (id, title, col_order) VALUES
 ('col-1', 'Backlog / Pedidos', 1),

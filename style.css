@@ -610,6 +610,34 @@ body {
     margin-top: 12px;
 }
 
+.preset-labels-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.preset-label-chip {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.preset-label-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.preset-label-chip.blue { background: var(--tag-blue); color: var(--tag-blue-text); }
+.preset-label-chip.purple { background: rgba(99, 102, 241, 0.14); color: var(--primary); }
+.preset-label-chip.green { background: var(--tag-green); color: var(--tag-green-text); }
+.preset-label-chip.yellow { background: var(--tag-yellow); color: var(--tag-yellow-text); }
+.preset-label-chip.red { background: var(--tag-red); color: var(--tag-red-text); }
+
 .workspace-selector {
     display: flex;
     flex-direction: column;
