@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Conta - Templum</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>html.auth-pending body{display:none!important;}</style>
+    <script>document.documentElement.classList.add('auth-pending');if(!localStorage.getItem('templum-auth-token')){window.location.replace('/login.html');}else{document.documentElement.classList.remove('auth-pending');}</script>
+    <style>
+        .account-container { padding: 40px; max-width: 760px; }
+        .account-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; box-shadow: var(--shadow-sm); }
+        .field { margin-bottom: 18px; }
+        .field label { display:block; margin-bottom:8px; font-weight:600; }
+        .field input { width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family: var(--font); }
+        .btn-save { background: var(--primary); color:white; border:none; border-radius:10px; padding:12px 18px; font-weight:600; cursor:pointer; }
+        @media (max-width:768px){ .account-container{padding:20px;} .account-card{padding:20px;} }
+        @media (max-width:480px){ .account-container{padding:14px;} .account-card{padding:16px;} .btn-save{width:100%;} }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header"><div class="logo"><div class="logo-icon"><i class="fa-solid fa-shapes"></i></div><span class="logo-text">Templum</span></div></div>
+            <div class="sidebar-menu">
+                <div class="menu-section"><span class="section-title">Contas / Workspaces</span><ul id="sidebar-ws-list"></ul></div>
+                <div class="menu-section">
+                    <span class="section-title">Minha Mesa</span>
+                    <ul>
+                        <li onclick="window.location.href='index.html'"><i class="fa-solid fa-table-columns"></i> Kanban Central</li>
+                        <li onclick="window.location.href='mesa.html'"><i class="fa-solid fa-user-check"></i> Minhas Tarefas</li>
+                        <li onclick="window.location.href='calendario.html'"><i class="fa-regular fa-calendar-days"></i> Calendário do Mês</li>
+                        <li onclick="window.location.href='postados.html'"><i class="fa-solid fa-square-check"></i> Checklist de Postagem</li>
+                        <li class="active" onclick="window.location.href='minha-conta.html'"><i class="fa-solid fa-user-gear"></i> Minha Conta</li>
+                    </ul>
+                </div>
+                <div class="menu-section">
+                    <span class="section-title">Gestão e Liderança</span>
+                    <ul>
+                        <li onclick="window.location.href='gestao.html'"><i class="fa-solid fa-chart-pie"></i> Relatórios da Agência</li>
+                        <li onclick="window.location.href='usuarios.html'"><i class="fa-solid fa-users"></i> Equipe e Acessos</li>
+                        <li onclick="window.location.href='etiquetas.html'"><i class="fa-solid fa-tags"></i> Etiquetas Padrão</li>
+                        <li onclick="window.location.href='admin-settings.html'"><i class="fa-solid fa-cogs"></i> Master Configurações</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="user-profile"><div class="user-info" style="width:100%;"><button onclick="localStorage.clear(); window.location.href='/login.html';" style="width:100%; padding: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border:none; border-radius:8px; cursor:pointer; font-weight: 600;"><i class="fa-solid fa-right-from-bracket"></i> Sair do Sistema</button></div></div>
+        </aside>
+        <main class="main-content" style="overflow-y:auto;">
+            <header class="topbar"><div class="search-container"><i class="fa-solid fa-user-gear"></i><input type="text" value="Atualize seus dados de acesso" readonly></div><div class="topbar-actions"><button class="icon-btn theme-toggle" id="theme-toggle"><i class="fa-solid fa-moon"></i></button></div></header>
+            <div class="account-container">
+                <div class="account-card">
+                    <h1 style="margin-bottom:8px;">Minha Conta</h1>
+                    <p style="color:var(--text-muted); margin-bottom:24px;">Altere seu e-mail e, se quiser, defina uma nova senha.</p>
+                    <div class="field"><label>E-mail</label><input type="email" id="my-email"></div>
+                    <div class="field"><label>Nova Senha</label><input type="password" id="my-password" placeholder="Deixe em branco para manter a senha atual"></div>
+                    <button id="save-account-btn" class="btn-save"><i class="fa-solid fa-save"></i> Salvar Minha Conta</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+    <script>
+        async function loadProfile() {
+            const response = await fetch('/api/me', { headers: authHeaders });
+            if (!response.ok) return;
+            const user = await response.json();
+            document.getElementById('my-email').value = user.email || '';
+        }
+
+        document.getElementById('save-account-btn').onclick = async () => {
+            const btn = document.getElementById('save-account-btn');
+            const email = document.getElementById('my-email').value.trim();
+            const password = document.getElementById('my-password').value;
+            if (!email) return alert('Digite seu e-mail.');
+            const original = btn.innerHTML;
+            btn.innerHTML = 'Salvando...';
+            try {
+                const response = await fetch('/api/me', { method: 'PUT', headers: authHeaders, body: JSON.stringify({ email, password }) });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || 'save failed');
+                localStorage.setItem('templum-auth-token', data.token);
+                localStorage.setItem('templum-auth-user', data.email);
+                localStorage.setItem('templum-auth-role', data.role || 'membro');
+                document.getElementById('my-password').value = '';
+                alert('Sua conta foi atualizada.');
+            } catch (err) {
+                alert(err.message || 'Não foi possível atualizar sua conta.');
+            } finally {
+                btn.innerHTML = original;
+            }
+        };
+
+        loadProfile();
+    </script>
+</body>
+</html>

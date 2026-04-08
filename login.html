@@ -95,6 +95,7 @@
                     // Armazena a credencial em lugar cofre do browser
                     localStorage.setItem('templum-auth-token', data.token);
                     localStorage.setItem('templum-auth-user', data.email);
+                    localStorage.setItem('templum-auth-role', data.role || 'membro');
                     window.location.href = '/index.html';
                 } else {
                     err.style.display = 'block';

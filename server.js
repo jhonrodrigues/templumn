@@ -111,6 +111,39 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+app.get('/api/me', authGuard, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, email, role FROM users WHERE id = $1', [req.user.id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Usuário não encontrado' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao carregar perfil' });
+    }
+});
+
+app.put('/api/me', authGuard, async (req, res) => {
+    try {
+        const nextEmail = (req.body.email || '').trim().toLowerCase();
+        const nextPassword = (req.body.password || '').trim();
+        if (!nextEmail) return res.status(400).json({ error: 'E-mail obrigatório' });
+
+        const existing = await pool.query('SELECT id FROM users WHERE email = $1 AND id <> $2', [nextEmail, req.user.id]);
+        if (existing.rows.length > 0) return res.status(409).json({ error: 'Este e-mail já está em uso' });
+
+        if (nextPassword) {
+            const hash = await bcrypt.hash(nextPassword, 8);
+            await pool.query('UPDATE users SET email = $1, password_hash = $2 WHERE id = $3', [nextEmail, hash, req.user.id]);
+        } else {
+            await pool.query('UPDATE users SET email = $1 WHERE id = $2', [nextEmail, req.user.id]);
+        }
+
+        const token = jwt.sign({ id: req.user.id, role: req.user.role, email: nextEmail }, JWT_SECRET, { expiresIn: '7d' });
+        res.json({ success: true, token, email: nextEmail, role: req.user.role });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao atualizar perfil' });
+    }
+});
+
 function authGuard(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -550,12 +583,13 @@ app.get('/api/dashboard', authGuard, async (req, res) => {
 app.get('/api/notifications', authGuard, async (req, res) => {
     try {
         const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
+        const isAllWorkspaces = workspace === '__all__';
         const result = await pool.query(
             `SELECT id, title, post_date, column_id, assignee, members, comments_count
              FROM cards
-             WHERE ${workspaceVisibilityClause(1)}
+             WHERE ${isAllWorkspaces ? '1=1' : workspaceVisibilityClause(1)}
              ORDER BY post_date ASC NULLS LAST, post_time ASC NULLS LAST, card_order ASC`,
-            [workspace]
+            isAllWorkspaces ? [] : [workspace]
         );
 
         const today = getSaoPauloDateParts().date;

@@ -9,6 +9,25 @@ const authHeaders = {
 };
 const getAuthHeaders = () => ({ 'Authorization': 'Bearer ' + localStorage.getItem('templum-auth-token') });
 
+async function syncCurrentUser() {
+    try {
+        const response = await fetch('/api/me', { headers: getAuthHeaders() });
+        if (!response.ok) return;
+        const user = await response.json();
+        localStorage.setItem('templum-auth-user', user.email);
+        localStorage.setItem('templum-auth-role', user.role || 'membro');
+        updateRoleBasedNavigation(user.role || 'membro');
+    } catch (err) {
+        console.error('Current user sync error', err);
+    }
+}
+
+function updateRoleBasedNavigation(role) {
+    document.querySelectorAll('li[onclick*="admin-settings.html"]').forEach((item) => {
+        item.style.display = role === 'master' ? '' : 'none';
+    });
+}
+
 // State Object to track the dynamic state
 let boardState = { columns: [] };
 let activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
@@ -298,6 +317,8 @@ async function initBranding() {
     }
 }
 initBranding();
+updateRoleBasedNavigation(localStorage.getItem('templum-auth-role') || 'membro');
+syncCurrentUser();
 loadStateFromServer();
 loadNotifications();
 loadLabelPresets();
@@ -503,11 +524,15 @@ function createCardElement(card, colId) {
 
     const cardImages = normalizeArray(card.images);
     const thumbnailHtml = cardImages.length > 0 ? `<img src="${cardImages[0]}" alt="Preview da demanda" class="card-thumbnail">` : '';
+    const workspaceTagHtml = activeWorkspaceId === '__all__' && (card.workspace_name || card.workspace_id)
+        ? `<span class="label gray">${escapeHtml(card.workspace_name || card.workspace_id)}</span>`
+        : '';
 
     cardEl.innerHTML = `
-        ${(platformHtml || dateHtml || labelsHTML) ? `<div class="card-labels" style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+        ${(platformHtml || dateHtml || labelsHTML || workspaceTagHtml) ? `<div class="card-labels" style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
             ${platformHtml}
             ${dateHtml}
+            ${workspaceTagHtml ? `<div style="margin-left:4px;">${workspaceTagHtml}</div>` : ''}
             ${labelsHTML ? `<div style="margin-left:4px;">${labelsHTML}</div>` : ''}
         </div>` : ''}
         ${thumbnailHtml}
