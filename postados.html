@@ -7,6 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>html.auth-pending body{display:none!important;}</style>
+    <script>document.documentElement.classList.add('auth-pending');if(!localStorage.getItem('templum-auth-token')){window.location.replace('/login.html');}else{document.documentElement.classList.remove('auth-pending');}</script>
     <style>
         .posted-page {
             padding: 32px;
@@ -195,7 +197,7 @@
 
         function cardMetaHtml(card) {
             const bits = [];
-            if (card.post_date) bits.push(`<span><i class="fa-regular fa-calendar"></i> ${card.post_date}</span>`);
+            if (card.post_date) bits.push(`<span><i class="fa-regular fa-calendar"></i> ${card.post_time ? `${card.post_date} ${card.post_time}` : card.post_date}</span>`);
             if (card.platform) bits.push(`<span><i class="fa-brands fa-${card.platform === 'youtube' ? 'youtube' : card.platform === 'instagram' ? 'instagram' : card.platform === 'facebook' ? 'facebook' : card.platform === 'tiktok' ? 'tiktok' : 'globe'}"></i> ${card.platform}</span>`);
             return bits.join('');
         }
@@ -265,7 +267,7 @@
             }
         }
 
-        postedMonthFilter.value = new Date().toISOString().slice(0, 7);
+        postedMonthFilter.value = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7);
         postedMonthFilter.addEventListener('change', loadPostedChecklist);
         window.renderCalendarPage = loadPostedChecklist;
         loadPostedChecklist();

@@ -11,6 +11,23 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'templum-super-secret-key-agencia';
 
+function getSaoPauloDateParts(date = new Date()) {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+    const parts = Object.fromEntries(formatter.formatToParts(date).filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
+    return {
+        date: `${parts.year}-${parts.month}-${parts.day}`,
+        time: `${parts.hour}:${parts.minute}`
+    };
+}
+
 // Database Connection
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -31,6 +48,7 @@ async function initDb() {
         // Auto Migration para fase 6 e 7
         try { await pool.query('ALTER TABLE cards ADD COLUMN platform VARCHAR(50);'); } catch(e){}
         try { await pool.query('ALTER TABLE cards ADD COLUMN post_date VARCHAR(50);'); } catch(e){}
+        try { await pool.query('ALTER TABLE cards ADD COLUMN post_time VARCHAR(10);'); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN description TEXT DEFAULT '';"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN members JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN checklist JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
@@ -326,6 +344,7 @@ app.get('/api/board', authGuard, async (req, res) => {
                             'card_order', k.card_order,
                             'platform', k.platform,
                             'post_date', k.post_date,
+                            'post_time', k.post_time,
                             'assignee', k.assignee
                         ) ORDER BY k.card_order ASC
                     ) FILTER (WHERE k.id IS NOT NULL), '[]'
@@ -361,7 +380,7 @@ app.post('/api/board/move', authGuard, async (req, res) => {
 
 // --- API: Create & Delete Cards ---
 app.post('/api/cards', authGuard, async (req, res) => {
-    const { title, column_id, platform, post_date, workspace_id, assignee, visible_workspaces, images, files } = req.body;
+    const { title, column_id, platform, post_date, post_time, workspace_id, assignee, visible_workspaces, images, files } = req.body;
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     const visibleWorkspaces = normalizeWorkspaceList(resolvedWS, visible_workspaces);
     const serializedVisibleWorkspaces = JSON.stringify(visibleWorkspaces);
@@ -372,8 +391,8 @@ app.post('/api/cards', authGuard, async (req, res) => {
         const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND ${workspaceVisibilityClause(2)}`, [column_id, resolvedWS]);
         const order = maxRes.rows[0].next_order;
         await pool.query(
-            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, workspace_id, assignee, visible_workspaces, images, files, attachments_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11::jsonb, $12)',
-            [id, column_id, title, order, platform, post_date, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0)]
+            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, workspace_id, assignee, visible_workspaces, images, files, attachments_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12::jsonb, $13)',
+            [id, column_id, title, order, platform, post_date, post_time || null, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0)]
         );
         res.json({ success: true, id, title });
     } catch (err) {
@@ -384,7 +403,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
 
 app.put('/api/cards/:id', authGuard, async (req, res) => {
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
-    const { title, description, platform, post_date, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id } = req.body;
+    const { title, description, platform, post_date, post_time, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id } = req.body;
     try {
         const serializedLabels = Array.isArray(labels) ? JSON.stringify(labels) : '[]';
         const serializedMembers = Array.isArray(members) ? JSON.stringify(members) : '[]';
@@ -398,11 +417,11 @@ app.put('/api/cards/:id', authGuard, async (req, res) => {
         const attachmentsCount = (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0);
         const result = await pool.query(
             `UPDATE cards
-             SET title = $1, description = $2, platform = $3, post_date = $4, assignee = $5,
-                 labels = $6::jsonb, members = $7::jsonb, checklist = $8::jsonb, comments = $9::jsonb, comments_count = $10,
-                 images = $11::jsonb, files = $12::jsonb, visible_workspaces = $13::jsonb, attachments_count = $14
-             WHERE id = $15 AND ${workspaceVisibilityClause(16)}`,
-            [title, description || '', platform || null, post_date || null, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedFiles, serializedVisibleWorkspaces, attachmentsCount, req.params.id, workspace]
+             SET title = $1, description = $2, platform = $3, post_date = $4, post_time = $5, assignee = $6,
+                 labels = $7::jsonb, members = $8::jsonb, checklist = $9::jsonb, comments = $10::jsonb, comments_count = $11,
+                 images = $12::jsonb, files = $13::jsonb, visible_workspaces = $14::jsonb, attachments_count = $15
+             WHERE id = $16 AND ${workspaceVisibilityClause(17)}`,
+            [title, description || '', platform || null, post_date || null, post_time || null, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedFiles, serializedVisibleWorkspaces, attachmentsCount, req.params.id, workspace]
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
         res.json({ success: true });
@@ -490,7 +509,7 @@ app.get('/api/my-cards', authGuard, async (req, res) => {
             query += ` AND ${workspaceVisibilityClause(2)}`;
         }
 
-        query += ' ORDER BY post_date ASC';
+        query += ' ORDER BY post_date ASC, post_time ASC';
         const result = await pool.query(query, params);
         res.json(result.rows);
     } catch(err) {
@@ -535,11 +554,11 @@ app.get('/api/notifications', authGuard, async (req, res) => {
             `SELECT id, title, post_date, column_id, assignee, members, comments_count
              FROM cards
              WHERE ${workspaceVisibilityClause(1)}
-             ORDER BY post_date ASC NULLS LAST, card_order ASC`,
+             ORDER BY post_date ASC NULLS LAST, post_time ASC NULLS LAST, card_order ASC`,
             [workspace]
         );
 
-        const today = new Date().toISOString().slice(0, 10);
+        const today = getSaoPauloDateParts().date;
         const notifications = [];
 
         result.rows.forEach((card) => {

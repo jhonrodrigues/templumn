@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS cards (
     card_order INTEGER NOT NULL,
     platform VARCHAR(50),
     post_date VARCHAR(50),
+    post_time VARCHAR(10),
     workspace_id VARCHAR(50) DEFAULT 'igreja',
     assignee VARCHAR(100)
 );
@@ -62,14 +63,6 @@ INSERT INTO columns (id, title, col_order) VALUES
 ('col-4', 'Aprovação', 4),
 ('col-5', 'Concluído', 5),
 ('col-6', 'Postados', 6)
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO cards (id, column_id, title, labels, comments_count, attachments_count, card_order) VALUES
-('card-1', 'col-1', 'Aprovar Arte - Culto Vida', '[{"text": "Design", "color": "purple"}]', 2, 1, 1),
-('card-2', 'col-1', 'Fazer orçamento de câmeras', '[{"text": "Financeiro", "color": "yellow"}]', 0, 0, 2),
-('card-3', 'col-2', 'Roteiro Vídeo Juventude', '[{"text": "Copy", "color": "blue"}]', 5, 2, 1),
-('card-4', 'col-3', 'Tratamento de fotos do Batismo', '[{"text": "Mídia", "color": "green"}, {"text": "Urgente", "color": "red"}]', 1, 15, 1),
-('card-5', 'col-5', 'Post Carrossel Ceia', '[{"text": "Design", "color": "purple"}]', 1, 1, 1)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO system_settings (id, primary_color) VALUES (1, '#4F46E5')

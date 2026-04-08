@@ -7,6 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>html.auth-pending body{display:none!important;}</style>
+    <script>document.documentElement.classList.add('auth-pending');if(!localStorage.getItem('templum-auth-token')){window.location.replace('/login.html');}else{document.documentElement.classList.remove('auth-pending');}</script>
 </head>
 <body>
 
@@ -139,6 +141,10 @@
                                 <input type="date" id="edit-card-date" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
                             </div>
                             <div>
+                                <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">HORÁRIO DO POST</label>
+                                <input type="time" id="edit-card-time" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                            </div>
+                            <div>
                                 <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DESCRIÇÃO</label>
                                 <textarea id="edit-card-description" class="desc-editor" placeholder="Detalhes da demanda, briefing e observacoes..."></textarea>
                             </div>
@@ -238,6 +244,11 @@
             <div style="margin-bottom: 16px;">
                 <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">DATA DO POST</label>
                 <input type="date" id="nc-date" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">HORÁRIO DO POST</label>
+                <input type="time" id="nc-time" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
             </div>
             
             <div style="margin-bottom: 24px;">

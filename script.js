@@ -17,6 +17,27 @@ let availableWorkspaces = [];
 let labelPresets = [];
 let suppressCardClickOnce = false;
 
+function getSaoPauloNowParts() {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+    const parts = Object.fromEntries(formatter.formatToParts(new Date()).filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
+    return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+}
+
+function formatPostSchedule(postDate, postTime) {
+    if (!postDate) return '';
+    const spl = postDate.split('-');
+    if (spl.length !== 3) return postDate;
+    return postTime ? `${spl[2]}/${spl[1]} ${postTime}` : `${spl[2]}/${spl[1]}`;
+}
+
 function setSidebarOpen(isOpen) {
     document.body.classList.toggle('sidebar-open', Boolean(isOpen));
 }
@@ -231,7 +252,10 @@ function getSelectedWorkspaceIds(containerId) {
 
 function resetNewCardModal() {
     document.getElementById('nc-title').value = '';
-    document.getElementById('nc-date').value = '';
+    const nowParts = getSaoPauloNowParts();
+    document.getElementById('nc-date').value = nowParts.date;
+    const timeField = document.getElementById('nc-time');
+    if (timeField) timeField.value = nowParts.time;
     document.getElementById('nc-platform').value = '';
     const aField = document.getElementById('nc-assignee');
     if (aField) aField.value = '';
@@ -373,6 +397,7 @@ function renderBoard() {
                 const title = document.getElementById('nc-title').value;
                 const platform = document.getElementById('nc-platform').value;
                 const post_date = document.getElementById('nc-date').value;
+                const post_time = document.getElementById('nc-time').value;
                 const aField = document.getElementById('nc-assignee');
                 const assignee = aField ? aField.value : '';
                 const visible_workspaces = getSelectedWorkspaceIds('new-card-workspaces');
@@ -384,7 +409,7 @@ function renderBoard() {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
-                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [] })
+                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, post_time, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [] })
                     });
                     m.classList.remove('active');
                     loadStateFromServer();
@@ -419,6 +444,7 @@ if (fabBtn) {
             const title = document.getElementById('nc-title').value;
             const platform = document.getElementById('nc-platform').value;
             const post_date = document.getElementById('nc-date').value;
+            const post_time = document.getElementById('nc-time').value;
             const assignee = aField ? aField.value : '';
             const visible_workspaces = getSelectedWorkspaceIds('new-card-workspaces');
             
@@ -429,7 +455,7 @@ if (fabBtn) {
                 await fetch('/api/cards', {
                     method: 'POST',
                     headers: authHeaders,
-                    body: JSON.stringify({ title, column_id: colId, platform, post_date, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [] })
+                    body: JSON.stringify({ title, column_id: colId, platform, post_date, post_time, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [] })
                 });
                 m.classList.remove('active');
                 loadStateFromServer();
@@ -471,8 +497,8 @@ function createCardElement(card, colId) {
     
     let dateHtml = '';
     if (card.post_date) {
-        const spl = card.post_date.split('-');
-        if(spl.length === 3) dateHtml = `<span style="font-size: 11px; margin-left: 8px; color: var(--text-main); font-weight: 600;"><i class="fa-regular fa-calendar"></i> ${spl[2]}/${spl[1]}</span>`;
+        const scheduleLabel = formatPostSchedule(card.post_date, card.post_time);
+        if(scheduleLabel) dateHtml = `<span style="font-size: 11px; margin-left: 8px; color: var(--text-main); font-weight: 600;"><i class="fa-regular fa-calendar"></i> ${scheduleLabel}</span>`;
     }
 
     const cardImages = normalizeArray(card.images);
@@ -692,6 +718,7 @@ const editTitleInput = document.getElementById('edit-card-title');
 const editDescriptionInput = document.getElementById('edit-card-description');
 const editPlatformInput = document.getElementById('edit-card-platform');
 const editDateInput = document.getElementById('edit-card-date');
+const editTimeInput = document.getElementById('edit-card-time');
 const saveCardBtn = document.getElementById('save-card-btn');
 const memberInput = document.getElementById('member-input');
 const membersList = document.getElementById('members-list');
@@ -935,6 +962,7 @@ function openModal(card, colId) {
     if (editDescriptionInput) editDescriptionInput.value = card.description || '';
     if (editPlatformInput) editPlatformInput.value = card.platform || '';
     if (editDateInput) editDateInput.value = card.post_date || '';
+    if (editTimeInput) editTimeInput.value = card.post_time || '';
     if (memberInput) memberInput.value = '';
     if (checklistInput) checklistInput.value = '';
     if (commentInput) commentInput.value = '';
@@ -1094,6 +1122,7 @@ if (saveCardBtn) {
         const description = editDescriptionInput ? editDescriptionInput.value.trim() : '';
         const platform = editPlatformInput ? editPlatformInput.value : '';
         const post_date = editDateInput ? editDateInput.value : '';
+        const post_time = editTimeInput ? editTimeInput.value : '';
         const assignee = activeCardData.members.length > 0 ? activeCardData.members[0] : '';
         const visible_workspaces = getSelectedWorkspaceIds('edit-card-workspaces');
         activeCardData.visible_workspaces = visible_workspaces;
@@ -1107,7 +1136,7 @@ if (saveCardBtn) {
             const response = await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), {
                 method: 'PUT',
                 headers: authHeaders,
-                body: JSON.stringify({ title, description, platform, post_date, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id })
+                body: JSON.stringify({ title, description, platform, post_date, post_time, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id })
             });
 
             if (!response.ok) throw new Error('save failed');
@@ -1119,6 +1148,7 @@ if (saveCardBtn) {
                 activeCard.description = description;
                 activeCard.platform = platform;
                 activeCard.post_date = post_date;
+                activeCard.post_time = post_time;
                 activeCard.assignee = assignee;
                 activeCard.labels = activeCardData.labels;
                 activeCard.members = activeCardData.members;
