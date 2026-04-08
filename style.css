@@ -668,3 +668,263 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg-app); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 220px;
+    }
+
+    .topbar,
+    .board-header {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .board-canvas {
+        padding-left: 20px;
+        padding-right: 20px;
+        gap: 16px;
+    }
+
+    .column {
+        width: 280px;
+        min-width: 280px;
+    }
+
+    .card-modal-content {
+        width: min(92vw, 900px);
+        padding: 24px;
+    }
+
+    .modal-body-layout {
+        gap: 20px;
+    }
+
+    .modal-sidebar {
+        width: 160px;
+    }
+
+    .calendar-container {
+        gap: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        overflow: auto;
+    }
+
+    .app-layout {
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+        width: 100%;
+    }
+
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-header {
+        height: auto;
+        padding: 16px 20px;
+    }
+
+    .sidebar-menu {
+        padding: 12px 0;
+        overflow: visible;
+    }
+
+    .menu-section {
+        margin-bottom: 16px;
+    }
+
+    .main-content {
+        overflow: visible;
+    }
+
+    .topbar {
+        height: auto;
+        padding: 16px 20px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .search-container {
+        width: 100%;
+    }
+
+    .topbar-actions {
+        width: 100%;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .new-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .board-header {
+        padding: 20px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+
+    .board-title h1 {
+        font-size: 22px;
+        flex-wrap: wrap;
+    }
+
+    .board-canvas {
+        padding: 0 20px 20px 20px;
+    }
+
+    .column {
+        width: 85vw;
+        min-width: 85vw;
+        max-width: 85vw;
+    }
+
+    .card-modal-content,
+    .modal-box {
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+        max-height: calc(100vh - 24px);
+        padding: 20px;
+        border-radius: 14px;
+    }
+
+    .close-modal {
+        top: 16px;
+        right: 16px;
+    }
+
+    .modal-header h2 {
+        font-size: 20px;
+        padding-right: 32px;
+    }
+
+    .modal-body-layout {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .modal-sidebar {
+        width: 100%;
+    }
+
+    .inline-form-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .compact-btn,
+    .compact-select {
+        width: 100%;
+        max-width: none;
+    }
+
+    .workspace-selector {
+        gap: 10px;
+    }
+
+    .image-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .calendar-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 0 20px 20px 20px;
+        margin-top: 0;
+    }
+
+    .calendar-header {
+        display: none;
+    }
+
+    .calendar-day {
+        min-height: 110px;
+    }
+
+    .calendar-toolbar,
+    .board-filters {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .calendar-month-input,
+    #ws-switcher {
+        width: 100%;
+    }
+
+    .user-profile {
+        padding: 16px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .sidebar-menu li {
+        margin-left: 8px;
+        margin-right: 8px;
+        padding-left: 14px;
+        padding-right: 14px;
+        font-size: 14px;
+    }
+
+    .topbar,
+    .board-header,
+    .board-canvas,
+    .calendar-container {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .column {
+        width: calc(100vw - 28px);
+        min-width: calc(100vw - 28px);
+        max-width: calc(100vw - 28px);
+    }
+
+    .card {
+        padding: 12px;
+    }
+
+    .card-thumbnail {
+        height: 120px;
+    }
+
+    .board-title h1 {
+        font-size: 20px;
+    }
+
+    .modal-section {
+        margin-bottom: 24px;
+    }
+
+    .checklist-items li,
+    .file-item,
+    .comment-item,
+    .workspace-option {
+        padding: 10px;
+    }
+
+    .image-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .calendar-container {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .calendar-day.empty {
+        display: none;
+    }
+}
