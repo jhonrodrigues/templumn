@@ -486,7 +486,6 @@ function createCardElement(card, colId) {
                 ${card.comments > 0 ? `<span><i class="fa-regular fa-comment"></i> ${card.comments}</span>` : ''}
                 ${card.attachments > 0 ? `<span><i class="fa-solid fa-paperclip"></i> ${card.attachments}</span>` : ''}
             </div>
-            <img src="https://ui-avatars.com/api/?name=User&background=random" class="avatar-sm" style="width: 24px; height: 24px;">
         </div>
     `;
 

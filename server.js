@@ -142,6 +142,17 @@ async function ensureWorkspaceSchema() {
     );
 }
 
+async function ensureLabelPresetSchema() {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS label_presets (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            color VARCHAR(50) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+}
+
 // =======================
 //   ROUTES OVERVIEW
 // =======================
@@ -213,15 +224,18 @@ app.get('/api/users', authGuard, requireRole(['master', 'gestor']), async (req, 
 // --- API: Label Presets ---
 app.get('/api/label-presets', authGuard, async (req, res) => {
     try {
+        await ensureLabelPresetSchema();
         const result = await pool.query('SELECT id, name, color FROM label_presets ORDER BY name ASC');
         res.json(result.rows);
     } catch (err) {
+        console.error('Label preset load error:', err);
         res.status(500).json({ error: 'Erro ao carregar etiquetas padrao' });
     }
 });
 
 app.post('/api/label-presets', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
+        await ensureLabelPresetSchema();
         const name = (req.body.name || '').trim();
         const color = (req.body.color || '').trim();
         if (!name || !color) return res.status(400).json({ error: 'Nome e cor obrigatorios' });
@@ -234,6 +248,7 @@ app.post('/api/label-presets', authGuard, requireRole(['master', 'gestor']), asy
 
 app.put('/api/label-presets/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
+        await ensureLabelPresetSchema();
         const name = (req.body.name || '').trim();
         const color = (req.body.color || '').trim();
         if (!name || !color) return res.status(400).json({ error: 'Nome e cor obrigatorios' });
@@ -246,6 +261,7 @@ app.put('/api/label-presets/:id', authGuard, requireRole(['master', 'gestor']), 
 
 app.delete('/api/label-presets/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
+        await ensureLabelPresetSchema();
         await pool.query('DELETE FROM label_presets WHERE id = $1', [req.params.id]);
         res.json({ success: true });
     } catch (err) {
