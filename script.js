@@ -14,6 +14,56 @@ let boardState = { columns: [] };
 let activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
 let activeCardData = null;
 let availableWorkspaces = [];
+let suppressCardClickOnce = false;
+
+function setSidebarOpen(isOpen) {
+    document.body.classList.toggle('sidebar-open', Boolean(isOpen));
+}
+
+function initMobileMenu() {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+
+    let toggleBtn = document.querySelector('.mobile-menu-toggle');
+    if (!toggleBtn) {
+        toggleBtn = document.createElement('button');
+        toggleBtn.className = 'mobile-menu-toggle';
+        toggleBtn.setAttribute('aria-label', 'Abrir menu');
+        toggleBtn.innerHTML = '<i class="fa-solid fa-bars"></i>';
+        document.body.appendChild(toggleBtn);
+    }
+
+    let backdrop = document.querySelector('.mobile-sidebar-backdrop');
+    if (!backdrop) {
+        backdrop = document.createElement('div');
+        backdrop.className = 'mobile-sidebar-backdrop';
+        document.body.appendChild(backdrop);
+    }
+
+    let closeBtn = sidebar.querySelector('.mobile-sidebar-close');
+    if (!closeBtn) {
+        closeBtn = document.createElement('button');
+        closeBtn.className = 'mobile-sidebar-close';
+        closeBtn.setAttribute('aria-label', 'Fechar menu');
+        closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        const header = sidebar.querySelector('.sidebar-header');
+        if (header) header.appendChild(closeBtn);
+    }
+
+    toggleBtn.onclick = () => setSidebarOpen(true);
+    closeBtn.onclick = () => setSidebarOpen(false);
+    backdrop.onclick = () => setSidebarOpen(false);
+
+    sidebar.querySelectorAll('li').forEach((item) => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 768) setSidebarOpen(false);
+        });
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) setSidebarOpen(false);
+    });
+}
 
 async function initWorkspaces() {
     try {
@@ -69,6 +119,7 @@ async function initWorkspaces() {
     } catch(err) { console.error('WS Load Error', err) }
 }
 initWorkspaces();
+initMobileMenu();
 
 async function loadStateFromServer() {
     const boardCanvas = document.getElementById('board-canvas');
@@ -339,9 +390,19 @@ function createCardElement(card, colId) {
     // Drag Listeners
     cardEl.addEventListener('dragstart', handleDragStart);
     cardEl.addEventListener('dragend', handleDragEnd);
+    cardEl.addEventListener('touchstart', handleTouchCardStart, { passive: true });
+    cardEl.addEventListener('touchmove', handleTouchCardMove, { passive: false });
+    cardEl.addEventListener('touchend', handleTouchCardEnd, { passive: false });
+    cardEl.addEventListener('touchcancel', handleTouchCardCancel, { passive: true });
     
     // Click Listener for Modal
-    cardEl.addEventListener('click', () => openModal(card, colId));
+    cardEl.addEventListener('click', () => {
+        if (suppressCardClickOnce) {
+            suppressCardClickOnce = false;
+            return;
+        }
+        openModal(card, colId);
+    });
 
     return cardEl;
 }
@@ -349,6 +410,129 @@ function createCardElement(card, colId) {
 // --- Drag & Drop Logic --- //
 let draggedCardId = null;
 let sourceColId = null;
+let touchDragState = null;
+
+function moveCardToColumn(cardId, fromColId, targetColId) {
+    if (!cardId || !fromColId || !targetColId || fromColId === targetColId) return;
+
+    const sourceCol = boardState.columns.find(c => c.id === fromColId);
+    const targetCol = boardState.columns.find(c => c.id === targetColId);
+    if (!sourceCol || !targetCol) return;
+
+    const cardIndex = sourceCol.cards.findIndex(c => c.id === cardId);
+    if (cardIndex === -1) return;
+
+    const [card] = sourceCol.cards.splice(cardIndex, 1);
+    targetCol.cards.push(card);
+    renderBoard();
+
+    fetch('/api/board/move', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+            cardId,
+            targetColId,
+            newOrder: targetCol.cards.length,
+            workspace_id: activeWorkspaceId
+        })
+    }).catch(err => console.error('Failed pushing move to DB', err));
+}
+
+function clearColumnHover() {
+    document.querySelectorAll('.column-body').forEach(el => el.classList.remove('drag-over', 'touch-drop-target'));
+}
+
+function cleanupTouchDrag() {
+    if (touchDragState?.pressTimer) clearTimeout(touchDragState.pressTimer);
+    if (touchDragState?.ghost) touchDragState.ghost.remove();
+    if (touchDragState?.sourceEl) touchDragState.sourceEl.classList.remove('touch-drag-source');
+    clearColumnHover();
+    touchDragState = null;
+}
+
+function beginTouchDrag(touch) {
+    if (!touchDragState || touchDragState.dragging) return;
+    touchDragState.dragging = true;
+    const rect = touchDragState.sourceEl.getBoundingClientRect();
+    const ghost = touchDragState.sourceEl.cloneNode(true);
+    ghost.classList.add('mobile-drag-ghost');
+    ghost.style.width = rect.width + 'px';
+    ghost.style.left = rect.left + 'px';
+    ghost.style.top = rect.top + 'px';
+    document.body.appendChild(ghost);
+    touchDragState.ghost = ghost;
+    touchDragState.sourceEl.classList.add('touch-drag-source');
+    updateTouchDragPosition(touch);
+}
+
+function updateTouchDragPosition(touch) {
+    if (!touchDragState?.dragging || !touchDragState.ghost) return;
+    touchDragState.ghost.style.left = (touch.clientX - touchDragState.offsetX) + 'px';
+    touchDragState.ghost.style.top = (touch.clientY - touchDragState.offsetY) + 'px';
+
+    clearColumnHover();
+    const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.column-body');
+    if (target) {
+        target.classList.add('drag-over', 'touch-drop-target');
+        touchDragState.targetColId = target.dataset.colId;
+    } else {
+        touchDragState.targetColId = null;
+    }
+}
+
+function handleTouchCardStart(e) {
+    if (window.innerWidth > 1024 || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    touchDragState = {
+        cardId: e.currentTarget.dataset.cardId,
+        sourceColId: e.currentTarget.dataset.colId,
+        sourceEl: e.currentTarget,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        offsetX: rect.width / 2,
+        offsetY: 24,
+        dragging: false,
+        moved: false,
+        targetColId: null,
+        pressTimer: setTimeout(() => beginTouchDrag(touch), 220)
+    };
+}
+
+function handleTouchCardMove(e) {
+    if (!touchDragState || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchDragState.startX);
+    const deltaY = Math.abs(touch.clientY - touchDragState.startY);
+
+    if (!touchDragState.dragging && (deltaX > 8 || deltaY > 8)) {
+        touchDragState.moved = true;
+        clearTimeout(touchDragState.pressTimer);
+        return;
+    }
+
+    if (touchDragState.dragging) {
+        e.preventDefault();
+        updateTouchDragPosition(touch);
+    }
+}
+
+function handleTouchCardEnd(e) {
+    if (!touchDragState) return;
+    clearTimeout(touchDragState.pressTimer);
+
+    if (touchDragState.dragging) {
+        e.preventDefault();
+        suppressCardClickOnce = true;
+        moveCardToColumn(touchDragState.cardId, touchDragState.sourceColId, touchDragState.targetColId);
+    }
+
+    cleanupTouchDrag();
+}
+
+function handleTouchCardCancel() {
+    cleanupTouchDrag();
+}
 
 function handleDragStart(e) {
     draggedCardId = e.currentTarget.dataset.cardId;
@@ -361,8 +545,7 @@ function handleDragStart(e) {
 
 function handleDragEnd(e) {
     e.currentTarget.classList.remove('dragging');
-    // Remove hover effects on all columns
-    document.querySelectorAll('.column-body').forEach(el => el.classList.remove('drag-over'));
+    clearColumnHover();
 }
 
 function handleDragOver(e) {
@@ -389,31 +572,7 @@ function handleDrop(e) {
     targetColBody.classList.remove('drag-over');
     
     const targetColId = targetColBody.dataset.colId;
-    
-    if (sourceColId === targetColId) return; // Dropped in the same column
-    
-    // Find Card Object
-    const sourceCol = boardState.columns.find(c => c.id === sourceColId);
-    const targetCol = boardState.columns.find(c => c.id === targetColId);
-    
-    const cardIndex = sourceCol.cards.findIndex(c => c.id === draggedCardId);
-    if (cardIndex > -1) {
-        const [card] = sourceCol.cards.splice(cardIndex, 1);
-        targetCol.cards.push(card);
-        renderBoard(); // re-render to reflect state map
-        
-        // Notify PostgreSQL Engine Asynchronously
-        fetch('/api/board/move', {
-            method: 'POST',
-            headers: authHeaders,
-            body: JSON.stringify({
-                cardId: draggedCardId,
-                targetColId: targetColId,
-                newOrder: targetCol.cards.length, // roughly the end of the new list
-                workspace_id: activeWorkspaceId
-            })
-        }).catch(err => console.error('Failed pushing move to DB', err));
-    }
+    moveCardToColumn(draggedCardId, sourceColId, targetColId);
 }
 
 // --- Modal Logic --- //
