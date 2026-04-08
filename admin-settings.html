@@ -37,6 +37,42 @@
             transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         .btn-save:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+        @media (max-width: 768px) {
+            .settings-container {
+                padding: 20px;
+                max-width: 100%;
+            }
+
+            .settings-card {
+                padding: 20px;
+            }
+
+            .color-picker,
+            .settings-card .form-group div[style*="display: flex"] {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+
+            .text-input {
+                max-width: none;
+            }
+
+            .btn-save {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .settings-container {
+                padding: 14px;
+            }
+
+            .settings-card {
+                padding: 16px;
+            }
+        }
     </style>
 </head>
 <body>

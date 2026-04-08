@@ -25,6 +25,35 @@
         .input-group { flex: 1; }
         .input-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; }
         .input-group input, .input-group select { width: 100%; padding: 12px; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; outline:none; font-family:var(--font); }
+
+        @media (max-width: 768px) {
+            .members-container {
+                max-width: 100%;
+            }
+
+            .add-user-card {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 18px;
+            }
+
+            .member-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            main.main-content {
+                padding: 20px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .member-table th,
+            .member-table td {
+                padding: 12px;
+            }
+        }
     </style>
 </head>
 <body>

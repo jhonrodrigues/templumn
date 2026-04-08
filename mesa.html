@@ -45,6 +45,53 @@
         .cal-item.tiktok .platform-icon { background: #000; }
         .cal-item.youtube .platform-icon { background: #FF0000; }
         .cal-item.facebook .platform-icon { background: #1877F2; }
+
+        @media (max-width: 768px) {
+            .app-header {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            #list-grid {
+                margin-top: 20px !important;
+                max-width: 100% !important;
+            }
+
+            .cal-item {
+                padding: 16px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .cal-item > div {
+                width: 100%;
+            }
+
+            .cal-item > div:last-child {
+                text-align: left !important;
+            }
+
+            main.main-content {
+                padding: 20px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .cal-item {
+                padding: 14px;
+                border-radius: 14px;
+            }
+
+            .cal-item .platform-icon {
+                width: 28px;
+                height: 28px;
+                min-width: 28px;
+                font-size: 14px;
+            }
+        }
     </style>
 </head>
 <body>
