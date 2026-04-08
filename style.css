@@ -504,6 +504,12 @@ body {
 .label.red { background: var(--tag-red); color: var(--tag-red-text); }
 .label.green { background: var(--tag-green); color: var(--tag-green-text); }
 .label.yellow { background: var(--tag-yellow); color: var(--tag-yellow-text); }
+.label.orange { background: rgba(249, 115, 22, 0.16); color: #c2410c; }
+.label.pink { background: rgba(236, 72, 153, 0.16); color: #be185d; }
+.label.cyan { background: rgba(6, 182, 212, 0.16); color: #0e7490; }
+.label.teal { background: rgba(20, 184, 166, 0.16); color: #0f766e; }
+.label.gray { background: rgba(100, 116, 139, 0.16); color: #475569; }
+.label.lime { background: rgba(132, 204, 22, 0.18); color: #4d7c0f; }
 
 .card-title { font-size: 14px; font-weight: 500; margin-bottom: 12px; line-height: 1.4; }
 
@@ -637,6 +643,12 @@ body {
 .preset-label-chip.green { background: var(--tag-green); color: var(--tag-green-text); }
 .preset-label-chip.yellow { background: var(--tag-yellow); color: var(--tag-yellow-text); }
 .preset-label-chip.red { background: var(--tag-red); color: var(--tag-red-text); }
+.preset-label-chip.orange { background: rgba(249, 115, 22, 0.16); color: #c2410c; }
+.preset-label-chip.pink { background: rgba(236, 72, 153, 0.16); color: #be185d; }
+.preset-label-chip.cyan { background: rgba(6, 182, 212, 0.16); color: #0e7490; }
+.preset-label-chip.teal { background: rgba(20, 184, 166, 0.16); color: #0f766e; }
+.preset-label-chip.gray { background: rgba(100, 116, 139, 0.16); color: #475569; }
+.preset-label-chip.lime { background: rgba(132, 204, 22, 0.18); color: #4d7c0f; }
 
 .workspace-selector {
     display: flex;

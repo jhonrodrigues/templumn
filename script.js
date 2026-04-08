@@ -694,11 +694,8 @@ const saveCardBtn = document.getElementById('save-card-btn');
 const memberInput = document.getElementById('member-input');
 const membersList = document.getElementById('members-list');
 const addMemberBtn = document.getElementById('add-member-btn');
-const labelInput = document.getElementById('label-input');
-const labelColorInput = document.getElementById('label-color');
 const labelsEditor = document.getElementById('labels-editor');
 const presetLabelsList = document.getElementById('preset-labels-list');
-const addLabelBtn = document.getElementById('add-label-btn');
 const checklistInput = document.getElementById('checklist-input');
 const checklistItems = document.getElementById('checklist-items');
 const addChecklistBtn = document.getElementById('add-checklist-btn');
@@ -937,7 +934,6 @@ function openModal(card, colId) {
     if (editPlatformInput) editPlatformInput.value = card.platform || '';
     if (editDateInput) editDateInput.value = card.post_date || '';
     if (memberInput) memberInput.value = '';
-    if (labelInput) labelInput.value = '';
     if (checklistInput) checklistInput.value = '';
     if (commentInput) commentInput.value = '';
     if (imageInput) imageInput.value = '';
@@ -976,17 +972,6 @@ if (memberInput) {
     memberInput.addEventListener('input', () => {
         loadMemberSuggestions(memberInput.value.trim());
     });
-}
-
-if (addLabelBtn) {
-    addLabelBtn.onclick = () => {
-        if (!activeCardData || !labelInput || !labelColorInput) return;
-        const text = labelInput.value.trim();
-        if (!text) return;
-        activeCardData.labels.push({ text, color: labelColorInput.value || 'blue' });
-        labelInput.value = '';
-        renderLabelsEditor();
-    };
 }
 
 if (addChecklistBtn) {
