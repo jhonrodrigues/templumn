@@ -76,6 +76,20 @@
             padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
             background: var(--bg-surface); color: var(--text-main); font-family: var(--font);
         }
+        .calendar-day.clickable { cursor: pointer; transition: 0.2s ease; }
+        .calendar-day.clickable:hover { border-color: var(--primary); box-shadow: var(--shadow-sm); }
+        .calendar-detail-list { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+        .calendar-detail-item {
+            border: 1px solid var(--border); border-radius: 12px; padding: 14px;
+            background: var(--bg-app); display: flex; flex-direction: column; gap: 8px;
+        }
+        .calendar-detail-item.posted {
+            border-color: rgba(16, 185, 129, 0.45);
+            background: rgba(16, 185, 129, 0.12);
+        }
+        .calendar-detail-meta {
+            display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--text-muted);
+        }
     </style>
 </head>
 <body>
@@ -167,12 +181,44 @@
     </main>
     </div>
 
+    <div class="modal-overlay" id="calendar-day-modal">
+        <div class="modal-box" style="width: 760px; max-width: 92vw;">
+            <button class="close-modal" id="close-calendar-day-modal"><i class="fa-solid fa-xmark"></i></button>
+            <h2 id="calendar-day-modal-title" style="margin-bottom: 6px; color: var(--text-main);">Demandas do dia</h2>
+            <p id="calendar-day-modal-subtitle" style="color: var(--text-muted); font-size: 14px; margin-bottom: 18px;">Lista detalhada do dia selecionado.</p>
+            <div id="calendar-day-detail-list" class="calendar-detail-list"></div>
+        </div>
+    </div>
+
     <!-- Security Import -->
     <script>
         const pageToken = localStorage.getItem('templum-auth-token');
         if (!pageToken) window.location.href='/login.html';
         const getPageAuthHeaders = () => ({ 'Authorization': 'Bearer ' + pageToken });
         const monthInput = document.getElementById('calendar-month');
+        const calendarDayModal = document.getElementById('calendar-day-modal');
+        const calendarDayModalTitle = document.getElementById('calendar-day-modal-title');
+        const calendarDayModalSubtitle = document.getElementById('calendar-day-modal-subtitle');
+        const calendarDayDetailList = document.getElementById('calendar-day-detail-list');
+
+        function openCalendarDayModal(dateKey, cards, isGeneralView) {
+            const [year, month, day] = dateKey.split('-');
+            calendarDayModalTitle.innerText = `Demandas de ${day}/${month}/${year}`;
+            calendarDayModalSubtitle.innerText = `${cards.length} demanda(s) agendada(s) para este dia.`;
+            calendarDayDetailList.innerHTML = cards.length ? cards.map((card) => `
+                <div class="calendar-detail-item ${card.column_id === 'col-6' ? 'posted' : ''}">
+                    <strong>${card.title}</strong>
+                    <div class="calendar-detail-meta">
+                        ${card.post_time ? `<span><i class="fa-regular fa-clock"></i> ${card.post_time}</span>` : ''}
+                        ${card.platform ? `<span><i class="fa-brands ${getPlatformIcon(card.platform)}"></i> ${card.platform}</span>` : ''}
+                        ${card.column_title ? `<span><i class="fa-solid fa-tag"></i> ${card.column_title}</span>` : ''}
+                        ${isGeneralView ? `<span><i class="fa-solid fa-layer-group"></i> ${card.workspace_name || card.workspace_id || 'Conta'}</span>` : ''}
+                    </div>
+                    ${card.description ? `<div style="color: var(--text-muted); font-size: 13px;">${card.description}</div>` : ''}
+                </div>
+            `).join('') : '<div style="color: var(--text-muted);">Nenhuma demanda neste dia.</div>';
+            calendarDayModal.classList.add('active');
+        }
 
         function getPlatformIcon(platform) {
             if (platform === 'instagram') return 'fa-instagram';
@@ -243,11 +289,18 @@
                     `).join('');
 
                     grid.innerHTML += `
-                        <div class="calendar-day">
+                        <div class="calendar-day ${dayCards.length ? 'clickable' : ''}" data-date-key="${dateKey}">
                             <div class="day-number">${i}</div>
                             ${cardsHtml}
                         </div>
                     `;
+
+                    if (dayCards.length) {
+                        const dayEl = grid.querySelector(`[data-date-key="${dateKey}"]`);
+                        if (dayEl) {
+                            dayEl.addEventListener('click', () => openCalendarDayModal(dateKey, dayCards, isGeneralView));
+                        }
+                    }
                 }
 
                 const usedCells = firstDayOfWeek + daysInMonth;
@@ -263,6 +316,10 @@
         window.renderCalendarPage = renderCalendar;
         monthInput.value = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7);
         monthInput.addEventListener('change', renderCalendar);
+        document.getElementById('close-calendar-day-modal').addEventListener('click', () => calendarDayModal.classList.remove('active'));
+        calendarDayModal.addEventListener('click', (event) => {
+            if (event.target === calendarDayModal) calendarDayModal.classList.remove('active');
+        });
         renderCalendar();
     </script>
     <script src="script.js"></script>
