@@ -115,6 +115,10 @@
             
             <div class="add-user-card" id="add-user-box" style="display:none;">
                 <div class="input-group">
+                    <label>Nome</label>
+                    <input type="text" id="nu-name" placeholder="Nome do usuário">
+                </div>
+                <div class="input-group">
                     <label>E-mail (Login Oficial)</label>
                     <input type="email" id="nu-email" placeholder="nome@templum.com">
                 </div>
@@ -138,6 +142,7 @@
             <table class="member-table">
                 <thead>
                     <tr>
+                        <th>Nome</th>
                         <th>E-mail</th>
                         <th>Perfil (Role)</th>
                         <th>Status</th>
@@ -145,7 +150,7 @@
                     </tr>
                 </thead>
                 <tbody id="users-tbody">
-                    <tr><td colspan="4" style="text-align:center;">Carregando...</td></tr>
+                    <tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -160,10 +165,10 @@
         async function loadUsers() {
             try {
                 const r = await fetch('/api/users', { headers: getPageAuthHeaders() });
-                if(r.status === 403 || r.status === 401) {
-                     document.getElementById('users-tbody').innerHTML = '<tr><td colspan="4">Falha Fatal de Permissão: Apenas Masters/Gestores visualizam o RH.</td></tr>';
+                 if(r.status === 403 || r.status === 401) {
+                     document.getElementById('users-tbody').innerHTML = '<tr><td colspan="5">Falha Fatal de Permissão: Apenas Masters/Gestores visualizam o RH.</td></tr>';
                      return;
-                }
+                 }
                 const users = await r.json();
                 
                 // Show create tool safely if token valid role
@@ -177,15 +182,24 @@
                     if(u.role === 'gestor') { badge = 'role-gestor'; rName = 'Líder Executivo'; }
                     
                     h += `<tr>
+                        <td><input type="text" value="${u.name || ''}" data-user-name="${u.id}" style="width:100%; padding:10px; border-radius:8px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main);"></td>
+                        <td><span>${u.email}</span></td>
                         <td>
-                            <div style="display:flex; align-items:center; gap: 12px;">
-                                <img src="https://ui-avatars.com/api/?name=${u.email.charAt(0)}&background=random" class="avatar-sm" style="width:32px; height:32px;">
-                                <span>${u.email}</span>
+                            <select data-user-role="${u.id}" style="width:100%; padding:10px; border-radius:8px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main);">
+                                <option value="membro" ${u.role === 'membro' ? 'selected' : ''}>Membro</option>
+                                <option value="gestor" ${u.role === 'gestor' ? 'selected' : ''}>Gestor</option>
+                                <option value="master" ${u.role === 'master' ? 'selected' : ''}>Master</option>
+                            </select>
+                            <div style="margin-top:8px;"><span class="role-badge ${badge}">${rName}</span></div>
+                        </td>
+                        <td><span style="color:#10b981; font-size:13px; font-weight:600;"><i class="fa-solid fa-circle" style="font-size:8px; margin-right:4px;"></i>Ativo</span></td>
+                        <td>
+                            <input type="password" data-user-pass="${u.id}" placeholder="Nova senha" style="width:100%; padding:10px; border-radius:8px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main); margin-bottom:8px;">
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn" style="padding:8px 10px;" onclick="saveUser(${u.id})"><i class="fa-solid fa-save"></i></button>
+                                <button class="btn" style="background:transparent; color:red; padding:8px 10px;" onclick="delUser(${u.id})"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </td>
-                        <td><span class="role-badge ${badge}">${rName}</span></td>
-                        <td><span style="color:#10b981; font-size:13px; font-weight:600;"><i class="fa-solid fa-circle" style="font-size:8px; margin-right:4px;"></i>Ativo</span></td>
-                        <td><button class="btn" style="background:transparent; color:red; padding:4px;" onclick="delUser(${u.id})"><i class="fa-solid fa-trash"></i></button></td>
                     </tr>`;
                 });
                 document.getElementById('users-tbody').innerHTML = h;
@@ -200,18 +214,36 @@
             }
         }
 
+        async function saveUser(id) {
+            const name = document.querySelector(`[data-user-name="${id}"]`).value.trim();
+            const role = document.querySelector(`[data-user-role="${id}"]`).value;
+            const password = document.querySelector(`[data-user-pass="${id}"]`).value;
+            const r = await fetch('/api/users/' + id, {
+                method: 'PUT',
+                headers: {'Content-Type':'application/json', ...getPageAuthHeaders()},
+                body: JSON.stringify({ name, role, password })
+            });
+            if(r.ok) {
+                loadUsers();
+            } else {
+                const data = await r.json().catch(() => ({}));
+                alert(data.error || 'Não foi possível atualizar o usuário.');
+            }
+        }
+
         document.getElementById('nu-btn').onclick = async () => {
+             const name = document.getElementById('nu-name').value;
              const email = document.getElementById('nu-email').value;
              const password = document.getElementById('nu-pass').value;
              const role = document.getElementById('nu-role').value;
              if(!email || !password) return alert("Preencha Login e Senha!");
 
              const r = await fetch('/api/users', { 
-                 method:'POST', headers: {'Content-Type':'application/json', ...getPageAuthHeaders()},
-                 body: JSON.stringify({ email, password, role })
+                  method:'POST', headers: {'Content-Type':'application/json', ...getPageAuthHeaders()},
+                 body: JSON.stringify({ name, email, password, role })
              });
              if(r.ok) {
-                 document.getElementById('nu-email').value = ''; document.getElementById('nu-pass').value = '';
+                 document.getElementById('nu-name').value = ''; document.getElementById('nu-email').value = ''; document.getElementById('nu-pass').value = '';
                  loadUsers();
              } else alert('Não foi possível gravar membro. Talvez email já exista ou você não tenha nível.');
         };

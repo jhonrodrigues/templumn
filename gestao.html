@@ -182,23 +182,23 @@
                 <div class="stats-grid">
                     <div class="stat-card">
                         <span class="stat-title">Cards Abertos</span>
-                        <span class="stat-value">54</span>
-                        <span class="stat-footer success-text"><i class="fa-solid fa-arrow-trend-down"></i> -12% desde a última semana</span>
+                        <span class="stat-value" id="dash-total-cards">0</span>
+                        <span class="stat-footer" id="dash-total-footer"><i class="fa-solid fa-layer-group"></i> Total no workspace atual</span>
                     </div>
                     <div class="stat-card">
                         <span class="stat-title">Cards Atrasados</span>
-                        <span class="stat-value" style="color: #ef4444;">8</span>
+                        <span class="stat-value" id="dash-overdue-cards" style="color: #ef4444;">0</span>
                         <span class="stat-footer"><i class="fa-solid fa-circle-exclamation"></i> Requer atenção imediata</span>
                     </div>
                     <div class="stat-card">
                         <span class="stat-title">Taxa de Entrega</span>
-                        <span class="stat-value">92%</span>
-                        <span class="stat-footer success-text"><i class="fa-solid fa-check"></i> Dentro da meta de 90%</span>
+                        <span class="stat-value" id="dash-delivery-rate">0%</span>
+                        <span class="stat-footer success-text"><i class="fa-solid fa-check"></i> Concluídos + postados</span>
                     </div>
                     <div class="stat-card">
                         <span class="stat-title">Membros Ativos (Hoje)</span>
-                        <span class="stat-value">12</span>
-                        <span class="stat-footer"><i class="fa-solid fa-users"></i> Equipe full da agência</span>
+                        <span class="stat-value" id="dash-active-members">0</span>
+                        <span class="stat-footer"><i class="fa-solid fa-users"></i> Usuários cadastrados</span>
                     </div>
                 </div>
 
@@ -206,31 +206,9 @@
                     <div class="dash-panel">
                         <div class="panel-header">
                             <span class="panel-title">Radar de Urgências Mundiais</span>
-                            <button style="background: none; border: none; color: var(--primary); font-weight: 600; cursor: pointer;">Ver todos</button>
+                            <span style="color: var(--text-muted); font-size: 12px;">Ordenado por vencimento</span>
                         </div>
-                        <ul class="task-list">
-                            <li class="task-item">
-                                <div class="task-info-left">
-                                    <span class="task-title">Revisão Carrossel EBD</span>
-                                    <span class="task-meta"><span class="ministry-tag">Escola Bíblica</span> • Resp: Pedro Designer</span>
-                                </div>
-                                <span class="urgent"><i class="fa-regular fa-clock"></i> 2 horas restantes</span>
-                            </li>
-                            <li class="task-item">
-                                <div class="task-info-left">
-                                    <span class="task-title">Aprovação Final Culto Vida</span>
-                                    <span class="task-meta"><span class="ministry-tag">IBL Principal</span> • Resp: Social Media</span>
-                                </div>
-                                <span class="urgent"><i class="fa-solid fa-fire"></i> Atrasado 1h</span>
-                            </li>
-                            <li class="task-item">
-                                <div class="task-info-left">
-                                    <span class="task-title">Ajuste de Cor Roteiro</span>
-                                    <span class="task-meta"><span class="ministry-tag">Juventude</span> • Resp: Editor</span>
-                                </div>
-                                <span style="font-weight: 600; color: #f59e0b;">Entrega hoje 18:00</span>
-                            </li>
-                        </ul>
+                        <ul class="task-list" id="dashboard-urgent-list"></ul>
                     </div>
 
                     <div class="dash-panel">
@@ -239,11 +217,11 @@
                         </div>
                         <div class="progress-circle">
                             <div class="progress-inner">
-                                <span style="font-size: 28px; font-weight: 800;">70%</span>
+                                <span id="dashboard-month-rate" style="font-size: 28px; font-weight: 800;">0%</span>
                                 <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Concluído</span>
                             </div>
                         </div>
-                        <p style="text-align: center; color: var(--text-muted); font-size: 14px;">120 de 160 tarefas entregues para toda a IBL Alphaville esse mês.</p>
+                        <p id="dashboard-month-summary" style="text-align: center; color: var(--text-muted); font-size: 14px;">0 de 0 tarefas entregues este mês.</p>
                     </div>
                 </div>
             </div>
@@ -260,21 +238,28 @@
                 if (res.status === 401 || res.status === 403) return window.location.href='/login.html';
                 
                 const data = await res.json();
-                
-                // Update Total
-                const totalEls = document.querySelectorAll('.stat-value');
-                if(totalEls.length >= 3) {
-                    totalEls[0].innerText = data.total_cards; // Total Cards
-                    totalEls[2].innerText = data.taxa_entrega + '%'; // Entrega %
-                }
-                
-                // Update Circle
-                const circleInner = document.querySelector('.progress-inner span');
-                if(circleInner) {
-                    circleInner.innerText = data.taxa_entrega + '%';
-                    const progCircle = document.querySelector('.progress-circle');
-                    progCircle.style.background = `conic-gradient(var(--primary) ${data.taxa_entrega}%, var(--bg-app) 0deg)`;
-                }
+                document.getElementById('dash-total-cards').innerText = data.total_cards ?? 0;
+                document.getElementById('dash-overdue-cards').innerText = data.cards_atrasados ?? 0;
+                document.getElementById('dash-delivery-rate').innerText = (data.taxa_entrega ?? 0) + '%';
+                document.getElementById('dash-active-members').innerText = data.membros_ativos ?? 0;
+                document.getElementById('dash-total-footer').innerHTML = `<i class="fa-solid fa-square-check"></i> ${data.cards_hoje ?? 0} entrega(s) para hoje`;
+
+                const monthRate = data.entregas_mes_percentual ?? 0;
+                document.getElementById('dashboard-month-rate').innerText = monthRate + '%';
+                document.getElementById('dashboard-month-summary').innerText = `${data.entregas_mes_concluidas ?? 0} de ${data.entregas_mes_total ?? 0} tarefas entregues neste mês.`;
+                const progCircle = document.querySelector('.progress-circle');
+                progCircle.style.background = `conic-gradient(var(--primary) ${monthRate}%, var(--bg-app) 0deg)`;
+
+                const urgentList = document.getElementById('dashboard-urgent-list');
+                urgentList.innerHTML = (data.urgent_cards || []).length ? data.urgent_cards.map((card) => `
+                    <li class="task-item">
+                        <div class="task-info-left">
+                            <span class="task-title">${card.title}</span>
+                            <span class="task-meta"><span class="ministry-tag">${card.workspace_name || card.workspace_id || 'Conta'}</span> ${card.assignee ? `• Resp: ${card.assignee}` : ''}</span>
+                        </div>
+                        <span class="urgent"><i class="fa-regular fa-clock"></i> ${card.post_date || 'Sem data'}${card.post_time ? ' ' + card.post_time : ''}</span>
+                    </li>
+                `).join('') : '<li class="task-item"><div class="task-info-left"><span class="task-title">Nenhuma urgência no momento</span><span class="task-meta">Tudo sob controle.</span></div></li>';
                 
             } catch(e) {
                 console.error('Falha ao carregar dashboard ao vivo');

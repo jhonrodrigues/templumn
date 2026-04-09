@@ -44,6 +44,7 @@ async function initDb() {
         // Setup initial Admin Account
         const hash = await bcrypt.hash('123456', 8);
         await pool.query('INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING', ['admin@templum.com', hash, 'master']);
+        try { await pool.query("ALTER TABLE users ADD COLUMN name VARCHAR(255) DEFAULT '';"); } catch(e){}
         
         // Auto Migration para fase 6 e 7
         try { await pool.query('ALTER TABLE cards ADD COLUMN platform VARCHAR(50);'); } catch(e){}
@@ -267,7 +268,7 @@ app.delete('/api/workspaces/:id', authGuard, requireRole(['master', 'gestor']), 
 // --- API: Users Governance ---
 app.get('/api/users', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, email, role FROM users ORDER BY id ASC');
+        const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY id ASC');
         res.json(result.rows);
     } catch(err) { res.status(500).send('Error loading users'); }
 });
@@ -323,21 +324,34 @@ app.get('/api/users/options', authGuard, async (req, res) => {
     try {
         const search = (req.query.q || '').trim();
         const result = search
-            ? await pool.query('SELECT email FROM users WHERE email ILIKE $1 ORDER BY email ASC LIMIT 10', [`%${search}%`])
-            : await pool.query('SELECT email FROM users ORDER BY email ASC LIMIT 50');
+            ? await pool.query('SELECT name, email FROM users WHERE email ILIKE $1 OR name ILIKE $1 ORDER BY name ASC, email ASC LIMIT 10', [`%${search}%`])
+            : await pool.query('SELECT name, email FROM users ORDER BY name ASC, email ASC LIMIT 50');
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: 'Erro ao buscar usuarios' });
     }
 });
 app.post('/api/users', authGuard, async (req, res) => {
-    const { email, password, role } = req.body;
+    const { name, email, password, role } = req.body;
     try {
         if(req.user.role !== 'master' && req.user.role !== 'gestor') return res.status(403).json({ error: 'Permissão Negada' });
         const hash = await bcrypt.hash(password, 8);
-        await pool.query('INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3)', [email, hash, role || 'membro']);
+        await pool.query('INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4)', [name || '', email, hash, role || 'membro']);
         res.json({ success: true });
     } catch(err) { res.status(500).json({ error: 'Erro ao criar membro.' }); }
+});
+app.put('/api/users/:id', authGuard, async (req, res) => {
+    if(req.user.role !== 'master') return res.status(403).json({ error: 'Permissão Negada' });
+    const { name, role, password } = req.body;
+    try {
+        if (password && password.trim()) {
+            const hash = await bcrypt.hash(password.trim(), 8);
+            await pool.query('UPDATE users SET name = $1, role = $2, password_hash = $3 WHERE id = $4', [name || '', role || 'membro', hash, req.params.id]);
+        } else {
+            await pool.query('UPDATE users SET name = $1, role = $2 WHERE id = $3', [name || '', role || 'membro', req.params.id]);
+        }
+        res.json({ success: true });
+    } catch(err) { res.status(500).json({ error: 'Erro ao atualizar membro.' }); }
 });
 app.delete('/api/users/:id', authGuard, async (req, res) => {
     if(req.user.role !== 'master') return res.status(403).json({ error: 'Permissão Negada' });
@@ -581,26 +595,50 @@ app.get('/api/my-cards', authGuard, async (req, res) => {
 app.get('/api/dashboard', authGuard, async (req, res) => {
     try {
         const workspace = req.query.workspace;
-        const totalRes = workspace
-            ? await pool.query(`SELECT COUNT(*) as t FROM cards WHERE ${workspaceVisibilityClause(1)}`, [workspace])
-            : await pool.query('SELECT COUNT(*) as t FROM cards');
-        const grouped = workspace
-            ? await pool.query(`SELECT column_id, COUNT(*) as c FROM cards WHERE ${workspaceVisibilityClause(1)} GROUP BY column_id`, [workspace])
-            : await pool.query('SELECT column_id, COUNT(*) as c FROM cards GROUP BY column_id');
-        
-        let total = parseInt(totalRes.rows[0].t) || 0;
-        let completed = 0; // Col-5 é o Concluido
-        
-        grouped.rows.forEach(r => {
-            if(r.column_id === 'col-5') completed = parseInt(r.c);
-        });
-        
-        let taxaDeEntrega = total > 0 ? Math.round((completed / total) * 100) : 100;
+        const isAllWorkspaces = workspace === '__all__';
+        const filterClause = isAllWorkspaces ? '1=1' : (workspace ? workspaceVisibilityClause(1) : '1=1');
+        const params = isAllWorkspaces ? [] : (workspace ? [workspace] : []);
+        const cardsRes = await pool.query(
+            `SELECT c.id, c.title, c.post_date, c.post_time, c.column_id, c.assignee, c.workspace_id, w.name as workspace_name
+             FROM cards c
+             LEFT JOIN workspaces w ON w.id = c.workspace_id
+             WHERE ${filterClause}
+             ORDER BY c.post_date ASC NULLS LAST, c.post_time ASC NULLS LAST, c.card_order ASC`,
+            params
+        );
 
-        res.json({ 
-            total_cards: total, 
+        const usersRes = await pool.query('SELECT COUNT(*) AS total FROM users');
+        const cards = cardsRes.rows;
+        const total = cards.length;
+        const completed = cards.filter((card) => card.column_id === 'col-5' || card.column_id === 'col-6').length;
+        const posted = cards.filter((card) => card.column_id === 'col-6').length;
+        const overdue = cards.filter((card) => card.post_date && card.post_date < getSaoPauloDateParts().date && card.column_id !== 'col-5' && card.column_id !== 'col-6').length;
+        const dueToday = cards.filter((card) => card.post_date === getSaoPauloDateParts().date && card.column_id !== 'col-6').length;
+        const taxaDeEntrega = total > 0 ? Math.round((completed / total) * 100) : 100;
+
+        const currentMonth = getSaoPauloDateParts().date.slice(0, 7);
+        const monthlyCards = cards.filter((card) => card.post_date && card.post_date.startsWith(currentMonth));
+        const monthlyCompleted = monthlyCards.filter((card) => card.column_id === 'col-5' || card.column_id === 'col-6').length;
+        const monthlyCompletion = monthlyCards.length > 0 ? Math.round((monthlyCompleted / monthlyCards.length) * 100) : 100;
+
+        const urgentCards = cards
+            .filter((card) => card.post_date && card.column_id !== 'col-5' && card.column_id !== 'col-6')
+            .slice()
+            .sort((a, b) => `${a.post_date || ''} ${a.post_time || ''}`.localeCompare(`${b.post_date || ''} ${b.post_time || ''}`))
+            .slice(0, 5);
+
+        res.json({
+            total_cards: total,
             cards_concluidos: completed,
-            taxa_entrega: taxaDeEntrega
+            cards_postados: posted,
+            cards_atrasados: overdue,
+            cards_hoje: dueToday,
+            membros_ativos: Number(usersRes.rows[0].total || 0),
+            taxa_entrega: taxaDeEntrega,
+            entregas_mes_total: monthlyCards.length,
+            entregas_mes_concluidas: monthlyCompleted,
+            entregas_mes_percentual: monthlyCompletion,
+            urgent_cards: urgentCards
         });
     } catch (err) {
         res.status(500).json({ error: 'Failed Dashboard' });
