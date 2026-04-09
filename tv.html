@@ -37,6 +37,8 @@
         .tv-calendar-grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; }
         .tv-calendar-label { text-align:center; color: var(--text-muted); font-size: 12px; font-weight:700; text-transform:uppercase; }
         .tv-day { min-height: 120px; border: 1px solid var(--border); border-radius: 16px; padding: 10px; background: var(--bg-surface); display:flex; flex-direction:column; gap:8px; }
+        .tv-day.clickable { cursor: pointer; transition: 0.2s ease; }
+        .tv-day.clickable:hover { border-color: var(--primary); box-shadow: var(--shadow-sm); }
         .tv-day.empty { opacity: 0.3; background: rgba(15,23,42,0.25); }
         .tv-day-number { font-size: 16px; font-weight: 800; }
         .tv-day-item { border-radius: 10px; padding: 6px 8px; background: var(--bg-app); border: 1px solid var(--border); font-size: 11px; }
@@ -52,6 +54,13 @@
         .tv-auth-box input { width: 100%; padding: 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); text-align:center; font-size: 28px; letter-spacing: 10px; margin: 18px 0; }
         .tv-auth-box button { width: 100%; padding: 14px; border: none; border-radius: 12px; background: var(--primary); color: white; font-weight: 700; cursor: pointer; }
         .tv-footer { position:fixed; right:24px; bottom:18px; color: var(--text-muted); font-size: 12px; }
+        .tv-day-modal { position: fixed; inset: 0; background: rgba(2,6,23,0.82); display:none; align-items:center; justify-content:center; z-index: 25; }
+        .tv-day-modal.active { display:flex; }
+        .tv-day-modal-box { width: min(760px, 92vw); max-height: 82vh; overflow-y: auto; background: var(--bg-surface); border:1px solid var(--border); border-radius: 20px; padding: 24px; }
+        .tv-day-modal-list { display:flex; flex-direction:column; gap:12px; margin-top:18px; }
+        .tv-day-modal-item { border:1px solid var(--border); border-radius: 14px; padding: 14px; background: var(--bg-app); }
+        .tv-day-modal-item.posted { border-color: rgba(16,185,129,0.45); background: rgba(16,185,129,0.12); }
+        .tv-day-modal-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; color: var(--text-muted); font-size:12px; }
     </style>
 </head>
 <body>
@@ -62,6 +71,19 @@
             <input type="password" id="tv-code-input" maxlength="4" inputmode="numeric" placeholder="0000">
             <button id="tv-auth-btn">Entrar no painel</button>
             <div id="tv-auth-error" style="margin-top: 12px; color: #ef4444; font-size: 13px;"></div>
+        </div>
+    </div>
+
+    <div class="tv-day-modal" id="tv-day-modal">
+        <div class="tv-day-modal-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                <div>
+                    <h2 id="tv-day-modal-title">Demandas do dia</h2>
+                    <p id="tv-day-modal-subtitle" style="color: var(--text-muted); margin-top: 6px;">Detalhes do dia selecionado.</p>
+                </div>
+                <button id="tv-day-modal-close" style="width:40px; height:40px; border-radius:999px; border:1px solid var(--border); background: var(--bg-app); color: var(--text-main); cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="tv-day-modal-list" class="tv-day-modal-list"></div>
         </div>
     </div>
 
@@ -111,6 +133,7 @@
     <script>
         const TV_TOKEN_KEY = 'templum-tv-token';
         let activeTvView = 'calendar';
+        let tvCalendarDayMap = {};
 
         function getTvHeaders() {
             return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem(TV_TOKEN_KEY) };
@@ -142,6 +165,7 @@
             const firstDay = new Date(year, month - 1, 1).getDay();
             const labels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
             const scheduled = [];
+            tvCalendarDayMap = {};
             (columns || []).forEach((column) => {
                 (column.cards || []).forEach((card) => {
                     if (card.post_date && card.post_date.startsWith(monthKey)) {
@@ -156,8 +180,10 @@
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayKey = `${monthKey}-${String(day).padStart(2, '0')}`;
                 const items = scheduled.filter((card) => card.post_date === dayKey).slice(0, 4);
+                const allItems = scheduled.filter((card) => card.post_date === dayKey);
+                tvCalendarDayMap[dayKey] = allItems;
                 grid.innerHTML += `
-                    <div class="tv-day">
+                    <div class="tv-day ${allItems.length ? 'clickable' : ''}" data-tv-day="${dayKey}">
                         <div class="tv-day-number">${day}</div>
                         ${items.map((card) => `
                             <div class="tv-day-item ${card.column_id === 'col-6' ? 'posted' : ''}">
@@ -169,12 +195,33 @@
                                 </div>
                             </div>
                         `).join('')}
+                        ${allItems.length > 4 ? `<div style="font-size: 11px; color: var(--text-muted); font-weight: 700;">+${allItems.length - 4} item(ns)</div>` : ''}
                     </div>
                 `;
             }
             if (scheduled.length === 0) {
                 grid.innerHTML += '<div style="grid-column: 1 / -1; color: var(--text-muted); padding: 18px 4px;">Nenhuma demanda agendada para este mês.</div>';
             }
+        }
+
+        function openTvDayModal(dayKey) {
+            const items = tvCalendarDayMap[dayKey] || [];
+            const [year, month, day] = dayKey.split('-');
+            document.getElementById('tv-day-modal-title').innerText = `Demandas de ${day}/${month}/${year}`;
+            document.getElementById('tv-day-modal-subtitle').innerText = `${items.length} demanda(s) neste dia.`;
+            document.getElementById('tv-day-modal-list').innerHTML = items.length ? items.map((card) => `
+                <div class="tv-day-modal-item ${card.column_id === 'col-6' ? 'posted' : ''}">
+                    <strong>${card.title}</strong>
+                    <div class="tv-day-modal-meta">
+                        ${card.post_time ? `<span><i class="fa-regular fa-clock"></i> ${card.post_time}</span>` : ''}
+                        ${card.platform ? `<span><i class="fa-brands fa-${card.platform === 'youtube' ? 'youtube' : card.platform === 'instagram' ? 'instagram' : card.platform === 'facebook' ? 'facebook' : card.platform === 'tiktok' ? 'tiktok' : 'globe'}"></i> ${card.platform}</span>` : ''}
+                        ${card.column_title ? `<span><i class="fa-solid fa-tag"></i> ${card.column_title}</span>` : ''}
+                        ${card.workspace_name || card.workspace_id ? `<span><i class="fa-solid fa-layer-group"></i> ${card.workspace_name || card.workspace_id}</span>` : ''}
+                    </div>
+                    ${card.description ? `<div style="color: var(--text-muted); margin-top:8px; font-size: 13px;">${card.description}</div>` : ''}
+                </div>
+            `).join('') : '<div style="color: var(--text-muted);">Nenhuma demanda neste dia.</div>';
+            document.getElementById('tv-day-modal').classList.add('active');
         }
 
         function setTvView(view) {
@@ -257,6 +304,15 @@
         updateClock();
         document.querySelectorAll('[data-tv-view]').forEach((button) => {
             button.addEventListener('click', () => setTvView(button.dataset.tvView));
+        });
+        document.getElementById('tv-calendar-grid').addEventListener('click', (event) => {
+            const dayEl = event.target.closest('[data-tv-day]');
+            if (!dayEl) return;
+            openTvDayModal(dayEl.dataset.tvDay);
+        });
+        document.getElementById('tv-day-modal-close').addEventListener('click', () => document.getElementById('tv-day-modal').classList.remove('active'));
+        document.getElementById('tv-day-modal').addEventListener('click', (event) => {
+            if (event.target.id === 'tv-day-modal') document.getElementById('tv-day-modal').classList.remove('active');
         });
         setTvView('calendar');
         if (localStorage.getItem(TV_TOKEN_KEY)) {

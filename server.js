@@ -27,6 +27,13 @@ function addRecurringDate(baseDate, recurrenceType) {
     return `${nextYear}-${nextMonth}-${nextDay}`;
 }
 
+function normalizeRecurrenceType(value) {
+    const normalized = String(value || 'none').trim().toLowerCase();
+    if (normalized === 'weekly' || normalized === 'mensal') return normalized === 'mensal' ? 'monthly' : 'weekly';
+    if (normalized === 'monthly' || normalized === 'semanal') return normalized === 'semanal' ? 'weekly' : 'monthly';
+    return 'none';
+}
+
 function getSaoPauloDateParts(date = new Date()) {
     const formatter = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo',
@@ -484,6 +491,7 @@ app.post('/api/board/move', authGuard, async (req, res) => {
 app.post('/api/cards', authGuard, async (req, res) => {
     await ensureCardSchema();
     const { title, column_id, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files } = req.body;
+    const normalizedRecurrenceType = normalizeRecurrenceType(recurrence_type);
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     const visibleWorkspaces = normalizeWorkspaceList(resolvedWS, visible_workspaces);
     const serializedVisibleWorkspaces = JSON.stringify(visibleWorkspaces);
@@ -495,7 +503,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
         const order = maxRes.rows[0].next_order;
         await pool.query(
             'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, attachments_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14)',
-            [id, column_id, title, order, platform, post_date, post_time || null, recurrence_type || 'none', resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0)]
+            [id, column_id, title, order, platform, post_date, post_time || null, normalizedRecurrenceType, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0)]
         );
         res.json({ success: true, id, title });
     } catch (err) {
@@ -508,6 +516,7 @@ app.put('/api/cards/:id', authGuard, async (req, res) => {
     await ensureCardSchema();
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
     const { title, description, platform, post_date, post_time, recurrence_type, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id } = req.body;
+    const normalizedRecurrenceType = normalizeRecurrenceType(recurrence_type);
     try {
         const serializedLabels = Array.isArray(labels) ? JSON.stringify(labels) : '[]';
         const serializedMembers = Array.isArray(members) ? JSON.stringify(members) : '[]';
@@ -525,7 +534,7 @@ app.put('/api/cards/:id', authGuard, async (req, res) => {
                  labels = $8::jsonb, members = $9::jsonb, checklist = $10::jsonb, comments = $11::jsonb, comments_count = $12,
                  images = $13::jsonb, files = $14::jsonb, visible_workspaces = $15::jsonb, attachments_count = $16
              WHERE id = $17 AND ${workspaceVisibilityClause(18)}`,
-            [title, description || '', platform || null, post_date || null, post_time || null, recurrence_type || 'none', assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedFiles, serializedVisibleWorkspaces, attachmentsCount, req.params.id, workspace]
+            [title, description || '', platform || null, post_date || null, post_time || null, normalizedRecurrenceType, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedFiles, serializedVisibleWorkspaces, attachmentsCount, req.params.id, workspace]
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
         res.json({ success: true });
@@ -583,9 +592,18 @@ app.post('/api/cards/:id/mark-posted', authGuard, async (req, res) => {
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
 
-        if (card.recurrence_type === 'weekly' || card.recurrence_type === 'monthly') {
-            const nextDate = addRecurringDate(card.post_date, card.recurrence_type);
+        const recurrenceType = normalizeRecurrenceType(card.recurrence_type);
+        if (recurrenceType === 'weekly' || recurrenceType === 'monthly') {
+            const sourceDate = card.post_date || getSaoPauloDateParts().date;
+            const nextDate = addRecurringDate(sourceDate, recurrenceType);
             if (nextDate) {
+                const duplicateRes = await pool.query(
+                    'SELECT id FROM cards WHERE title = $1 AND workspace_id = $2 AND post_date = $3 AND recurrence_type = $4 LIMIT 1',
+                    [card.title, card.workspace_id, nextDate, recurrenceType]
+                );
+                if (duplicateRes.rows.length > 0) {
+                    return res.json({ success: true, recurring_created: false, reason: 'duplicate' });
+                }
                 const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND ${workspaceVisibilityClause(2)}`, [card.column_id, card.workspace_id]);
                 const order = maxRes.rows[0].next_order;
                 const nextId = 'card-' + Date.now() + Math.floor(Math.random() * 1000);
@@ -610,11 +628,12 @@ app.post('/api/cards/:id/mark-posted', authGuard, async (req, res) => {
                         card.platform || null,
                         nextDate,
                         card.post_time || null,
-                        card.recurrence_type,
+                        recurrenceType,
                         card.workspace_id,
                         card.assignee || null
                     ]
                 );
+                return res.json({ success: true, recurring_created: true, next_date: nextDate });
             }
         }
 
