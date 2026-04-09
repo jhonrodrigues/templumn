@@ -228,10 +228,12 @@
                 <div class="dash-panel" style="margin-top: 24px;" id="tv-access-panel">
                     <div class="panel-header">
                         <span class="panel-title">Acesso da TV</span>
-                        <button id="regen-tv-code-btn" style="background: none; border: none; color: var(--primary); font-weight: 600; cursor: pointer;">Gerar novo código</button>
                     </div>
                     <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-                        <div style="font-size: 42px; font-weight: 800; letter-spacing: 6px;" id="tv-code-value">0000</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="font-size: 42px; font-weight: 800; letter-spacing: 6px;" id="tv-code-value">0000</div>
+                            <button id="regen-tv-code-btn" title="Renovar token da TV" aria-label="Renovar token da TV" style="width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); display: inline-flex; align-items: center; justify-content: center; cursor: pointer;"><i class="fa-solid fa-rotate-right"></i></button>
+                        </div>
                         <div style="color: var(--text-muted);">
                             <div>Acesse na TV em <strong>/tv</strong></div>
                             <div>Digite esse código de 4 dígitos para liberar a visualização.</div>
