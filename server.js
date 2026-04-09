@@ -258,11 +258,13 @@ async function ensureSystemSettingsSchema() {
         CREATE TABLE IF NOT EXISTS system_settings (
             id INTEGER PRIMARY KEY,
             primary_color VARCHAR(10) NOT NULL,
-            tv_access_code VARCHAR(4) DEFAULT '0000'
+            tv_access_code VARCHAR(4) DEFAULT '0000',
+            logo TEXT DEFAULT ''
         )
     `);
     try { await pool.query("ALTER TABLE system_settings ADD COLUMN tv_access_code VARCHAR(4) DEFAULT '0000';"); } catch (e) {}
-    await pool.query("INSERT INTO system_settings (id, primary_color, tv_access_code) VALUES (1, '#4F46E5', '0000') ON CONFLICT (id) DO NOTHING;");
+    try { await pool.query("ALTER TABLE system_settings ADD COLUMN logo TEXT DEFAULT '';"); } catch (e) {}
+    await pool.query("INSERT INTO system_settings (id, primary_color, tv_access_code, logo) VALUES (1, '#4F46E5', '0000', '') ON CONFLICT (id) DO NOTHING;");
 }
 
 // =======================
@@ -844,25 +846,34 @@ app.post('/api/tv/auth', async (req, res) => {
 app.get('/api/settings', async (req, res) => {
     try {
         await ensureSystemSettingsSchema();
-        const result = await pool.query('SELECT primary_color FROM system_settings LIMIT 1');
+        const result = await pool.query('SELECT primary_color, logo FROM system_settings LIMIT 1');
         if (result.rows.length > 0) {
-            res.json({ primary_color: result.rows[0].primary_color });
+            res.json({ 
+                primary_color: result.rows[0].primary_color,
+                logo_url: result.rows[0].logo || null
+            });
         } else {
-            res.json({ primary_color: '#4F46E5' });
+            res.json({ primary_color: '#4F46E5', logo_url: null });
         }
     } catch (err) {
-        // Return default gracefully on first init
-        res.json({ primary_color: '#4F46E5' });
+        res.json({ primary_color: '#4F46E5', logo_url: null });
     }
 });
 
 app.post('/api/settings', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
-    const { primary_color } = req.body;
+    const { primary_color, logo } = req.body;
     try {
-        await pool.query(`
-            INSERT INTO system_settings (id, primary_color) VALUES (1, $1)
-            ON CONFLICT (id) DO UPDATE SET primary_color = $1
-        `, [primary_color]);
+        if (logo) {
+            await pool.query(`
+                INSERT INTO system_settings (id, primary_color, logo) VALUES (1, $1, $2)
+                ON CONFLICT (id) DO UPDATE SET primary_color = $1, logo = $2
+            `, [primary_color, logo]);
+        } else {
+            await pool.query(`
+                INSERT INTO system_settings (id, primary_color) VALUES (1, $1)
+                ON CONFLICT (id) DO UPDATE SET primary_color = $1
+            `, [primary_color]);
+        }
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to update settings' });

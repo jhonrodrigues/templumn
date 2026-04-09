@@ -331,6 +331,18 @@ async function initBranding() {
         if (data.primary_color) {
             document.documentElement.style.setProperty('--primary', data.primary_color);
         }
+        if (data.logo_url) {
+            const logoContainer = document.querySelector('.logo');
+            if (logoContainer) {
+                const existingImg = logoContainer.querySelector('.custom-logo');
+                if (existingImg) existingImg.remove();
+                const img = document.createElement('img');
+                img.src = data.logo_url;
+                img.className = 'custom-logo';
+                img.style.cssText = 'max-height: 36px; max-width: 120px; border-radius: 6px; margin-right: 8px;';
+                logoContainer.insertBefore(img, logoContainer.firstChild);
+            }
+        }
     } catch(err) {
         console.error('Sem conexao, mantendo cor original.');
     }

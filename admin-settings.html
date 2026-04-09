@@ -185,6 +185,19 @@
                         <input type="text" class="text-input" value="Templum">
                     </div>
 
+                    <div class="form-group">
+                        <label>Logo da Agência (para o Dashboard)</label>
+                        <p>Carregue um logo para exibir no topo do Kanban. Tamanho recomendado: 200x50px.</p>
+                        <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                            <input type="file" id="logo-upload" accept="image/*" style="display: none;">
+                            <button type="button" class="btn-save" onclick="document.getElementById('logo-upload').click()" style="background: var(--bg-app); color: var(--text-main); border: 1px solid var(--border);"><i class="fa-solid fa-upload"></i> Escolher Imagem</button>
+                            <div id="logo-preview-container" style="display: none;">
+                                <img id="logo-preview" style="max-height: 50px; max-width: 200px; border-radius: 8px; border: 1px solid var(--border);">
+                                <button type="button" onclick="clearLogo()" style="margin-left: 8px; background: none; border: none; color: #ef4444; cursor: pointer;"><i class="fa-solid fa-times"></i> Remover</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <hr style="border: 0; border-top: 1px solid var(--border); margin: 32px 0;">
 
                     <button class="btn-save" id="save-settings-btn"><i class="fa-solid fa-save"></i> Salvar Identidade</button>
@@ -453,6 +466,79 @@
 
         loadWorkspaceAdmin();
         loadLabelAdmin();
+
+        const logoUpload = document.getElementById('logo-upload');
+        const logoPreview = document.getElementById('logo-preview');
+        const logoPreviewContainer = document.getElementById('logo-preview-container');
+        window.logoCleared = false;
+
+        fetch('/api/settings').then(r => r.json()).then(data => {
+            if (data.logo_url) {
+                logoPreview.src = data.logo_url;
+                logoPreviewContainer.style.display = 'inline-block';
+            }
+        }).catch(() => {});
+
+        window.clearLogo = function() {
+            logoPreview.src = '';
+            logoPreviewContainer.style.display = 'none';
+            logoUpload.value = '';
+            window.logoCleared = true;
+        };
+        window.logoCleared = false;
+
+        logoUpload.addEventListener('change', (e) => {
+            window.logoCleared = false;
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                logoPreview.src = e.target.result;
+                logoPreviewContainer.style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        window.clearLogo = function() {
+            logoPreview.src = '';
+            logoPreviewContainer.style.display = 'none';
+            logoUpload.value = '';
+            window.logoCleared = true;
+        };
+
+        saveBtn.addEventListener('click', async () => {
+            const finalColor = hexInput.value;
+            const logoFile = logoUpload.files[0];
+            let logoBase64 = null;
+
+            if (window.logoCleared) {
+                logoBase64 = '';
+            } else if (logoFile) {
+                logoBase64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(logoFile);
+                });
+            }
+
+            try {
+                saveBtn.innerHTML = 'Salvando...';
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { ...authHeaders, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        primary_color: finalColor,
+                        logo: logoBase64
+                    })
+                });
+                alert('Sucesso! A nova identidade foi salva.');
+                window.logoCleared = false;
+            } catch(err) {
+                 alert('Erro ao contatar o servidor no momento do save.');
+            } finally {
+                saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Identidade';
+            }
+        });
     </script>
 </body>
 </html>
