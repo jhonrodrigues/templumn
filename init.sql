@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS cards (
     platform VARCHAR(50),
     post_date VARCHAR(50),
     post_time VARCHAR(10),
+    recurrence_type VARCHAR(20) DEFAULT 'none',
     workspace_id VARCHAR(50) DEFAULT 'igreja',
     assignee VARCHAR(100)
 );
@@ -40,7 +41,8 @@ CREATE TABLE IF NOT EXISTS cards (
 -- Configurações Globais (Primary Color)
 CREATE TABLE IF NOT EXISTS system_settings (
     id INTEGER PRIMARY KEY,
-    primary_color VARCHAR(10) NOT NULL
+    primary_color VARCHAR(10) NOT NULL,
+    tv_access_code VARCHAR(4) DEFAULT '0000'
 );
 
 CREATE TABLE IF NOT EXISTS workspaces (
@@ -66,7 +68,7 @@ INSERT INTO columns (id, title, col_order) VALUES
 ('col-6', 'Postados', 6)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO system_settings (id, primary_color) VALUES (1, '#4F46E5')
+INSERT INTO system_settings (id, primary_color, tv_access_code) VALUES (1, '#4F46E5', '0000')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO workspaces (id, name, priority) VALUES

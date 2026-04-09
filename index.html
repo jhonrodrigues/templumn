@@ -148,6 +148,14 @@
                                 <input type="time" id="edit-card-time" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
                             </div>
                             <div>
+                                <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">RECORRÊNCIA</label>
+                                <select id="edit-card-recurrence" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                    <option value="none">Sem recorrência</option>
+                                    <option value="weekly">Semanal</option>
+                                    <option value="monthly">Mensal</option>
+                                </select>
+                            </div>
+                            <div>
                                 <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DESCRIÇÃO</label>
                                 <textarea id="edit-card-description" class="desc-editor" placeholder="Detalhes da demanda, briefing e observacoes..."></textarea>
                             </div>
@@ -252,6 +260,15 @@
             <div style="margin-bottom: 16px;">
                 <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">HORÁRIO DO POST</label>
                 <input type="time" id="nc-time" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">RECORRÊNCIA</label>
+                <select id="nc-recurrence" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                    <option value="none">Sem recorrência</option>
+                    <option value="weekly">Semanal</option>
+                    <option value="monthly">Mensal</option>
+                </select>
             </div>
             
             <div style="margin-bottom: 24px;">

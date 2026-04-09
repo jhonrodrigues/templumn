@@ -280,6 +280,8 @@ function resetNewCardModal() {
     document.getElementById('nc-date').value = nowParts.date;
     const timeField = document.getElementById('nc-time');
     if (timeField) timeField.value = nowParts.time;
+    const recurrenceField = document.getElementById('nc-recurrence');
+    if (recurrenceField) recurrenceField.value = 'none';
     document.getElementById('nc-platform').value = '';
     const aField = document.getElementById('nc-assignee');
     if (aField) aField.value = '';
@@ -434,6 +436,7 @@ function renderBoard() {
                 const platform = document.getElementById('nc-platform').value;
                 const post_date = document.getElementById('nc-date').value;
                 const post_time = document.getElementById('nc-time').value;
+                const recurrence_type = document.getElementById('nc-recurrence').value;
                 const aField = document.getElementById('nc-assignee');
                 const assignee = aField ? aField.value : '';
                 const visible_workspaces = getSelectedWorkspaceIds('new-card-workspaces');
@@ -445,7 +448,7 @@ function renderBoard() {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
-                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, post_time, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [] })
+                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, post_time, recurrence_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [] })
                     });
                     m.classList.remove('active');
                     loadStateFromServer();
@@ -481,6 +484,7 @@ if (fabBtn) {
             const platform = document.getElementById('nc-platform').value;
             const post_date = document.getElementById('nc-date').value;
             const post_time = document.getElementById('nc-time').value;
+            const recurrence_type = document.getElementById('nc-recurrence').value;
             const assignee = aField ? aField.value : '';
             const visible_workspaces = getSelectedWorkspaceIds('new-card-workspaces');
             
@@ -491,7 +495,7 @@ if (fabBtn) {
                 await fetch('/api/cards', {
                     method: 'POST',
                     headers: authHeaders,
-                    body: JSON.stringify({ title, column_id: colId, platform, post_date, post_time, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [] })
+                    body: JSON.stringify({ title, column_id: colId, platform, post_date, post_time, recurrence_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [] })
                 });
                 m.classList.remove('active');
                 loadStateFromServer();
@@ -759,6 +763,7 @@ const editDescriptionInput = document.getElementById('edit-card-description');
 const editPlatformInput = document.getElementById('edit-card-platform');
 const editDateInput = document.getElementById('edit-card-date');
 const editTimeInput = document.getElementById('edit-card-time');
+const editRecurrenceInput = document.getElementById('edit-card-recurrence');
 const saveCardBtn = document.getElementById('save-card-btn');
 const memberInput = document.getElementById('member-input');
 const membersList = document.getElementById('members-list');
@@ -1005,6 +1010,7 @@ function openModal(card, colId) {
     if (editPlatformInput) editPlatformInput.value = card.platform || '';
     if (editDateInput) editDateInput.value = card.post_date || '';
     if (editTimeInput) editTimeInput.value = card.post_time || '';
+    if (editRecurrenceInput) editRecurrenceInput.value = card.recurrence_type || 'none';
     if (memberInput) memberInput.value = '';
     if (checklistInput) checklistInput.value = '';
     if (commentInput) commentInput.value = '';
@@ -1212,6 +1218,7 @@ if (saveCardBtn) {
         const platform = editPlatformInput ? editPlatformInput.value : '';
         const post_date = editDateInput ? editDateInput.value : '';
         const post_time = editTimeInput ? editTimeInput.value : '';
+        const recurrence_type = editRecurrenceInput ? editRecurrenceInput.value : 'none';
         const assignee = activeCardData.members.length > 0 ? activeCardData.members[0] : '';
         const visible_workspaces = getSelectedWorkspaceIds('edit-card-workspaces');
         activeCardData.visible_workspaces = visible_workspaces;
@@ -1225,7 +1232,7 @@ if (saveCardBtn) {
             const response = await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), {
                 method: 'PUT',
                 headers: authHeaders,
-                body: JSON.stringify({ title, description, platform, post_date, post_time, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id })
+                body: JSON.stringify({ title, description, platform, post_date, post_time, recurrence_type, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id })
             });
 
             if (!response.ok) throw new Error('save failed');
@@ -1238,6 +1245,7 @@ if (saveCardBtn) {
                 activeCard.platform = platform;
                 activeCard.post_date = post_date;
                 activeCard.post_time = post_time;
+                activeCard.recurrence_type = recurrence_type;
                 activeCard.assignee = assignee;
                 activeCard.labels = activeCardData.labels;
                 activeCard.members = activeCardData.members;

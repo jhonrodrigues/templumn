@@ -224,6 +224,20 @@
                         <p id="dashboard-month-summary" style="text-align: center; color: var(--text-muted); font-size: 14px;">0 de 0 tarefas entregues este mês.</p>
                     </div>
                 </div>
+
+                <div class="dash-panel" style="margin-top: 24px;" id="tv-access-panel">
+                    <div class="panel-header">
+                        <span class="panel-title">Acesso da TV</span>
+                        <button id="regen-tv-code-btn" style="background: none; border: none; color: var(--primary); font-weight: 600; cursor: pointer;">Gerar novo código</button>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                        <div style="font-size: 42px; font-weight: 800; letter-spacing: 6px;" id="tv-code-value">0000</div>
+                        <div style="color: var(--text-muted);">
+                            <div>Acesse na TV em <strong>/tv</strong></div>
+                            <div>Digite esse código de 4 dígitos para liberar a visualização.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -265,7 +279,33 @@
                 console.error('Falha ao carregar dashboard ao vivo');
             }
         }
+
+        async function loadTvCode() {
+            try {
+                const response = await fetch('/api/tv-access-code', { headers: getAuthHeaders() });
+                if (!response.ok) {
+                    document.getElementById('tv-access-panel').style.display = 'none';
+                    return;
+                }
+                const data = await response.json();
+                document.getElementById('tv-code-value').innerText = data.code || '0000';
+            } catch (err) {
+                document.getElementById('tv-access-panel').style.display = 'none';
+            }
+        }
+
+        document.getElementById('regen-tv-code-btn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/tv-access-code', { method: 'POST', headers: getAuthHeaders() });
+                if (!response.ok) return;
+                const data = await response.json();
+                document.getElementById('tv-code-value').innerText = data.code || '0000';
+            } catch (err) {
+            }
+        });
+
         loadDashboard();
+        loadTvCode();
     </script>
 </body>
 </html>

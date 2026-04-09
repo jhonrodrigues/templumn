@@ -11,6 +11,22 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'templum-super-secret-key-agencia';
 
+function generateFourDigitCode() {
+    return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+function addRecurringDate(baseDate, recurrenceType) {
+    const [year, month, day] = (baseDate || '').split('-').map(Number);
+    if (!year || !month || !day) return null;
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (recurrenceType === 'weekly') date.setUTCDate(date.getUTCDate() + 7);
+    if (recurrenceType === 'monthly') date.setUTCMonth(date.getUTCMonth() + 1);
+    const nextYear = date.getUTCFullYear();
+    const nextMonth = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const nextDay = String(date.getUTCDate()).padStart(2, '0');
+    return `${nextYear}-${nextMonth}-${nextDay}`;
+}
+
 function getSaoPauloDateParts(date = new Date()) {
     const formatter = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo',
@@ -50,6 +66,7 @@ async function initDb() {
         try { await pool.query('ALTER TABLE cards ADD COLUMN platform VARCHAR(50);'); } catch(e){}
         try { await pool.query('ALTER TABLE cards ADD COLUMN post_date VARCHAR(50);'); } catch(e){}
         try { await pool.query('ALTER TABLE cards ADD COLUMN post_time VARCHAR(10);'); } catch(e){}
+        try { await pool.query("ALTER TABLE cards ADD COLUMN recurrence_type VARCHAR(20) DEFAULT 'none';"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN description TEXT DEFAULT '';"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN members JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN checklist JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
@@ -76,6 +93,8 @@ async function initDb() {
             )
         `);
         try { await pool.query('ALTER TABLE workspaces ADD COLUMN priority INTEGER DEFAULT 100;'); } catch(e){}
+        try { await pool.query("ALTER TABLE system_settings ADD COLUMN tv_access_code VARCHAR(4) DEFAULT '0000';"); } catch(e){}
+        await pool.query("INSERT INTO system_settings (id, primary_color, tv_access_code) VALUES (1, '#4F46E5', '0000') ON CONFLICT (id) DO NOTHING;");
         // Inserir os 3 iniciais pedidos sob demanda
         await pool.query("INSERT INTO workspaces (id, name, priority) VALUES ('lagoinhaalphaville.sp', 'Lagoinha Alphaville Principal', 1), ('heroalphaville', 'Hero Alphaville', 2), ('shinealphaville', 'Shine Alphaville', 3) ON CONFLICT DO NOTHING;");
         
@@ -114,7 +133,7 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/me', authGuard, async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, email, role FROM users WHERE id = $1', [req.user.id]);
+        const result = await pool.query('SELECT id, name, email, role FROM users WHERE id = $1', [req.user.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Usuário não encontrado' });
         res.json(result.rows[0]);
     } catch (err) {
@@ -153,6 +172,23 @@ function authGuard(req, res, next) {
     jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) return res.status(403).json({error: 'Sessão Expirada'});
         req.user = user;
+        next();
+    });
+}
+
+function authOrTvGuard(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({error: 'Token Ausente - Não Autorizado'});
+
+    jwt.verify(token, JWT_SECRET, (err, payload) => {
+        if (err) return res.status(403).json({error: 'Sessão Expirada'});
+        if (payload.tv === true) {
+            req.tv = true;
+            req.user = { role: 'tv' };
+        } else {
+            req.user = payload;
+        }
         next();
     });
 }
@@ -362,7 +398,7 @@ app.delete('/api/users/:id', authGuard, async (req, res) => {
 });
 
 // --- API: Board API (Columns & Cards) ---
-app.get('/api/board', authGuard, async (req, res) => {
+app.get('/api/board', authOrTvGuard, async (req, res) => {
     try {
         const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
         const isAllWorkspaces = workspace === '__all__';
@@ -392,6 +428,7 @@ app.get('/api/board', authGuard, async (req, res) => {
                             'platform', k.platform,
                             'post_date', k.post_date,
                             'post_time', k.post_time,
+                            'recurrence_type', k.recurrence_type,
                             'assignee', k.assignee
                         ) ORDER BY k.card_order ASC
                     ) FILTER (WHERE k.id IS NOT NULL), '[]'
@@ -427,7 +464,7 @@ app.post('/api/board/move', authGuard, async (req, res) => {
 
 // --- API: Create & Delete Cards ---
 app.post('/api/cards', authGuard, async (req, res) => {
-    const { title, column_id, platform, post_date, post_time, workspace_id, assignee, visible_workspaces, images, files } = req.body;
+    const { title, column_id, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files } = req.body;
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     const visibleWorkspaces = normalizeWorkspaceList(resolvedWS, visible_workspaces);
     const serializedVisibleWorkspaces = JSON.stringify(visibleWorkspaces);
@@ -438,8 +475,8 @@ app.post('/api/cards', authGuard, async (req, res) => {
         const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND ${workspaceVisibilityClause(2)}`, [column_id, resolvedWS]);
         const order = maxRes.rows[0].next_order;
         await pool.query(
-            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, workspace_id, assignee, visible_workspaces, images, files, attachments_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12::jsonb, $13)',
-            [id, column_id, title, order, platform, post_date, post_time || null, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0)]
+            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, attachments_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14)',
+            [id, column_id, title, order, platform, post_date, post_time || null, recurrence_type || 'none', resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0)]
         );
         res.json({ success: true, id, title });
     } catch (err) {
@@ -450,7 +487,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
 
 app.put('/api/cards/:id', authGuard, async (req, res) => {
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
-    const { title, description, platform, post_date, post_time, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id } = req.body;
+    const { title, description, platform, post_date, post_time, recurrence_type, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id } = req.body;
     try {
         const serializedLabels = Array.isArray(labels) ? JSON.stringify(labels) : '[]';
         const serializedMembers = Array.isArray(members) ? JSON.stringify(members) : '[]';
@@ -464,11 +501,11 @@ app.put('/api/cards/:id', authGuard, async (req, res) => {
         const attachmentsCount = (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0);
         const result = await pool.query(
             `UPDATE cards
-             SET title = $1, description = $2, platform = $3, post_date = $4, post_time = $5, assignee = $6,
-                 labels = $7::jsonb, members = $8::jsonb, checklist = $9::jsonb, comments = $10::jsonb, comments_count = $11,
-                 images = $12::jsonb, files = $13::jsonb, visible_workspaces = $14::jsonb, attachments_count = $15
-             WHERE id = $16 AND ${workspaceVisibilityClause(17)}`,
-            [title, description || '', platform || null, post_date || null, post_time || null, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedFiles, serializedVisibleWorkspaces, attachmentsCount, req.params.id, workspace]
+             SET title = $1, description = $2, platform = $3, post_date = $4, post_time = $5, recurrence_type = $6, assignee = $7,
+                 labels = $8::jsonb, members = $9::jsonb, checklist = $10::jsonb, comments = $11::jsonb, comments_count = $12,
+                 images = $13::jsonb, files = $14::jsonb, visible_workspaces = $15::jsonb, attachments_count = $16
+             WHERE id = $17 AND ${workspaceVisibilityClause(18)}`,
+            [title, description || '', platform || null, post_date || null, post_time || null, recurrence_type || 'none', assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedFiles, serializedVisibleWorkspaces, attachmentsCount, req.params.id, workspace]
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
         res.json({ success: true });
@@ -512,11 +549,54 @@ app.post('/api/cards/:id/remove-workspace', authGuard, async (req, res) => {
 app.post('/api/cards/:id/mark-posted', authGuard, async (req, res) => {
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
     try {
+        const cardRes = await pool.query(
+            `SELECT * FROM cards WHERE id = $1 AND ${workspaceVisibilityClause(2)}`,
+            [req.params.id, workspace]
+        );
+        if (cardRes.rows.length === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
+        const card = cardRes.rows[0];
+
         const result = await pool.query(
             `UPDATE cards SET column_id = 'col-6' WHERE id = $1 AND ${workspaceVisibilityClause(2)}`,
             [req.params.id, workspace]
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
+
+        if (card.recurrence_type === 'weekly' || card.recurrence_type === 'monthly') {
+            const nextDate = addRecurringDate(card.post_date, card.recurrence_type);
+            if (nextDate) {
+                const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND ${workspaceVisibilityClause(2)}`, [card.column_id, card.workspace_id]);
+                const order = maxRes.rows[0].next_order;
+                const nextId = 'card-' + Date.now() + Math.floor(Math.random() * 1000);
+                await pool.query(
+                    `INSERT INTO cards (id, column_id, title, description, labels, members, checklist, comments, images, files, visible_workspaces, comments_count, attachments_count, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee)
+                     VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+                    [
+                        nextId,
+                        card.column_id,
+                        card.title,
+                        card.description || '',
+                        JSON.stringify(card.labels || []),
+                        JSON.stringify(card.members || []),
+                        JSON.stringify(card.checklist || []),
+                        JSON.stringify(card.comments || []),
+                        JSON.stringify(card.images || []),
+                        JSON.stringify(card.files || []),
+                        JSON.stringify(card.visible_workspaces || []),
+                        0,
+                        card.attachments_count || 0,
+                        order,
+                        card.platform || null,
+                        nextDate,
+                        card.post_time || null,
+                        card.recurrence_type,
+                        card.workspace_id,
+                        card.assignee || null
+                    ]
+                );
+            }
+        }
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao marcar card como postado' });
@@ -592,7 +672,7 @@ app.get('/api/my-cards', authGuard, async (req, res) => {
 });
 
 // --- API: Dashboard Metrics ---
-app.get('/api/dashboard', authGuard, async (req, res) => {
+app.get('/api/dashboard', authOrTvGuard, async (req, res) => {
     try {
         const workspace = req.query.workspace;
         const isAllWorkspaces = workspace === '__all__';
@@ -682,6 +762,41 @@ app.get('/api/notifications', authGuard, async (req, res) => {
     }
 });
 
+app.get('/api/tv-access-code', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const result = await pool.query('SELECT tv_access_code FROM system_settings WHERE id = 1');
+        res.json({ code: result.rows[0]?.tv_access_code || '0000' });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao carregar código da TV' });
+    }
+});
+
+app.post('/api/tv-access-code', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const code = generateFourDigitCode();
+        await pool.query(`
+            INSERT INTO system_settings (id, primary_color, tv_access_code) VALUES (1, '#4F46E5', $1)
+            ON CONFLICT (id) DO UPDATE SET tv_access_code = $1
+        `, [code]);
+        res.json({ code });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao gerar código da TV' });
+    }
+});
+
+app.post('/api/tv/auth', async (req, res) => {
+    try {
+        const code = String(req.body.code || '').trim();
+        if (!/^\d{4}$/.test(code)) return res.status(400).json({ error: 'Código inválido' });
+        const result = await pool.query('SELECT tv_access_code FROM system_settings WHERE id = 1');
+        if ((result.rows[0]?.tv_access_code || '0000') !== code) return res.status(401).json({ error: 'Código incorreto' });
+        const token = jwt.sign({ tv: true }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ token });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao autenticar TV' });
+    }
+});
+
 // --- API: Settings (Admin Master) ---
 app.get('/api/settings', async (req, res) => {
     try {
@@ -689,7 +804,7 @@ app.get('/api/settings', async (req, res) => {
         if (result.rows.length > 0) {
             res.json({ primary_color: result.rows[0].primary_color });
         } else {
-            res.json({ primary_color: '#4F46E5' }); // Default Purple
+            res.json({ primary_color: '#4F46E5' });
         }
     } catch (err) {
         // Return default gracefully on first init

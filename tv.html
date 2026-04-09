@@ -7,23 +7,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <style>html.auth-pending body{display:none!important;}</style>
-    <script>document.documentElement.classList.add('auth-pending');if(!localStorage.getItem('templum-auth-token')){window.location.replace('/login.html');}else{document.documentElement.classList.remove('auth-pending');}</script>
     <style>
-        body { overflow: hidden; }
+        body { overflow: hidden; background: #020617; }
         .tv-shell { min-height: 100vh; padding: 24px; background: radial-gradient(circle at top left, rgba(99,102,241,0.16), transparent 30%), var(--bg-app); }
         .tv-header { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; margin-bottom:24px; }
         .tv-title h1 { font-size: 36px; line-height: 1.1; }
         .tv-title p { color: var(--text-muted); margin-top: 8px; font-size: 16px; }
         .tv-meta { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
         .tv-chip { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 999px; padding: 10px 14px; font-size: 14px; font-weight: 600; }
-        .tv-stats { display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; margin-bottom:24px; }
-        .tv-stat { background: var(--bg-surface); border:1px solid var(--border); border-radius:18px; padding:20px; }
-        .tv-stat-label { color: var(--text-muted); font-size: 13px; text-transform: uppercase; font-weight: 700; margin-bottom: 10px; }
-        .tv-stat-value { font-size: 34px; font-weight: 800; }
-        .tv-board { display:flex; gap:16px; overflow:hidden; height: calc(100vh - 230px); }
-        .tv-column { flex:1; min-width:0; background: rgba(15,23,42,0.18); border:1px solid var(--border); border-radius:20px; padding:16px; display:flex; flex-direction:column; }
-        .tv-column-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+        .tv-layout { display:grid; grid-template-columns: 1.1fr 1fr; gap:20px; height: calc(100vh - 140px); }
+        .tv-panel { background: rgba(15,23,42,0.45); border: 1px solid var(--border); border-radius: 20px; padding: 18px; overflow:hidden; }
+        .tv-stats { display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:18px; }
+        .tv-stat { background: var(--bg-surface); border:1px solid var(--border); border-radius:18px; padding:18px; }
+        .tv-stat-label { color: var(--text-muted); font-size: 12px; text-transform: uppercase; font-weight: 700; margin-bottom: 10px; }
+        .tv-stat-value { font-size: 30px; font-weight: 800; }
+        .tv-board { display:flex; gap:14px; overflow:hidden; height: calc(100% - 132px); }
+        .tv-column { flex:1; min-width:0; background: rgba(15,23,42,0.18); border:1px solid var(--border); border-radius:20px; padding:14px; display:flex; flex-direction:column; }
+        .tv-column-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
         .tv-column-title { font-size: 18px; font-weight: 800; }
         .tv-column-count { color: var(--text-muted); font-size: 13px; }
         .tv-card-list { display:flex; flex-direction:column; gap:10px; overflow:hidden; }
@@ -32,15 +32,37 @@
         .tv-card-meta { display:flex; flex-wrap:wrap; gap:6px; font-size:12px; color: var(--text-muted); }
         .tv-card.posted { border-color: rgba(16,185,129,0.45); background: rgba(16,185,129,0.12); }
         .tv-tag { display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; font-size:11px; font-weight:700; background: rgba(99,102,241,0.14); color: var(--primary); }
+        .tv-calendar-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+        .tv-calendar-grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; }
+        .tv-calendar-label { text-align:center; color: var(--text-muted); font-size: 12px; font-weight:700; text-transform:uppercase; }
+        .tv-day { min-height: 120px; border: 1px solid var(--border); border-radius: 16px; padding: 10px; background: var(--bg-surface); display:flex; flex-direction:column; gap:8px; }
+        .tv-day.empty { opacity: 0.3; background: rgba(15,23,42,0.25); }
+        .tv-day-number { font-size: 16px; font-weight: 800; }
+        .tv-day-item { border-radius: 10px; padding: 6px 8px; background: var(--bg-app); border: 1px solid var(--border); font-size: 11px; }
+        .tv-day-item.posted { border-color: rgba(16,185,129,0.45); background: rgba(16,185,129,0.12); }
+        .tv-auth-overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.92); display:flex; align-items:center; justify-content:center; z-index: 20; }
+        .tv-auth-box { width: min(420px, 92vw); background: var(--bg-surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px; text-align:center; }
+        .tv-auth-box input { width: 100%; padding: 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); text-align:center; font-size: 28px; letter-spacing: 10px; margin: 18px 0; }
+        .tv-auth-box button { width: 100%; padding: 14px; border: none; border-radius: 12px; background: var(--primary); color: white; font-weight: 700; cursor: pointer; }
         .tv-footer { position:fixed; right:24px; bottom:18px; color: var(--text-muted); font-size: 12px; }
     </style>
 </head>
 <body>
+    <div class="tv-auth-overlay" id="tv-auth-overlay">
+        <div class="tv-auth-box">
+            <h2>Acesso da TV</h2>
+            <p style="color: var(--text-muted); margin-top: 8px;">Digite o código de 4 dígitos gerado no dashboard.</p>
+            <input type="password" id="tv-code-input" maxlength="4" inputmode="numeric" placeholder="0000">
+            <button id="tv-auth-btn">Entrar no painel</button>
+            <div id="tv-auth-error" style="margin-top: 12px; color: #ef4444; font-size: 13px;"></div>
+        </div>
+    </div>
+
     <div class="tv-shell">
         <div class="tv-header">
             <div class="tv-title">
                 <h1>Painel TV</h1>
-                <p>Visão geral de todas as contas com atualização automática.</p>
+                <p>Visão geral com Kanban e calendário de todas as contas.</p>
             </div>
             <div class="tv-meta">
                 <span class="tv-chip" id="tv-clock">--:--</span>
@@ -49,23 +71,46 @@
             </div>
         </div>
 
-        <div class="tv-stats">
-            <div class="tv-stat"><div class="tv-stat-label">Cards Totais</div><div class="tv-stat-value" id="tv-total">0</div></div>
-            <div class="tv-stat"><div class="tv-stat-label">Atrasados</div><div class="tv-stat-value" id="tv-overdue">0</div></div>
-            <div class="tv-stat"><div class="tv-stat-label">Postados</div><div class="tv-stat-value" id="tv-posted">0</div></div>
-            <div class="tv-stat"><div class="tv-stat-label">Entrega</div><div class="tv-stat-value" id="tv-rate">0%</div></div>
+        <div class="tv-layout">
+            <section class="tv-panel">
+                <div class="tv-stats">
+                    <div class="tv-stat"><div class="tv-stat-label">Cards Totais</div><div class="tv-stat-value" id="tv-total">0</div></div>
+                    <div class="tv-stat"><div class="tv-stat-label">Atrasados</div><div class="tv-stat-value" id="tv-overdue">0</div></div>
+                    <div class="tv-stat"><div class="tv-stat-label">Postados</div><div class="tv-stat-value" id="tv-posted">0</div></div>
+                    <div class="tv-stat"><div class="tv-stat-label">Entrega</div><div class="tv-stat-value" id="tv-rate">0%</div></div>
+                </div>
+                <div class="tv-board" id="tv-board"></div>
+            </section>
+
+            <section class="tv-panel">
+                <div class="tv-calendar-head">
+                    <div>
+                        <div style="font-size: 22px; font-weight: 800;">Calendário do Mês</div>
+                        <div id="tv-calendar-subtitle" style="font-size: 13px; color: var(--text-muted);">Todas as contas</div>
+                    </div>
+                    <div class="tv-chip" id="tv-calendar-month"></div>
+                </div>
+                <div class="tv-calendar-grid" id="tv-calendar-grid"></div>
+            </section>
         </div>
 
-        <div class="tv-board" id="tv-board"></div>
         <div class="tv-footer" id="tv-footer">Última atualização: --</div>
     </div>
 
     <script>
-        const authHeaders = { 'Authorization': 'Bearer ' + localStorage.getItem('templum-auth-token') };
+        const TV_TOKEN_KEY = 'templum-tv-token';
+
+        function getTvHeaders() {
+            return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem(TV_TOKEN_KEY) };
+        }
 
         function updateClock() {
             const fmt = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById('tv-clock').innerText = fmt.format(new Date());
+        }
+
+        function getCurrentMonthKey() {
+            return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7);
         }
 
         function cardMeta(card) {
@@ -76,14 +121,45 @@
             return bits.join('');
         }
 
+        function renderTvCalendar(columns) {
+            const monthKey = getCurrentMonthKey();
+            const [year, month] = monthKey.split('-').map(Number);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            const labels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+            const scheduled = [];
+            (columns || []).forEach((column) => {
+                (column.cards || []).forEach((card) => {
+                    if (card.post_date && card.post_date.startsWith(monthKey)) {
+                        scheduled.push({ ...card, column_id: column.id, column_title: column.title });
+                    }
+                });
+            });
+            const grid = document.getElementById('tv-calendar-grid');
+            document.getElementById('tv-calendar-month').innerText = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', month: 'long', year: 'numeric' }).format(new Date(`${monthKey}-01T00:00:00`));
+            grid.innerHTML = labels.map((label) => `<div class="tv-calendar-label">${label}</div>`).join('');
+            for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div class="tv-day empty"></div>';
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayKey = `${monthKey}-${String(day).padStart(2, '0')}`;
+                const items = scheduled.filter((card) => card.post_date === dayKey).slice(0, 4);
+                grid.innerHTML += `
+                    <div class="tv-day">
+                        <div class="tv-day-number">${day}</div>
+                        ${items.map((card) => `<div class="tv-day-item ${card.column_id === 'col-6' ? 'posted' : ''}">${card.post_time ? card.post_time + ' • ' : ''}${card.title}</div>`).join('')}
+                    </div>
+                `;
+            }
+        }
+
         async function loadTvView() {
             try {
                 const [boardRes, dashRes] = await Promise.all([
-                    fetch('/api/board?workspace=__all__', { headers: authHeaders }),
-                    fetch('/api/dashboard?workspace=__all__', { headers: authHeaders })
+                    fetch('/api/board?workspace=__all__', { headers: getTvHeaders() }),
+                    fetch('/api/dashboard?workspace=__all__', { headers: getTvHeaders() })
                 ]);
                 if (boardRes.status === 401 || boardRes.status === 403) {
-                    window.location.href = '/login.html';
+                    localStorage.removeItem(TV_TOKEN_KEY);
+                    document.getElementById('tv-auth-overlay').style.display = 'flex';
                     return;
                 }
                 const boardData = await boardRes.json();
@@ -115,16 +191,42 @@
                     `;
                 }).join('');
 
+                renderTvCalendar(boardData.columns || []);
                 document.getElementById('tv-footer').innerText = 'Última atualização: ' + new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date());
             } catch (err) {
                 document.getElementById('tv-board').innerHTML = '<div style="color: var(--text-muted);">Não foi possível carregar o painel da TV.</div>';
             }
         }
 
+        document.getElementById('tv-auth-btn').addEventListener('click', async () => {
+            const code = document.getElementById('tv-code-input').value.trim();
+            const errorEl = document.getElementById('tv-auth-error');
+            errorEl.innerText = '';
+            try {
+                const response = await fetch('/api/tv/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || 'Código inválido');
+                localStorage.setItem(TV_TOKEN_KEY, data.token);
+                document.getElementById('tv-auth-overlay').style.display = 'none';
+                loadTvView();
+            } catch (err) {
+                errorEl.innerText = err.message || 'Não foi possível autenticar a TV.';
+            }
+        });
+
         updateClock();
-        loadTvView();
+        if (localStorage.getItem(TV_TOKEN_KEY)) {
+            document.getElementById('tv-auth-overlay').style.display = 'none';
+            loadTvView();
+        }
         setInterval(updateClock, 1000);
-        setInterval(loadTvView, 10000);
+        setInterval(() => {
+            if (localStorage.getItem(TV_TOKEN_KEY)) loadTvView();
+        }, 10000);
     </script>
 </body>
 </html>
