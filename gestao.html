@@ -292,7 +292,7 @@
                 const data = await response.json();
                 document.getElementById('tv-code-value').innerText = data.code || '0000';
             } catch (err) {
-                document.getElementById('tv-access-panel').style.display = 'none';
+                document.getElementById('tv-code-value').innerText = '----';
             }
         }
 

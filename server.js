@@ -246,6 +246,18 @@ async function ensureCardSchema() {
     try { await pool.query("ALTER TABLE cards ADD COLUMN post_time VARCHAR(10);"); } catch (e) {}
 }
 
+async function ensureSystemSettingsSchema() {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS system_settings (
+            id INTEGER PRIMARY KEY,
+            primary_color VARCHAR(10) NOT NULL,
+            tv_access_code VARCHAR(4) DEFAULT '0000'
+        )
+    `);
+    try { await pool.query("ALTER TABLE system_settings ADD COLUMN tv_access_code VARCHAR(4) DEFAULT '0000';"); } catch (e) {}
+    await pool.query("INSERT INTO system_settings (id, primary_color, tv_access_code) VALUES (1, '#4F46E5', '0000') ON CONFLICT (id) DO NOTHING;");
+}
+
 // =======================
 //   ROUTES OVERVIEW
 // =======================
@@ -773,6 +785,7 @@ app.get('/api/notifications', authGuard, async (req, res) => {
 
 app.get('/api/tv-access-code', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
+        await ensureSystemSettingsSchema();
         const result = await pool.query('SELECT tv_access_code FROM system_settings WHERE id = 1');
         res.json({ code: result.rows[0]?.tv_access_code || '0000' });
     } catch (err) {
@@ -782,6 +795,7 @@ app.get('/api/tv-access-code', authGuard, requireRole(['master', 'gestor']), asy
 
 app.post('/api/tv-access-code', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
+        await ensureSystemSettingsSchema();
         const code = generateFourDigitCode();
         await pool.query(`
             INSERT INTO system_settings (id, primary_color, tv_access_code) VALUES (1, '#4F46E5', $1)
@@ -795,6 +809,7 @@ app.post('/api/tv-access-code', authGuard, requireRole(['master', 'gestor']), as
 
 app.post('/api/tv/auth', async (req, res) => {
     try {
+        await ensureSystemSettingsSchema();
         const code = String(req.body.code || '').trim();
         if (!/^\d{4}$/.test(code)) return res.status(400).json({ error: 'Código inválido' });
         const result = await pool.query('SELECT tv_access_code FROM system_settings WHERE id = 1');
@@ -809,6 +824,7 @@ app.post('/api/tv/auth', async (req, res) => {
 // --- API: Settings (Admin Master) ---
 app.get('/api/settings', async (req, res) => {
     try {
+        await ensureSystemSettingsSchema();
         const result = await pool.query('SELECT primary_color FROM system_settings LIMIT 1');
         if (result.rows.length > 0) {
             res.json({ primary_color: result.rows[0].primary_color });
