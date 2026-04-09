@@ -241,6 +241,11 @@ async function ensureLabelPresetSchema() {
     `);
 }
 
+async function ensureCardSchema() {
+    try { await pool.query("ALTER TABLE cards ADD COLUMN recurrence_type VARCHAR(20) DEFAULT 'none';"); } catch (e) {}
+    try { await pool.query("ALTER TABLE cards ADD COLUMN post_time VARCHAR(10);"); } catch (e) {}
+}
+
 // =======================
 //   ROUTES OVERVIEW
 // =======================
@@ -400,6 +405,7 @@ app.delete('/api/users/:id', authGuard, async (req, res) => {
 // --- API: Board API (Columns & Cards) ---
 app.get('/api/board', authOrTvGuard, async (req, res) => {
     try {
+        await ensureCardSchema();
         const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
         const isAllWorkspaces = workspace === '__all__';
         const cardVisibilityCondition = isAllWorkspaces ? '1=1' : workspaceVisibilityClause(1);
@@ -464,6 +470,7 @@ app.post('/api/board/move', authGuard, async (req, res) => {
 
 // --- API: Create & Delete Cards ---
 app.post('/api/cards', authGuard, async (req, res) => {
+    await ensureCardSchema();
     const { title, column_id, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files } = req.body;
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     const visibleWorkspaces = normalizeWorkspaceList(resolvedWS, visible_workspaces);
@@ -486,6 +493,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
 });
 
 app.put('/api/cards/:id', authGuard, async (req, res) => {
+    await ensureCardSchema();
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
     const { title, description, platform, post_date, post_time, recurrence_type, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id } = req.body;
     try {
@@ -549,6 +557,7 @@ app.post('/api/cards/:id/remove-workspace', authGuard, async (req, res) => {
 app.post('/api/cards/:id/mark-posted', authGuard, async (req, res) => {
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
     try {
+        await ensureCardSchema();
         const cardRes = await pool.query(
             `SELECT * FROM cards WHERE id = $1 AND ${workspaceVisibilityClause(2)}`,
             [req.params.id, workspace]
