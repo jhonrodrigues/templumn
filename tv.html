@@ -34,18 +34,18 @@
         .tv-card.posted { border-color: rgba(16,185,129,0.45); background: rgba(16,185,129,0.12); }
         .tv-tag { display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; font-size:11px; font-weight:700; background: rgba(99,102,241,0.14); color: var(--primary); }
         .tv-calendar-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
-        .tv-calendar-grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; }
+        .tv-calendar-grid { display:grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap:8px; }
         .tv-calendar-label { text-align:center; color: var(--text-muted); font-size: 12px; font-weight:700; text-transform:uppercase; }
-        .tv-day { min-height: 120px; border: 1px solid var(--border); border-radius: 16px; padding: 10px; background: var(--bg-surface); display:flex; flex-direction:column; gap:8px; }
+        .tv-day { min-height: 104px; border: 1px solid var(--border); border-radius: 14px; padding: 8px; background: var(--bg-surface); display:flex; flex-direction:column; gap:6px; overflow: hidden; }
         .tv-day.clickable { cursor: pointer; transition: 0.2s ease; }
         .tv-day.clickable:hover { border-color: var(--primary); box-shadow: var(--shadow-sm); }
         .tv-day.empty { opacity: 0.3; background: rgba(15,23,42,0.25); }
-        .tv-day-number { font-size: 16px; font-weight: 800; }
-        .tv-day-item { border-radius: 10px; padding: 6px 8px; background: var(--bg-app); border: 1px solid var(--border); font-size: 11px; }
+        .tv-day-number { font-size: 15px; font-weight: 800; }
+        .tv-day-item { border-radius: 8px; padding: 5px 6px; background: var(--bg-app); border: 1px solid var(--border); font-size: 10px; line-height: 1.2; overflow: hidden; }
         .tv-day-item.posted { border-color: rgba(16,185,129,0.45); background: rgba(16,185,129,0.12); }
-        .tv-day-item-meta { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
-        .tv-day-account { display:inline-flex; padding:3px 6px; border-radius:999px; background: rgba(99,102,241,0.14); color: var(--primary); font-size:10px; font-weight:700; }
-        .tv-day-status { display:inline-flex; padding:3px 6px; border-radius:999px; background: rgba(15,23,42,0.16); color: var(--text-main); font-size:10px; font-weight:700; }
+        .tv-day-item-meta { display:flex; flex-wrap:wrap; gap:3px; margin-top:3px; }
+        .tv-day-account { display:inline-flex; padding:2px 5px; border-radius:999px; background: rgba(99,102,241,0.14); color: var(--primary); font-size:9px; font-weight:700; }
+        .tv-day-status { display:inline-flex; padding:2px 5px; border-radius:999px; background: rgba(15,23,42,0.16); color: var(--text-main); font-size:9px; font-weight:700; }
         .tv-view-toggle { display:flex; gap:10px; }
         .tv-toggle-btn { background: var(--bg-surface); border:1px solid var(--border); border-radius: 999px; padding: 10px 16px; color: var(--text-main); font-weight: 700; cursor: pointer; }
         .tv-toggle-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
@@ -179,7 +179,7 @@
             for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div class="tv-day empty"></div>';
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayKey = `${monthKey}-${String(day).padStart(2, '0')}`;
-                const items = scheduled.filter((card) => card.post_date === dayKey).slice(0, 4);
+                const items = scheduled.filter((card) => card.post_date === dayKey).slice(0, 2);
                 const allItems = scheduled.filter((card) => card.post_date === dayKey);
                 tvCalendarDayMap[dayKey] = allItems;
                 grid.innerHTML += `
@@ -195,7 +195,7 @@
                                 </div>
                             </div>
                         `).join('')}
-                        ${allItems.length > 4 ? `<div style="font-size: 11px; color: var(--text-muted); font-weight: 700;">+${allItems.length - 4} item(ns)</div>` : ''}
+                        ${allItems.length > 2 ? `<div style="font-size: 10px; color: var(--text-muted); font-weight: 700;">+${allItems.length - 2} item(ns)</div>` : ''}
                     </div>
                 `;
             }
