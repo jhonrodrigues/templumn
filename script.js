@@ -331,20 +331,36 @@ async function initBranding() {
         if (data.primary_color) {
             document.documentElement.style.setProperty('--primary', data.primary_color);
         }
-        if (data.logo_url) {
-            const logoContainer = document.querySelector('.logo');
-            if (logoContainer) {
-                const existingImg = logoContainer.querySelector('.custom-logo');
-                if (existingImg) existingImg.remove();
-                const img = document.createElement('img');
-                img.src = data.logo_url;
-                img.className = 'custom-logo';
-                img.style.cssText = 'max-height: 36px; max-width: 120px; border-radius: 6px; margin-right: 8px;';
-                logoContainer.insertBefore(img, logoContainer.firstChild);
-            }
-        }
+        updateLogo(data);
+        const observer = new MutationObserver(() => {
+            updateLogo(data);
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     } catch(err) {
         console.error('Sem conexao, mantendo cor original.');
+    }
+}
+
+function updateLogo(data) {
+    const logoContainer = document.querySelector('.logo');
+    if (logoContainer) {
+        const existingImg = logoContainer.querySelector('.custom-logo');
+        if (existingImg) existingImg.remove();
+        const logoIcon = logoContainer.querySelector('.logo-icon');
+        const logoText = logoContainer.querySelector('.logo-text');
+        if (logoIcon) logoIcon.style.display = 'none';
+        if (logoText) logoText.style.display = 'none';
+        
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const logoUrl = isDark ? data.logo_dark_url : data.logo_light_url;
+        
+        if (logoUrl) {
+            const img = document.createElement('img');
+            img.src = logoUrl;
+            img.className = 'custom-logo';
+            img.style.cssText = 'max-height: 36px; max-width: 120px; border-radius: 6px;';
+            logoContainer.insertBefore(img, logoContainer.firstChild);
+        }
     }
 }
 initBranding();

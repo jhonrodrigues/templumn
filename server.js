@@ -259,12 +259,14 @@ async function ensureSystemSettingsSchema() {
             id INTEGER PRIMARY KEY,
             primary_color VARCHAR(10) NOT NULL,
             tv_access_code VARCHAR(4) DEFAULT '0000',
-            logo TEXT DEFAULT ''
+            logo_light TEXT DEFAULT '',
+            logo_dark TEXT DEFAULT ''
         )
     `);
     try { await pool.query("ALTER TABLE system_settings ADD COLUMN tv_access_code VARCHAR(4) DEFAULT '0000';"); } catch (e) {}
-    try { await pool.query("ALTER TABLE system_settings ADD COLUMN logo TEXT DEFAULT '';"); } catch (e) {}
-    await pool.query("INSERT INTO system_settings (id, primary_color, tv_access_code, logo) VALUES (1, '#4F46E5', '0000', '') ON CONFLICT (id) DO NOTHING;");
+    try { await pool.query("ALTER TABLE system_settings ADD COLUMN logo_light TEXT DEFAULT '';"); } catch (e) {}
+    try { await pool.query("ALTER TABLE system_settings ADD COLUMN logo_dark TEXT DEFAULT '';"); } catch (e) {}
+    await pool.query("INSERT INTO system_settings (id, primary_color, tv_access_code, logo_light, logo_dark) VALUES (1, '#4F46E5', '0000', '', '') ON CONFLICT (id) DO NOTHING;");
 }
 
 // =======================
@@ -846,34 +848,28 @@ app.post('/api/tv/auth', async (req, res) => {
 app.get('/api/settings', async (req, res) => {
     try {
         await ensureSystemSettingsSchema();
-        const result = await pool.query('SELECT primary_color, logo FROM system_settings LIMIT 1');
+        const result = await pool.query('SELECT primary_color, logo_light, logo_dark FROM system_settings LIMIT 1');
         if (result.rows.length > 0) {
             res.json({ 
                 primary_color: result.rows[0].primary_color,
-                logo_url: result.rows[0].logo || null
+                logo_light_url: result.rows[0].logo_light || null,
+                logo_dark_url: result.rows[0].logo_dark || null
             });
         } else {
-            res.json({ primary_color: '#4F46E5', logo_url: null });
+            res.json({ primary_color: '#4F46E5', logo_light_url: null, logo_dark_url: null });
         }
     } catch (err) {
-        res.json({ primary_color: '#4F46E5', logo_url: null });
+        res.json({ primary_color: '#4F46E5', logo_light_url: null, logo_dark_url: null });
     }
 });
 
 app.post('/api/settings', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
-    const { primary_color, logo } = req.body;
+    const { primary_color, logo_light, logo_dark } = req.body;
     try {
-        if (logo) {
-            await pool.query(`
-                INSERT INTO system_settings (id, primary_color, logo) VALUES (1, $1, $2)
-                ON CONFLICT (id) DO UPDATE SET primary_color = $1, logo = $2
-            `, [primary_color, logo]);
-        } else {
-            await pool.query(`
-                INSERT INTO system_settings (id, primary_color) VALUES (1, $1)
-                ON CONFLICT (id) DO UPDATE SET primary_color = $1
-            `, [primary_color]);
-        }
+        await pool.query(`
+            INSERT INTO system_settings (id, primary_color, logo_light, logo_dark) VALUES (1, $1, $2, $3)
+            ON CONFLICT (id) DO UPDATE SET primary_color = $1, logo_light = COALESCE(NULLIF($2, ''), system_settings.logo_light), logo_dark = COALESCE(NULLIF($3, ''), system_settings.logo_dark)
+        `, [primary_color, logo_light || '', logo_dark || '']);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to update settings' });

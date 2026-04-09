@@ -186,14 +186,27 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Logo da Agência (para o Dashboard)</label>
-                        <p>Carregue um logo para exibir no topo do Kanban. Tamanho recomendado: 200x50px.</p>
+                        <label>Logo da Agência - Versão Clara</label>
+                        <p>Logo exibido quando o tema claro está ativo. Tamanho recomendado: 200x50px.</p>
                         <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-                            <input type="file" id="logo-upload" accept="image/*" style="display: none;">
-                            <button type="button" class="btn-save" onclick="document.getElementById('logo-upload').click()" style="background: var(--bg-app); color: var(--text-main); border: 1px solid var(--border);"><i class="fa-solid fa-upload"></i> Escolher Imagem</button>
-                            <div id="logo-preview-container" style="display: none;">
-                                <img id="logo-preview" style="max-height: 50px; max-width: 200px; border-radius: 8px; border: 1px solid var(--border);">
-                                <button type="button" onclick="clearLogo()" style="margin-left: 8px; background: none; border: none; color: #ef4444; cursor: pointer;"><i class="fa-solid fa-times"></i> Remover</button>
+                            <input type="file" id="logo-light-upload" accept="image/*" style="display: none;">
+                            <button type="button" class="btn-save" onclick="document.getElementById('logo-light-upload').click()" style="background: var(--bg-app); color: var(--text-main); border: 1px solid var(--border);"><i class="fa-solid fa-upload"></i> Escolher Imagem</button>
+                            <div id="logo-light-preview-container" style="display: none;">
+                                <img id="logo-light-preview" style="max-height: 50px; max-width: 200px; border-radius: 8px; border: 1px solid var(--border);">
+                                <button type="button" onclick="clearLogo('light')" style="margin-left: 8px; background: none; border: none; color: #ef4444; cursor: pointer;"><i class="fa-solid fa-times"></i> Remover</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Logo da Agência - Versão Escura</label>
+                        <p>Logo exibido quando o tema escuro está ativo. Tamanho recomendado: 200x50px.</p>
+                        <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                            <input type="file" id="logo-dark-upload" accept="image/*" style="display: none;">
+                            <button type="button" class="btn-save" onclick="document.getElementById('logo-dark-upload').click()" style="background: var(--bg-app); color: var(--text-main); border: 1px solid var(--border);"><i class="fa-solid fa-upload"></i> Escolher Imagem</button>
+                            <div id="logo-dark-preview-container" style="display: none;">
+                                <img id="logo-dark-preview" style="max-height: 50px; max-width: 200px; border-radius: 8px; border: 1px solid var(--border);">
+                                <button type="button" onclick="clearLogo('dark')" style="margin-left: 8px; background: none; border: none; color: #ef4444; cursor: pointer;"><i class="fa-solid fa-times"></i> Remover</button>
                             </div>
                         </div>
                     </div>
@@ -467,57 +480,86 @@
         loadWorkspaceAdmin();
         loadLabelAdmin();
 
-        const logoUpload = document.getElementById('logo-upload');
-        const logoPreview = document.getElementById('logo-preview');
-        const logoPreviewContainer = document.getElementById('logo-preview-container');
-        window.logoCleared = false;
+        const logoLightUpload = document.getElementById('logo-light-upload');
+        const logoLightPreview = document.getElementById('logo-light-preview');
+        const logoLightPreviewContainer = document.getElementById('logo-light-preview-container');
+        const logoDarkUpload = document.getElementById('logo-dark-upload');
+        const logoDarkPreview = document.getElementById('logo-dark-preview');
+        const logoDarkPreviewContainer = document.getElementById('logo-dark-preview-container');
+        window.logoLightCleared = false;
+        window.logoDarkCleared = false;
 
         fetch('/api/settings').then(r => r.json()).then(data => {
-            if (data.logo_url) {
-                logoPreview.src = data.logo_url;
-                logoPreviewContainer.style.display = 'inline-block';
+            if (data.logo_light_url) {
+                logoLightPreview.src = data.logo_light_url;
+                logoLightPreviewContainer.style.display = 'inline-block';
+            }
+            if (data.logo_dark_url) {
+                logoDarkPreview.src = data.logo_dark_url;
+                logoDarkPreviewContainer.style.display = 'inline-block';
             }
         }).catch(() => {});
 
-        window.clearLogo = function() {
-            logoPreview.src = '';
-            logoPreviewContainer.style.display = 'none';
-            logoUpload.value = '';
-            window.logoCleared = true;
+        window.clearLogo = function(type) {
+            if (type === 'light') {
+                logoLightPreview.src = '';
+                logoLightPreviewContainer.style.display = 'none';
+                logoLightUpload.value = '';
+                window.logoLightCleared = true;
+            } else if (type === 'dark') {
+                logoDarkPreview.src = '';
+                logoDarkPreviewContainer.style.display = 'none';
+                logoDarkUpload.value = '';
+                window.logoDarkCleared = true;
+            }
         };
-        window.logoCleared = false;
 
-        logoUpload.addEventListener('change', (e) => {
-            window.logoCleared = false;
+        logoLightUpload.addEventListener('change', (e) => {
+            window.logoLightCleared = false;
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
-                logoPreview.src = e.target.result;
-                logoPreviewContainer.style.display = 'inline-block';
+                logoLightPreview.src = e.target.result;
+                logoLightPreviewContainer.style.display = 'inline-block';
             };
             reader.readAsDataURL(file);
         });
 
-        window.clearLogo = function() {
-            logoPreview.src = '';
-            logoPreviewContainer.style.display = 'none';
-            logoUpload.value = '';
-            window.logoCleared = true;
-        };
+        logoDarkUpload.addEventListener('change', (e) => {
+            window.logoDarkCleared = false;
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                logoDarkPreview.src = e.target.result;
+                logoDarkPreviewContainer.style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+        });
 
         saveBtn.addEventListener('click', async () => {
             const finalColor = hexInput.value;
-            const logoFile = logoUpload.files[0];
-            let logoBase64 = null;
+            let logoLightBase64 = null;
+            let logoDarkBase64 = null;
 
-            if (window.logoCleared) {
-                logoBase64 = '';
-            } else if (logoFile) {
-                logoBase64 = await new Promise((resolve) => {
+            if (window.logoLightCleared) {
+                logoLightBase64 = '';
+            } else if (logoLightUpload.files[0]) {
+                logoLightBase64 = await new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onload = (e) => resolve(e.target.result);
-                    reader.readAsDataURL(logoFile);
+                    reader.readAsDataURL(logoLightUpload.files[0]);
+                });
+            }
+
+            if (window.logoDarkCleared) {
+                logoDarkBase64 = '';
+            } else if (logoDarkUpload.files[0]) {
+                logoDarkBase64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(logoDarkUpload.files[0]);
                 });
             }
 
@@ -528,11 +570,13 @@
                     headers: { ...authHeaders, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         primary_color: finalColor,
-                        logo: logoBase64
+                        logo_light: logoLightBase64,
+                        logo_dark: logoDarkBase64
                     })
                 });
                 alert('Sucesso! A nova identidade foi salva.');
-                window.logoCleared = false;
+                window.logoLightCleared = false;
+                window.logoDarkCleared = false;
             } catch(err) {
                  alert('Erro ao contatar o servidor no momento do save.');
             } finally {
