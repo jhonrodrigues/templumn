@@ -711,6 +711,14 @@ app.post('/api/settings', authGuard, requireRole(['master', 'gestor']), async (r
 });
 
 // For any fallback (like refreshing /gestao), send the HTML file
+app.get('/tv', (req, res) => {
+   res.sendFile(path.join(__dirname, 'tv.html'));
+});
+
+app.get('/painel-tv', (req, res) => {
+   res.redirect('/tv');
+});
+
 app.get('/:page', (req, res) => {
    const page = req.params.page;
    if(page.endsWith('.html')){

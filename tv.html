@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel TV - Templum</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>html.auth-pending body{display:none!important;}</style>
+    <script>document.documentElement.classList.add('auth-pending');if(!localStorage.getItem('templum-auth-token')){window.location.replace('/login.html');}else{document.documentElement.classList.remove('auth-pending');}</script>
+    <style>
+        body { overflow: hidden; }
+        .tv-shell { min-height: 100vh; padding: 24px; background: radial-gradient(circle at top left, rgba(99,102,241,0.16), transparent 30%), var(--bg-app); }
+        .tv-header { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; margin-bottom:24px; }
+        .tv-title h1 { font-size: 36px; line-height: 1.1; }
+        .tv-title p { color: var(--text-muted); margin-top: 8px; font-size: 16px; }
+        .tv-meta { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+        .tv-chip { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 999px; padding: 10px 14px; font-size: 14px; font-weight: 600; }
+        .tv-stats { display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; margin-bottom:24px; }
+        .tv-stat { background: var(--bg-surface); border:1px solid var(--border); border-radius:18px; padding:20px; }
+        .tv-stat-label { color: var(--text-muted); font-size: 13px; text-transform: uppercase; font-weight: 700; margin-bottom: 10px; }
+        .tv-stat-value { font-size: 34px; font-weight: 800; }
+        .tv-board { display:flex; gap:16px; overflow:hidden; height: calc(100vh - 230px); }
+        .tv-column { flex:1; min-width:0; background: rgba(15,23,42,0.18); border:1px solid var(--border); border-radius:20px; padding:16px; display:flex; flex-direction:column; }
+        .tv-column-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+        .tv-column-title { font-size: 18px; font-weight: 800; }
+        .tv-column-count { color: var(--text-muted); font-size: 13px; }
+        .tv-card-list { display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+        .tv-card { background: var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:8px; }
+        .tv-card-title { font-size: 15px; font-weight:700; line-height:1.3; }
+        .tv-card-meta { display:flex; flex-wrap:wrap; gap:6px; font-size:12px; color: var(--text-muted); }
+        .tv-card.posted { border-color: rgba(16,185,129,0.45); background: rgba(16,185,129,0.12); }
+        .tv-tag { display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; font-size:11px; font-weight:700; background: rgba(99,102,241,0.14); color: var(--primary); }
+        .tv-footer { position:fixed; right:24px; bottom:18px; color: var(--text-muted); font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="tv-shell">
+        <div class="tv-header">
+            <div class="tv-title">
+                <h1>Painel TV</h1>
+                <p>Visão geral de todas as contas com atualização automática.</p>
+            </div>
+            <div class="tv-meta">
+                <span class="tv-chip" id="tv-clock">--:--</span>
+                <span class="tv-chip">Atualiza a cada 10s</span>
+                <span class="tv-chip">URL rápida: <strong>/tv</strong></span>
+            </div>
+        </div>
+
+        <div class="tv-stats">
+            <div class="tv-stat"><div class="tv-stat-label">Cards Totais</div><div class="tv-stat-value" id="tv-total">0</div></div>
+            <div class="tv-stat"><div class="tv-stat-label">Atrasados</div><div class="tv-stat-value" id="tv-overdue">0</div></div>
+            <div class="tv-stat"><div class="tv-stat-label">Postados</div><div class="tv-stat-value" id="tv-posted">0</div></div>
+            <div class="tv-stat"><div class="tv-stat-label">Entrega</div><div class="tv-stat-value" id="tv-rate">0%</div></div>
+        </div>
+
+        <div class="tv-board" id="tv-board"></div>
+        <div class="tv-footer" id="tv-footer">Última atualização: --</div>
+    </div>
+
+    <script>
+        const authHeaders = { 'Authorization': 'Bearer ' + localStorage.getItem('templum-auth-token') };
+
+        function updateClock() {
+            const fmt = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('tv-clock').innerText = fmt.format(new Date());
+        }
+
+        function cardMeta(card) {
+            const bits = [];
+            if (card.workspace_name || card.workspace_id) bits.push(`<span class="tv-tag">${card.workspace_name || card.workspace_id}</span>`);
+            if (card.post_date) bits.push(`<span><i class="fa-regular fa-calendar"></i> ${card.post_date}${card.post_time ? ' ' + card.post_time : ''}</span>`);
+            if (card.assignee) bits.push(`<span><i class="fa-regular fa-user"></i> ${card.assignee}</span>`);
+            return bits.join('');
+        }
+
+        async function loadTvView() {
+            try {
+                const [boardRes, dashRes] = await Promise.all([
+                    fetch('/api/board?workspace=__all__', { headers: authHeaders }),
+                    fetch('/api/dashboard?workspace=__all__', { headers: authHeaders })
+                ]);
+                if (boardRes.status === 401 || boardRes.status === 403) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                const boardData = await boardRes.json();
+                const dashData = await dashRes.json();
+
+                document.getElementById('tv-total').innerText = dashData.total_cards ?? 0;
+                document.getElementById('tv-overdue').innerText = dashData.cards_atrasados ?? 0;
+                document.getElementById('tv-posted').innerText = dashData.cards_postados ?? 0;
+                document.getElementById('tv-rate').innerText = (dashData.taxa_entrega ?? 0) + '%';
+
+                const boardEl = document.getElementById('tv-board');
+                boardEl.innerHTML = (boardData.columns || []).map((column) => {
+                    const cards = (column.cards || []).slice(0, 8);
+                    return `
+                        <section class="tv-column">
+                            <div class="tv-column-header">
+                                <div class="tv-column-title">${column.title}</div>
+                                <div class="tv-column-count">${(column.cards || []).length} itens</div>
+                            </div>
+                            <div class="tv-card-list">
+                                ${cards.length ? cards.map((card) => `
+                                    <article class="tv-card ${column.id === 'col-6' ? 'posted' : ''}">
+                                        <div class="tv-card-title">${card.title}</div>
+                                        <div class="tv-card-meta">${cardMeta(card)}</div>
+                                    </article>
+                                `).join('') : '<div style="color: var(--text-muted); font-size: 13px; padding: 8px 0;">Sem itens</div>'}
+                            </div>
+                        </section>
+                    `;
+                }).join('');
+
+                document.getElementById('tv-footer').innerText = 'Última atualização: ' + new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date());
+            } catch (err) {
+                document.getElementById('tv-board').innerHTML = '<div style="color: var(--text-muted);">Não foi possível carregar o painel da TV.</div>';
+            }
+        }
+
+        updateClock();
+        loadTvView();
+        setInterval(updateClock, 1000);
+        setInterval(loadTvView, 10000);
+    </script>
+</body>
+</html>
