@@ -1849,10 +1849,11 @@ function initTheme() {
     const savedTheme = localStorage.getItem('templum-theme');
     if (savedTheme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
-        if (themeToggleBtn) themeToggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
     } else {
         document.documentElement.removeAttribute('data-theme');
-        if (themeToggleBtn) themeToggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
+    }
+    if (themeToggleBtn) {
+        themeToggleBtn.innerHTML = savedTheme === 'dark' ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
     }
 }
 
