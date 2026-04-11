@@ -1697,6 +1697,7 @@ if (document.getElementById('close-column-modal') && document.getElementById('co
 
 if (saveCardBtn) {
     saveCardBtn.onclick = async () => {
+        console.log('Save button clicked');
         if (!activeCardId || !activeCardData) return;
         const title = editTitleInput ? editTitleInput.value.trim() : '';
         const description = editDescriptionInput ? editDescriptionInput.value.trim() : '';
