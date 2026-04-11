@@ -446,17 +446,24 @@ function reinitializeModalElements() {
 }
 
 async function loadStateFromServer() {
+    console.log('loadStateFromServer called', { activeWorkspaceId, boardCanvas: !!document.getElementById('board-canvas') });
     const boardCanvas = document.getElementById('board-canvas');
-    if (!boardCanvas) return; // Not on the Kanban page
+    if (!boardCanvas) {
+        console.log('Board canvas not found, skipping load');
+        return; // Not on the Kanban page
+    }
     
     try {
+        console.log('Fetching board for workspace:', activeWorkspaceId);
         const response = await fetch('/api/board?workspace=' + activeWorkspaceId, { headers: getAuthHeaders() });
+        console.log('Response status:', response.status);
         if (response.status === 401 || response.status === 403) {
             window.location.href = '/login.html';
             return;
         }
         if (response.ok) {
             const data = await response.json();
+            console.log('Board data received, columns:', data.columns?.length);
             boardState.columns = data.columns;
             renderBoard();
         }
@@ -618,8 +625,12 @@ const notificationsPanel = document.getElementById('notifications-panel');
 // --- Render Logic --- //
 
 function renderBoard() {
+    console.log('renderBoard called', { columnsCount: boardState.columns?.length });
     const boardCanvasEl = document.getElementById('board-canvas');
-    if (!boardCanvasEl) return;
+    if (!boardCanvasEl) {
+        console.log('Board canvas not found in renderBoard');
+        return;
+    }
     boardCanvasEl.innerHTML = '';
     
     boardState.columns.forEach(column => {
