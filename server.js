@@ -29,8 +29,8 @@ function addRecurringDate(baseDate, recurrenceType) {
 
 function normalizeRecurrenceType(value) {
     const normalized = String(value || 'none').trim().toLowerCase();
-    if (normalized === 'weekly' || normalized === 'mensal') return normalized === 'mensal' ? 'monthly' : 'weekly';
-    if (normalized === 'monthly' || normalized === 'semanal') return normalized === 'semanal' ? 'weekly' : 'monthly';
+    if (normalized === 'weekly' || normalized === 'semanal') return 'weekly';
+    if (normalized === 'monthly' || normalized === 'mensal') return 'monthly';
     return 'none';
 }
 
@@ -503,6 +503,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
     const serializedFiles = JSON.stringify(Array.isArray(files) ? files : []);
     const id = 'card-' + Date.now() + Math.floor(Math.random()*1000);
     try {
+        console.log('Creating card with:', { column_id, title, post_date, post_time, recurrence_type: normalizedRecurrenceType, resolvedWS });
         const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND ${workspaceVisibilityClause(2)}`, [column_id, resolvedWS]);
         const order = maxRes.rows[0].next_order;
         await pool.query(
@@ -512,7 +513,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
         res.json({ success: true, id, title });
     } catch (err) {
         console.error('Insert error:', err);
-        res.status(500).json({ error: 'Erro ao criar card' });
+        res.status(500).json({ error: 'Erro ao criar card: ' + err.message });
     }
 });
 
@@ -682,6 +683,57 @@ app.delete('/api/columns/:id', authGuard, requireRole(['master']), async (req, r
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao excluir quadro' });
+    }
+});
+
+app.post('/api/cards/:id/duplicate', authGuard, async (req, res) => {
+    const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
+    try {
+        const cardRes = await pool.query(
+            `SELECT * FROM cards WHERE id = $1 AND ${workspaceVisibilityClause(2)}`,
+            [req.params.id, workspace]
+        );
+        if (cardRes.rows.length === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
+        const card = cardRes.rows[0];
+
+        const maxRes = await pool.query(
+            `SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND ${workspaceVisibilityClause(2)}`,
+            [card.column_id, workspace]
+        );
+        const order = maxRes.rows[0].next_order;
+        const nextId = 'card-' + Date.now() + Math.floor(Math.random() * 1000);
+
+        await pool.query(
+            `INSERT INTO cards (id, column_id, title, description, labels, members, checklist, comments, images, files, visible_workspaces, comments_count, attachments_count, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee)
+             VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+            [
+                nextId,
+                card.column_id,
+                '(Cópia) ' + card.title,
+                card.description || '',
+                JSON.stringify(card.labels || []),
+                JSON.stringify(card.members || []),
+                JSON.stringify(card.checklist || []),
+                JSON.stringify([]), // Reset comments
+                JSON.stringify(card.images || []),
+                JSON.stringify(card.files || []),
+                JSON.stringify(card.visible_workspaces || []),
+                0,
+                card.attachments_count || 0,
+                order,
+                card.platform || null,
+                card.post_date || null,
+                card.post_time || null,
+                card.recurrence_type || 'none',
+                card.workspace_id,
+                card.assignee || null
+            ]
+        );
+
+        res.json({ success: true, id: nextId });
+    } catch (err) {
+        console.error('Duplicate error:', err);
+        res.status(500).json({ error: 'Erro ao duplicar card' });
     }
 });
 

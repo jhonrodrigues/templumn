@@ -809,6 +809,7 @@ const imagesList = document.getElementById('images-list');
 const fileInput = document.getElementById('file-input');
 const filesList = document.getElementById('files-list');
 const removeCardFromWorkspaceBtn = document.getElementById('remove-card-from-workspace-btn');
+const duplicateCardBtn = document.getElementById('duplicate-card-btn');
 const columnModal = document.getElementById('column-modal');
 const closeColumnModalBtn = document.getElementById('close-column-modal');
 const editColumnTitleInput = document.getElementById('edit-column-title');
@@ -1038,7 +1039,13 @@ function openModal(card, colId) {
     if (editPlatformInput) editPlatformInput.value = card.platform || '';
     if (editDateInput) editDateInput.value = card.post_date || '';
     if (editTimeInput) editTimeInput.value = card.post_time || '';
-    if (editRecurrenceInput) editRecurrenceInput.value = card.recurrence_type || 'none';
+    if (editRecurrenceInput) {
+        editRecurrenceInput.value = card.recurrence_type || 'none';
+        const removeBtn = document.getElementById('remove-recurrence-btn');
+        if (removeBtn) {
+            removeBtn.style.display = (card.recurrence_type && card.recurrence_type !== 'none') ? 'block' : 'none';
+        }
+    }
     if (memberInput) memberInput.value = '';
     if (checklistInput) checklistInput.value = '';
     if (commentInput) commentInput.value = '';
@@ -1164,6 +1171,17 @@ if (removeCardFromWorkspaceBtn) {
         } catch (e) {
             alert('Erro ao remover card desta conta');
         }
+    };
+}
+
+const removeRecurrenceBtn = document.getElementById('remove-recurrence-btn');
+if (removeRecurrenceBtn) {
+    removeRecurrenceBtn.onclick = () => {
+        if (!activeCardId || !activeCardData) return;
+        if (!confirm('Remover a recorrência desta demanda? Os cards futuros já criados continuarão existindo.')) return;
+        if (editRecurrenceInput) editRecurrenceInput.value = 'none';
+        const removeBtn = document.getElementById('remove-recurrence-btn');
+        if (removeBtn) removeBtn.style.display = 'none';
     };
 }
 
@@ -1309,6 +1327,31 @@ if (delBtn) {
             } catch(e) {
                 alert('Erro ao excluir card');
             }
+        }
+    };
+}
+
+if (duplicateCardBtn) {
+    duplicateCardBtn.onclick = async () => {
+        if (!activeCardId) return;
+        if (!confirm('Deseja duplicar esta demanda?')) return;
+        
+        const originalText = duplicateCardBtn.innerHTML;
+        duplicateCardBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Duplicando';
+        
+        try {
+            const response = await fetch(`/api/cards/${activeCardId}/duplicate?workspace=${encodeURIComponent(activeWorkspaceId)}`, {
+                method: 'POST',
+                headers: authHeaders
+            });
+            if (!response.ok) throw new Error('duplicate failed');
+            
+            modalOverlay.classList.remove('active');
+            loadStateFromServer();
+        } catch (e) {
+            alert('Erro ao duplicar card');
+        } finally {
+            duplicateCardBtn.innerHTML = originalText;
         }
     };
 }
