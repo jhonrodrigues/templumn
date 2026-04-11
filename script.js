@@ -1695,15 +1695,6 @@ if (document.getElementById('close-column-modal') && document.getElementById('co
     });
 }
 
-attachModalHandlers();
-        } catch (e) {
-            alert('Erro ao duplicar card');
-        } finally {
-            duplicateCardBtn.innerHTML = originalText;
-        }
-    };
-}
-
 if (document.getElementById('card-modal') && document.querySelector('#card-modal .close-modal')) {
     const closeBtn = document.querySelector('#card-modal .close-modal');
     const modalOverlayEl = document.getElementById('card-modal');
