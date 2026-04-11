@@ -459,7 +459,7 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
                             'post_time', k.post_time,
                             'recurrence_type', k.recurrence_type,
                             'assignee', k.assignee
-                        ) ORDER BY k.card_order ASC
+                        ) ORDER BY k.post_date ASC NULLS LAST, k.post_time ASC NULLS LAST, k.card_order ASC
                     ) FILTER (WHERE k.id IS NOT NULL), '[]'
                 ) as cards
             FROM columns c
@@ -683,6 +683,78 @@ app.delete('/api/columns/:id', authGuard, requireRole(['master']), async (req, r
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao excluir quadro' });
+    }
+});
+
+app.post('/api/columns/:id/move', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    const { id } = req.params;
+    const { direction } = req.body;
+    console.log(`[MOVE COLUMN] ID: ${id}, Direction: ${direction}`);
+    try {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const targetRes = await client.query('SELECT id, col_order, title FROM columns WHERE id = $1', [id]);
+            if (targetRes.rows.length === 0) throw new Error(`Coluna ${id} nao encontrada`);
+            const currentOrder = targetRes.rows[0].col_order;
+            console.log(`[MOVE COLUMN] Current Column: ${targetRes.rows[0].title}, Order: ${currentOrder}`);
+
+            let swapRes;
+            if (direction === 'left') {
+                swapRes = await client.query('SELECT id, col_order, title FROM columns WHERE col_order < $1 ORDER BY col_order DESC LIMIT 1', [currentOrder]);
+            } else {
+                swapRes = await client.query('SELECT id, col_order, title FROM columns WHERE col_order > $1 ORDER BY col_order ASC LIMIT 1', [currentOrder]);
+            }
+
+            if (swapRes.rows.length > 0) {
+                const other = swapRes.rows[0];
+                console.log(`[MOVE COLUMN] Found neighbor: ${other.title}, Order: ${other.col_order}`);
+                await client.query('UPDATE columns SET col_order = $1 WHERE id = $2', [other.col_order, id]);
+                await client.query('UPDATE columns SET col_order = $1 WHERE id = $2', [currentOrder, other.id]);
+                console.log(`[MOVE COLUMN] SWAP SUCCESS: ${id} <-> ${other.id}`);
+            } else {
+                console.log(`[MOVE COLUMN] No neighbor found in direction ${direction}`);
+            }
+
+            await client.query('COMMIT');
+            res.json({ success: true });
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error('[MOVE COLUMN] ROLLBACK ERROR:', err);
+            throw err;
+        } finally {
+            client.release();
+        }
+    } catch (err) {
+        console.error('[MOVE COLUMN] Final Error:', err);
+        res.status(500).json({ error: 'Erro ao mover quadro: ' + err.message });
+    }
+});
+
+app.get('/api/captacoes', authGuard, async (req, res) => {
+    try {
+        const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
+        const isAllWorkspaces = workspace === '__all__';
+        const filterClause = isAllWorkspaces ? '1=1' : workspaceVisibilityClause(1);
+        const params = isAllWorkspaces ? [] : [workspace];
+
+        const query = `
+            SELECT id, title, description, labels, post_date, post_time, platform, workspace_id, assignee, card_order, column_id
+            FROM cards
+            WHERE ${filterClause}
+              AND (
+                labels @> '[{"text": "Captação de Vídeo"}]'::jsonb 
+                OR labels @> '[{"text": "Captação de foto"}]'::jsonb
+                OR labels @> '[{"text": "Captacao de Video"}]'::jsonb
+                OR labels @> '[{"text": "Captacao de foto"}]'::jsonb
+              )
+            ORDER BY post_date ASC NULLS LAST, post_time ASC NULLS LAST;
+        `;
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Captacoes load error:', err);
+        res.status(500).json({ error: 'Erro ao carregar captações' });
     }
 });
 

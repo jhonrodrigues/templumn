@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento de Captações - Templum</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>html.auth-pending body{display:none!important;}</style>
+    <script>document.documentElement.classList.add('auth-pending');if(!localStorage.getItem('templum-auth-token')){window.location.replace('/login.html');}else{document.documentElement.classList.remove('auth-pending');}</script>
+    <style>
+        .captacoes-container {
+            margin-top: 24px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        .captacao-item {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .captacao-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border-color: var(--primary);
+        }
+        .captacao-item:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: var(--primary);
+            opacity: 0.8;
+        }
+        .captacao-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .captacao-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(79, 70, 229, 0.12);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .captacao-details h3 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .captacao-details .captacao-meta {
+            margin-top: 6px;
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .captacao-schedule {
+            text-align: right;
+        }
+        .schedule-date {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .schedule-account {
+            display: block;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-capture {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .badge-video { background: rgba(79, 70, 229, 0.15); color: #818cf8; }
+        .badge-photo { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+
+        @media (max-width: 768px) {
+            .captacao-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+            .captacao-schedule {
+                text-align: left;
+                width: 100%;
+                padding-top: 12px;
+                border-top: 1px solid var(--border);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon"><i class="fa-solid fa-shapes"></i></div>
+                    <span class="logo-text">Templum</span>
+                </div>
+            </div>
+
+            <div class="sidebar-menu">
+                <div class="menu-section">
+                    <span class="section-title">Contas / Workspaces</span>
+                    <ul id="sidebar-ws-list"></ul>
+                </div>
+
+                <div class="menu-section">
+                    <span class="section-title">Minha Mesa</span>
+                    <ul>
+                        <li onclick="window.location.href='index.html'"><i class="fa-solid fa-table-columns"></i> Kanban Central</li>
+                        <li onclick="window.location.href='mesa.html'"><i class="fa-solid fa-user-check"></i> Minhas Tarefas</li>
+                        <li onclick="window.location.href='captacoes.html'" class="active"><i class="fa-solid fa-video"></i> Agendamento Captações</li>
+                        <li onclick="window.location.href='calendario.html'"><i class="fa-regular fa-calendar-days"></i> Calendário do Mês</li>
+                        <li onclick="window.location.href='postados.html'"><i class="fa-solid fa-square-check"></i> Checklist de Postagem</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-section">
+                    <span class="section-title">Gestão e Liderança</span>
+                    <ul>
+                        <li onclick="window.location.href='gestao.html'"><i class="fa-solid fa-chart-pie"></i> Relatórios da Agência</li>
+                        <li onclick="window.location.href='usuarios.html'"><i class="fa-solid fa-users"></i> Equipe e Acessos</li>
+                        <li onclick="window.location.href='etiquetas.html'"><i class="fa-solid fa-tags"></i> Etiquetas Padrão</li>
+                        <li onclick="window.location.href='admin-settings.html'"><i class="fa-solid fa-cogs"></i> Master Configurações</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="user-profile">
+                <div class="user-info" style="width:100%;">
+                    <button onclick="localStorage.clear(); window.location.href='/login.html';" style="width:100%; padding: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border:none; border-radius:8px; cursor:pointer; font-weight: 600;"><i class="fa-solid fa-right-from-bracket"></i> Sair do Sistema</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content" style="padding: 32px 48px; overflow-y: auto;">
+            <header class="app-header">
+                <div>
+                    <h1 class="board-title">Agendamento de Captações</h1>
+                    <p style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Planejamento de Vídeos e Fotos com Ministérios</p>
+                </div>
+                <div style="margin-top: 16px;">
+                    <select id="ws-switcher" data-include-all="true" style="padding: 10px 16px; border-radius: 10px; background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border); font-weight: 600; outline:none; font-family:var(--font); cursor: pointer;">
+                        <!-- JS INJECT -->
+                    </select>
+                </div>
+            </header>
+
+            <div class="captacoes-container" id="captacoes-list">
+                <!-- Gerado via JS -->
+                <div style="text-align:center; padding: 64px; color: var(--text-muted);">Carregando agendamentos...</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Reuso (importado do script.js logic) -->
+    <!-- Ele sera injetado se necessario ou usaremos o script.js consolidado -->
+
+    <script src="script.js"></script>
+    <script>
+        async function renderCaptacoes() {
+            const list = document.getElementById('captacoes-list');
+            const ws = activeWorkspaceId || '__all__';
+            
+            try {
+                const res = await fetch(`/api/captacoes?workspace=${encodeURIComponent(ws)}`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                
+                if (data.length === 0) {
+                    list.innerHTML = `
+                        <div style="background:var(--bg-surface); padding: 48px; text-align:center; border-radius:16px; color:var(--text-muted); border: 2px dashed var(--border);">
+                            <i class="fa-solid fa-video-slash" style="font-size: 32px; margin-bottom: 16px; display: block; opacity: 0.5;"></i>
+                            Nenhuma demanda de captação encontrada para este workspace.
+                        </div>`;
+                    return;
+                }
+                
+                list.innerHTML = data.map(card => {
+                    const isVideo = card.labels.some(l => l.text.includes('Vídeo') || l.text.includes('Video'));
+                    const isPhoto = card.labels.some(l => l.text.includes('foto'));
+                    
+                    return `
+                        <div class="captacao-item" onclick="openModalById('${card.id}')">
+                            <div class="captacao-info">
+                                <div class="captacao-icon">
+                                    <i class="fa-solid ${isVideo ? 'fa-video' : 'fa-camera'}"></i>
+                                </div>
+                                <div class="captacao-details">
+                                    <h3>${card.title}</h3>
+                                    <div class="captacao-meta">
+                                        <span class="badge-capture ${isVideo ? 'badge-video' : 'badge-photo'}">
+                                            ${isVideo ? 'Captação de Vídeo' : 'Captação de Foto'}
+                                        </span>
+                                        ${card.assignee ? `<span><i class="fa-regular fa-user"></i> ${card.assignee}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="captacao-schedule">
+                                <span class="schedule-date">
+                                    <i class="fa-regular fa-calendar-check"></i> 
+                                    ${card.post_date ? `${card.post_date} ${card.post_time || ''}` : 'Não agendado'}
+                                </span>
+                                <span class="schedule-account">${card.workspace_id}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                list.innerHTML = `<div style="color:var(--danger); text-align:center;">Erro ao carregar captações.</div>`;
+            }
+        }
+
+        // Bridge function to open modal from script.js logic
+        async function openModalById(cardId) {
+            // Find card in boardState if already loaded, or fetch it
+            try {
+                // We can't easily access the internal boardState from here if it's not global
+                // But script.js makes boardState global.
+                // However, the card might not be in the current boardState columns
+                // Let's refresh/load card data if needed.
+                // For now, let's assume we can trigger a refresh of the card modal
+                // OR we just use fetch to get it.
+                // Actually, the easiest is to call loadStateFromServer and then find it
+                // But better: script.js should have a way to open card by ID.
+                // I will add a global function to script.js for this.
+                window.openCardDetail(cardId);
+            } catch(e) { console.error(e); }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCaptacoes();
+            // Listen for workspace changes from script.js
+            const wsSwitcher = document.getElementById('ws-switcher');
+            if (wsSwitcher) {
+                const originalOnChange = wsSwitcher.onchange;
+                wsSwitcher.onchange = (e) => {
+                    if (originalOnChange) originalOnChange(e);
+                    renderCaptacoes();
+                };
+            }
+        });
+    </script>
+</body>
+</html>

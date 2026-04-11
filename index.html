@@ -34,6 +34,7 @@
                     <ul>
                         <li onclick="window.location.href='index.html'"><i class="fa-solid fa-table-columns"></i> Kanban Central</li>
                         <li onclick="window.location.href='mesa.html'"><i class="fa-solid fa-user-check"></i> Minhas Tarefas</li>
+                        <li onclick="window.location.href='captacoes.html'"><i class="fa-solid fa-video"></i> Agendamento Captações</li>
                         <li onclick="window.location.href='calendario.html'"><i class="fa-regular fa-calendar-days"></i> Calendário do Mês</li>
                         <li onclick="window.location.href='postados.html'"><i class="fa-solid fa-square-check"></i> Checklist de Postagem</li>
                         <li onclick="window.location.href='minha-conta.html'"><i class="fa-solid fa-user-gear"></i> Minha Conta</li>
@@ -298,6 +299,10 @@
             <div style="margin-bottom: 20px;">
                 <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">NOME DO QUADRO</label>
                 <input type="text" id="edit-column-title" class="modal-text-input" autocomplete="off">
+            </div>
+            <div id="column-reorder-actions" style="display:flex; gap:8px; margin-bottom:12px;">
+                <button id="move-column-left-btn" style="flex:1; padding: 10px; border-radius: 8px; background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;"><i class="fa-solid fa-arrow-left"></i> Esquerda</button>
+                <button id="move-column-right-btn" style="flex:1; padding: 10px; border-radius: 8px; background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;">Direita <i class="fa-solid fa-arrow-right"></i></button>
             </div>
             <button id="save-column-btn" style="width: 100%; padding: 14px; border-radius: 8px; background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px;">Salvar Quadro</button>
             <button id="delete-column-btn" style="width: 100%; padding: 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.18); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; margin-top: 12px; display:none;">Excluir Quadro</button>

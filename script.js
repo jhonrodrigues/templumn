@@ -816,6 +816,9 @@ const editColumnTitleInput = document.getElementById('edit-column-title');
 const saveColumnBtn = document.getElementById('save-column-btn');
 const deleteColumnBtn = document.getElementById('delete-column-btn');
 const createColumnBtn = document.getElementById('create-column-btn');
+const moveColumnLeftBtn = document.getElementById('move-column-left-btn');
+const moveColumnRightBtn = document.getElementById('move-column-right-btn');
+const columnReorderActions = document.getElementById('column-reorder-actions');
 
 function normalizeArray(value) {
     if (!value) return [];
@@ -1076,6 +1079,9 @@ function openColumnModal(column = null) {
         const role = localStorage.getItem('templum-auth-role');
         deleteColumnBtn.style.display = column && role === 'master' ? 'block' : 'none';
     }
+    if (columnReorderActions) {
+        columnReorderActions.style.display = column ? 'flex' : 'none';
+    }
     if (columnModal) columnModal.classList.add('active');
 }
 
@@ -1245,6 +1251,39 @@ if (deleteColumnBtn) {
     };
 }
 
+async function moveColumn(id, direction) {
+    console.log(`[FRONTEND] Move Column: ID=${id}, Direction=${direction}`);
+    try {
+        const response = await fetch(`/api/columns/${id}/move`, {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({ direction })
+        });
+        const data = await response.json();
+        console.log(`[FRONTEND] Move Response:`, data);
+        if (!response.ok) throw new Error(data.error || 'Move failed');
+        loadStateFromServer();
+        if (columnModal) columnModal.classList.remove('active');
+    } catch (err) {
+        console.error(`[FRONTEND] Move Error:`, err);
+        alert('Erro ao mover quadro: ' + err.message);
+    }
+}
+
+if (moveColumnLeftBtn) {
+    moveColumnLeftBtn.onclick = () => {
+        if (!activeColumnId) return;
+        moveColumn(activeColumnId, 'left');
+    };
+}
+
+if (moveColumnRightBtn) {
+    moveColumnRightBtn.onclick = () => {
+        if (!activeColumnId) return;
+        moveColumn(activeColumnId, 'right');
+    };
+}
+
 if (closeColumnModalBtn && columnModal) {
     closeColumnModalBtn.onclick = () => {
         columnModal.classList.remove('active');
@@ -1411,4 +1450,23 @@ if (notificationsBtn && notificationsPanel) {
 }
 
 // Initialization is now managed by async loadStateFromServer()
+window.openCardDetail = async (cardId) => {
+    try {
+        // Find card in current state
+        let found = null;
+        boardState.columns.forEach(col => {
+            const card = col.cards.find(c => c.id === cardId);
+            if (card) found = { card, colId: col.id };
+        });
+
+        if (found) {
+            openModal(found.card, found.colId);
+        } else {
+            // If not found (different workspace?), we'd need to fetch or switch
+            console.warn('Card not found in current boardState, might be in another workspace.');
+            alert('Esta demanda pode estar em outro workspace. Tente mudar a conta ativa.');
+        }
+    } catch(e) { console.error(e); }
+};
+
 initTheme();
