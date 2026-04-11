@@ -621,7 +621,9 @@ const notificationsPanel = document.getElementById('notifications-panel');
 // --- Render Logic --- //
 
 function renderBoard() {
-    boardCanvas.innerHTML = '';
+    const boardCanvasEl = document.getElementById('board-canvas');
+    if (!boardCanvasEl) return;
+    boardCanvasEl.innerHTML = '';
     
     boardState.columns.forEach(column => {
         // Create Column
