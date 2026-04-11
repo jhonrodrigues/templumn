@@ -1454,17 +1454,30 @@ window.openCardDetail = async (cardId) => {
     try {
         // Find card in current state
         let found = null;
-        boardState.columns.forEach(col => {
-            const card = col.cards.find(c => c.id === cardId);
-            if (card) found = { card, colId: col.id };
-        });
+        if (boardState && boardState.columns) {
+            boardState.columns.forEach(col => {
+                const card = col.cards.find(c => c.id === cardId);
+                if (card) found = { card, colId: col.id };
+            });
+        }
 
         if (found) {
             openModal(found.card, found.colId);
         } else {
-            // If not found (different workspace?), we'd need to fetch or switch
-            console.warn('Card not found in current boardState, might be in another workspace.');
-            alert('Esta demanda pode estar em outro workspace. Tente mudar a conta ativa.');
+            // Not in current list (maybe on another page or workspace)
+            // Fetch directly from API
+            try {
+                const ws = activeWorkspaceId || localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
+                const res = await fetch(`/api/cards/${cardId}?workspace=${encodeURIComponent(ws)}`, { 
+                    headers: getAuthHeaders() 
+                });
+                if (!res.ok) throw new Error('Card not found');
+                const card = await res.json();
+                openModal(card, card.column_id);
+            } catch (err) {
+                console.warn('Card not found in current boardState or API.');
+                alert('Não foi possível carregar os detalhes desta demanda. Ela pode ter sido removida ou está em outra conta.');
+            }
         }
     } catch(e) { console.error(e); }
 };

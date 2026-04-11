@@ -742,11 +742,13 @@ app.get('/api/captacoes', authGuard, async (req, res) => {
             SELECT id, title, description, labels, post_date, post_time, platform, workspace_id, assignee, card_order, column_id
             FROM cards
             WHERE ${filterClause}
-              AND (
-                labels @> '[{"text": "Captação de Vídeo"}]'::jsonb 
-                OR labels @> '[{"text": "Captação de foto"}]'::jsonb
-                OR labels @> '[{"text": "Captacao de Video"}]'::jsonb
-                OR labels @> '[{"text": "Captacao de foto"}]'::jsonb
+              AND EXISTS (
+                SELECT 1 FROM jsonb_array_elements(labels) l 
+                WHERE l->>'text' ILIKE '%Captação de Vídeo%' 
+                   OR l->>'text' ILIKE '%Captação de foto%'
+                   OR l->>'text' ILIKE '%Captacao de Video%'
+                   OR l->>'text' ILIKE '%Captacao de foto%'
+                   OR l->>'text' ILIKE '%Captação%'
               )
             ORDER BY post_date ASC NULLS LAST, post_time ASC NULLS LAST;
         `;
@@ -755,6 +757,29 @@ app.get('/api/captacoes', authGuard, async (req, res) => {
     } catch (err) {
         console.error('Captacoes load error:', err);
         res.status(500).json({ error: 'Erro ao carregar captações' });
+    }
+});
+
+app.get('/api/cards/:id', authGuard, async (req, res) => {
+    const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
+    try {
+        const result = await pool.query(
+            `SELECT k.*, ws.name as workspace_name 
+             FROM cards k
+             LEFT JOIN workspaces ws ON ws.id = k.workspace_id
+             WHERE k.id = $1 AND ${workspaceVisibilityClause(2)}`,
+            [req.params.id, workspace]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Card não encontrado' });
+        
+        const card = result.rows[0];
+        // Normalize for frontend expectations (comments_data vs comments)
+        card.comments_data = card.comments;
+        
+        res.json(card);
+    } catch (err) {
+        console.error('Get card error:', err);
+        res.status(500).json({ error: 'Erro ao carregar detalhes da demanda' });
     }
 });
 
