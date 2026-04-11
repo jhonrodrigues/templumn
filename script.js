@@ -38,6 +38,13 @@ let activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaal
 let activeCardData = null;
 let availableWorkspaces = [];
 let labelPresets = [];
+let activeCardId = null;
+let activeCardColId = null;
+let activeColumnId = null;
+let suppressCardClickOnce = false;
+
+// Modal elements
+let modalOverlay, modalBox, closeModalBtn, saveCardBtn, deleteCardBtn;
 let memberSuggestionsCache = [];
 let suppressCardClickOnce = false;
 
@@ -611,7 +618,7 @@ async function loadNotifications() {
 }
 
 // Reference to DOM elements
-const themeToggleBtn = document.getElementById('theme-toggle');
+let themeToggleBtn = document.getElementById('theme-toggle');
 const notificationsBtn = document.getElementById('notifications-btn');
 const notificationsPanel = document.getElementById('notifications-panel');
 
