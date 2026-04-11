@@ -46,7 +46,6 @@ let suppressCardClickOnce = false;
 // Modal elements
 let modalOverlay, modalBox, closeModalBtn, saveCardBtn, deleteCardBtn;
 let memberSuggestionsCache = [];
-let suppressCardClickOnce = false;
 
 function getSaoPauloNowParts() {
     const formatter = new Intl.DateTimeFormat('en-CA', {
