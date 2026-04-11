@@ -611,11 +611,7 @@ async function loadNotifications() {
 }
 
 // Reference to DOM elements
-const boardCanvas = document.getElementById('board-canvas');
 const themeToggleBtn = document.getElementById('theme-toggle');
-const modalOverlay = document.getElementById('card-modal');
-// Reference to DOM elements (line 614 had duplicates, using only top declaration)
-let closeModalBtn = document.querySelector('#card-modal .close-modal');
 const notificationsBtn = document.getElementById('notifications-btn');
 const notificationsPanel = document.getElementById('notifications-panel');
 
@@ -1048,9 +1044,6 @@ let ncTime = document.getElementById('nc-time');
 let ncRecurrence = document.getElementById('nc-recurrence');
 let ncAssignee = document.getElementById('nc-assignee');
 let ncWorkspaces = document.getElementById('new-card-workspaces');
-
-// Perform dynamic injection now that variables are ready
-injectModalsIfNeeded();
 
 function injectModalsIfNeeded() {
     if (document.getElementById('card-modal')) return;
@@ -1721,13 +1714,16 @@ if (moveColumnRightBtn) {
     };
 }
 
-if (closeColumnModalBtn && columnModal) {
-    closeColumnModalBtn.onclick = () => {
-        columnModal.classList.remove('active');
+if (document.getElementById('close-column-modal') && document.getElementById('column-modal')) {
+    const closeColBtn = document.getElementById('close-column-modal');
+    const colModalEl = document.getElementById('column-modal');
+    
+    closeColBtn.onclick = () => {
+        colModalEl.classList.remove('active');
     };
-    columnModal.addEventListener('click', (event) => {
-        if (event.target === columnModal) {
-            columnModal.classList.remove('active');
+    colModalEl.addEventListener('click', (event) => {
+        if (event.target === colModalEl) {
+            colModalEl.classList.remove('active');
         }
     });
 }
@@ -1831,14 +1827,17 @@ if (duplicateCardBtn) {
     };
 }
 
-if (closeModalBtn && modalOverlay) {
-    closeModalBtn.addEventListener('click', () => {
-        modalOverlay.classList.remove('active');
+if (document.getElementById('card-modal') && document.querySelector('#card-modal .close-modal')) {
+    const closeBtn = document.querySelector('#card-modal .close-modal');
+    const modalOverlayEl = document.getElementById('card-modal');
+    
+    closeBtn.addEventListener('click', () => {
+        modalOverlayEl.classList.remove('active');
     });
 
-    modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) {
-            modalOverlay.classList.remove('active');
+    modalOverlayEl.addEventListener('click', (e) => {
+        if (e.target === modalOverlayEl) {
+            modalOverlayEl.classList.remove('active');
         }
     });
 }
@@ -1919,4 +1918,6 @@ window.openCardDetail = async (cardId) => {
     } catch(e) { console.error(e); }
 };
 
+// Initialize theme and modals
 initTheme();
+injectModalsIfNeeded();
