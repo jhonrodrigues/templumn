@@ -81,7 +81,7 @@ async function initDb() {
         try { await pool.query("ALTER TABLE cards ADD COLUMN images JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN visible_workspaces JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN files JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
-        await pool.query("INSERT INTO columns (id, title, col_order) VALUES ('col-6', 'Postados', 6) ON CONFLICT (id) DO NOTHING;");
+        await pool.query("INSERT INTO columns (id, title, col_order) VALUES ('col-1', 'Backlog / Pedidos', 1), ('col-2', 'To Do (Fazer)', 2), ('col-3', 'In Progress (Fazendo)', 3), ('col-4', 'Aprovação', 4), ('col-5', 'Concluído', 5), ('col-6', 'Postados', 6) ON CONFLICT (id) DO NOTHING;");
         
         // Dynamic Workspaces Table
         await pool.query(`
@@ -220,7 +220,7 @@ function normalizeWorkspaceList(primaryWorkspace, workspaces) {
 }
 
 function workspaceVisibilityClause(paramIndex) {
-    return `(workspace_id = $${paramIndex} OR COALESCE(visible_workspaces, '[]'::jsonb) ? $${paramIndex})`;
+    return `(workspace_id = $${paramIndex} OR COALESCE(visible_workspaces, '[]'::jsonb) @> to_jsonb($${paramIndex}::text))`;
 }
 
 async function ensureWorkspaceSchema() {
