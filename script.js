@@ -1007,7 +1007,6 @@ let editPlatformInput = document.getElementById('edit-card-platform');
 let editDateInput = document.getElementById('edit-card-date');
 let editTimeInput = document.getElementById('edit-card-time');
 let editRecurrenceInput = document.getElementById('edit-card-recurrence');
-let removeRecurrenceBtn = document.getElementById('remove-recurrence-btn');
 let modalListName = document.getElementById('modal-list-name');
 let modalTitle = document.getElementById('modal-title');
 let memberInput = document.getElementById('member-input');
@@ -1619,7 +1618,6 @@ if (removeCardFromWorkspaceBtn) {
     };
 }
 
-const removeRecurrenceBtn = document.getElementById('remove-recurrence-btn');
 if (removeRecurrenceBtn) {
     removeRecurrenceBtn.onclick = () => {
         if (!activeCardId || !activeCardData) return;
@@ -1793,9 +1791,8 @@ if (saveCardBtn) {
     };
 }
 
-const delBtn = document.getElementById('delete-card-btn');
-if (delBtn) {
-    delBtn.onclick = async () => {
+if (deleteCardBtn) {
+    deleteCardBtn.onclick = async () => {
         if (!activeCardId) return;
         if(confirm('Tem certeza que deseja excluir DEIFINITIVAMENTE este cartão do Banco de Dados?')) {
             try {
