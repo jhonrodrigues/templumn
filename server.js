@@ -763,9 +763,10 @@ app.get('/api/cards/:id', authGuard, async (req, res) => {
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
     try {
         const result = await pool.query(
-            `SELECT k.*, ws.name as workspace_name 
+            `SELECT k.*, ws.name as workspace_name, c.title as column_name
              FROM cards k
              LEFT JOIN workspaces ws ON ws.id = k.workspace_id
+             LEFT JOIN columns c ON c.id = k.column_id
              WHERE k.id = $1 AND ${workspaceVisibilityClause(2)}`,
             [req.params.id, workspace]
         );

@@ -231,6 +231,219 @@ async function initWorkspaces() {
 }
 initWorkspaces();
 initMobileMenu();
+// injection moved below variable declarations
+
+function injectModalsIfNeeded() {
+    if (document.getElementById('card-modal')) return;
+
+    const modalContainer = document.createElement('div');
+    modalContainer.innerHTML = `
+        <!-- Card Detail Modal Overlay -->
+        <div class="modal-overlay" id="card-modal">
+            <div class="card-modal-content">
+                <button class="close-modal"><i class="fa-solid fa-times"></i></button>
+                <div class="modal-header">
+                    <div class="modal-label">Na lista <strong id="modal-list-name">...</strong></div>
+                    <h2 id="modal-title">Título do Card</h2>
+                </div>
+                
+                <div class="modal-body-layout">
+                    <div class="modal-main">
+                        <div class="modal-section">
+                            <h3><i class="fa-solid fa-pen-to-square"></i> Editar Card</h3>
+                            <div style="display:flex; flex-direction:column; gap:16px; margin-top:16px;">
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">TÍTULO / PAUTA</label>
+                                    <input type="text" id="edit-card-title" autocomplete="off" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">REDE SOCIAL</label>
+                                    <select id="edit-card-platform" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                        <option value="">Nenhuma / Geral</option>
+                                        <option value="instagram">Instagram</option>
+                                        <option value="tiktok">TikTok</option>
+                                        <option value="youtube">YouTube</option>
+                                        <option value="facebook">Facebook</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DATA DO POST</label>
+                                    <input type="date" id="edit-card-date" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">HORÁRIO DO POST</label>
+                                    <input type="time" id="edit-card-time" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">RECORRÊNCIA</label>
+                                    <div style="display:flex; gap:8px;">
+                                        <select id="edit-card-recurrence" style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                            <option value="none">Sem recorrência</option>
+                                            <option value="weekly">Semanal</option>
+                                            <option value="monthly">Mensal</option>
+                                        </select>
+                                        <button type="button" id="remove-recurrence-btn" title="Remover recorrência" style="padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-app); color:var(--text-main); cursor:pointer; display:none;">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DESCRIÇÃO</label>
+                                    <textarea id="edit-card-description" class="desc-editor" placeholder="Detalhes da demanda, briefing e observacoes..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3><i class="fa-regular fa-user"></i> Membros</h3>
+                            <div class="inline-form-row">
+                                <input type="text" id="member-input" class="modal-text-input" placeholder="Email do membro" list="member-suggestions">
+                                <datalist id="member-suggestions"></datalist>
+                                <button type="button" class="sidebar-btn compact-btn" id="add-member-btn"><i class="fa-solid fa-plus"></i> Adicionar</button>
+                            </div>
+                            <div id="members-list" class="pill-list"></div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3><i class="fa-solid fa-layer-group"></i> Contas / Collab</h3>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Escolha em quais workspaces a demanda deve aparecer.</p>
+                            <div id="edit-card-workspaces" class="workspace-selector"></div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3><i class="fa-solid fa-tag"></i> Etiquetas</h3>
+                            <div id="preset-labels-list" class="preset-labels-list"></div>
+                            <div id="labels-editor" class="pill-list"></div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3><i class="fa-solid fa-list-check"></i> Checklist</h3>
+                            <div class="inline-form-row">
+                                <input type="text" id="checklist-input" class="modal-text-input" placeholder="Novo item do checklist">
+                                <button type="button" class="sidebar-btn compact-btn" id="add-checklist-btn"><i class="fa-solid fa-plus"></i> Adicionar</button>
+                            </div>
+                            <ul class="checklist-items" id="checklist-items"></ul>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3><i class="fa-regular fa-image"></i> Imagens da Demanda</h3>
+                            <div class="inline-form-row">
+                                <input type="file" id="image-input" class="modal-text-input" accept="image/*" multiple>
+                            </div>
+                            <div id="images-list" class="image-grid"></div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3><i class="fa-solid fa-paperclip"></i> Arquivos Anexos</h3>
+                            <div class="inline-form-row">
+                                <input type="file" id="file-input" class="modal-text-input" multiple>
+                            </div>
+                            <div id="files-list" class="file-list"></div>
+                        </div>
+
+                        <div class="modal-section">
+                            <h3><i class="fa-regular fa-comments"></i> Atividade</h3>
+                            <div id="comments-list" class="comments-list"></div>
+                            <div class="inline-form-row" style="margin-top:12px;">
+                                <input type="text" id="comment-input" class="modal-text-input" placeholder="Escreva um comentario...">
+                                <button type="button" class="sidebar-btn compact-btn" id="add-comment-btn"><i class="fa-solid fa-paper-plane"></i> Publicar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-sidebar">
+                        <span class="sidebar-title">Ações</span>
+                        <button class="sidebar-btn" id="save-card-btn"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+                        <button class="sidebar-btn" id="remove-card-from-workspace-btn"><i class="fa-solid fa-layer-group"></i> Remover desta conta</button>
+                        <button class="sidebar-btn" id="duplicate-card-btn"><i class="fa-solid fa-copy"></i> Duplicar</button>
+                        <button class="sidebar-btn danger" id="delete-card-btn"><i class="fa-solid fa-trash"></i> Excluir</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="column-modal">
+            <div class="modal-box" style="width: 420px; max-width: 90%;">
+                <button class="close-modal" id="close-column-modal"><i class="fa-solid fa-xmark"></i></button>
+                <h2 style="margin-bottom: 20px; color: var(--text-main);">Editar Quadro</h2>
+                <div style="margin-bottom: 20px;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">NOME DO QUADRO</label>
+                    <input type="text" id="edit-column-title" class="modal-text-input" autocomplete="off">
+                </div>
+                <div id="column-reorder-actions" style="display:flex; gap:8px; margin-bottom:12px;">
+                    <button id="move-column-left-btn" style="flex:1; padding: 10px; border-radius: 8px; background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;"><i class="fa-solid fa-arrow-left"></i> Esquerda</button>
+                    <button id="move-column-right-btn" style="flex:1; padding: 10px; border-radius: 8px; background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;">Direita <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+                <button id="save-column-btn" style="width: 100%; padding: 14px; border-radius: 8px; background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px;">Salvar Quadro</button>
+                <button id="delete-column-btn" style="width: 100%; padding: 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.18); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; margin-top: 12px; display:none;">Excluir Quadro</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modalContainer);
+
+    // Re-attach listeners is handled by the script initializing AFTER injection
+    reinitializeModalElements();
+}
+
+function reinitializeModalElements() {
+    modalOverlay = document.getElementById('card-modal');
+    modalBox = document.querySelector('.card-modal-content');
+    closeModalBtn = document.querySelector('#card-modal .close-modal');
+    saveCardBtn = document.getElementById('save-card-btn');
+    deleteCardBtn = document.getElementById('delete-card-btn');
+    editTitleInput = document.getElementById('edit-card-title');
+    editDescriptionInput = document.getElementById('edit-card-description');
+    editPlatformInput = document.getElementById('edit-card-platform');
+    editDateInput = document.getElementById('edit-card-date');
+    editTimeInput = document.getElementById('edit-card-time');
+    editRecurrenceInput = document.getElementById('edit-card-recurrence');
+    removeRecurrenceBtn = document.getElementById('remove-recurrence-btn');
+    modalListName = document.getElementById('modal-list-name');
+    modalTitle = document.getElementById('modal-title');
+    memberInput = document.getElementById('member-input');
+    membersList = document.getElementById('members-list');
+    addMemberBtn = document.getElementById('add-member-btn');
+    labelsEditor = document.getElementById('labels-editor');
+    presetLabelsList = document.getElementById('preset-labels-list');
+    checklistInput = document.getElementById('checklist-input');
+    checklistItems = document.getElementById('checklist-items');
+    addChecklistBtn = document.getElementById('add-checklist-btn');
+    commentInput = document.getElementById('comment-input');
+    commentsList = document.getElementById('comments-list');
+    addCommentBtn = document.getElementById('add-comment-btn');
+    imageInput = document.getElementById('image-input');
+    imagesList = document.getElementById('images-list');
+    fileInput = document.getElementById('file-input');
+    filesList = document.getElementById('files-list');
+    removeCardFromWorkspaceBtn = document.getElementById('remove-card-from-workspace-btn');
+    duplicateCardBtn = document.getElementById('duplicate-card-btn');
+    columnModal = document.getElementById('column-modal');
+    closeColumnModalBtn = document.getElementById('close-column-modal');
+    editColumnTitleInput = document.getElementById('edit-column-title');
+    saveColumnBtn = document.getElementById('save-column-btn');
+    deleteColumnBtn = document.getElementById('delete-column-btn');
+    createColumnBtn = document.getElementById('create-column-btn');
+    moveColumnLeftBtn = document.getElementById('move-column-left-btn');
+    moveColumnRightBtn = document.getElementById('move-column-right-btn');
+    columnReorderActions = document.getElementById('column-reorder-actions');
+    
+    // FAB / New Card
+    fabGlobalCreate = document.getElementById('fab-global-create');
+    newCardModal = document.getElementById('new-card-modal');
+    closeNewModal = document.getElementById('close-new-modal');
+    submitNewCardBtn = document.getElementById('submit-new-card');
+    ncTitle = document.getElementById('nc-title');
+    ncPlatform = document.getElementById('nc-platform');
+    ncDate = document.getElementById('nc-date');
+    ncTime = document.getElementById('nc-time');
+    ncRecurrence = document.getElementById('nc-recurrence');
+    ncAssignee = document.getElementById('nc-assignee');
+    ncWorkspaces = document.getElementById('new-card-workspaces');
+    
+    // Re-bind theme toggle if it was missing
+    themeToggleBtn = document.getElementById('theme-toggle');
+}
 
 async function loadStateFromServer() {
     const boardCanvas = document.getElementById('board-canvas');
@@ -780,45 +993,258 @@ function handleDrop(e) {
     moveCardToColumn(draggedCardId, sourceColId, targetColId);
 }
 
-// --- Modal Logic --- //
-let activeCardId = null;
-let activeCardColId = null;
-let draggedChecklistIndex = null;
-let activeColumnId = null;
+// --- Modal Selection & Event Logic --- //
+// Using let for dynamic re-binding if needed
+let modalOverlay = document.getElementById('card-modal');
+let modalBox = document.querySelector('.card-modal-content');
+let closeModalBtn = document.querySelector('#card-modal .close-modal');
+let saveCardBtn = document.getElementById('save-card-btn');
+let deleteCardBtn = document.getElementById('delete-card-btn');
+let editTitleInput = document.getElementById('edit-card-title');
+let editDescriptionInput = document.getElementById('edit-card-description');
+let editPlatformInput = document.getElementById('edit-card-platform');
+let editDateInput = document.getElementById('edit-card-date');
+let editTimeInput = document.getElementById('edit-card-time');
+let editRecurrenceInput = document.getElementById('edit-card-recurrence');
+let removeRecurrenceBtn = document.getElementById('remove-recurrence-btn');
+let modalListName = document.getElementById('modal-list-name');
+let modalTitle = document.getElementById('modal-title');
+let memberInput = document.getElementById('member-input');
+let membersList = document.getElementById('members-list');
+let addMemberBtn = document.getElementById('add-member-btn');
+let labelsEditor = document.getElementById('labels-editor');
+let presetLabelsList = document.getElementById('preset-labels-list');
+let checklistInput = document.getElementById('checklist-input');
+let checklistItems = document.getElementById('checklist-items');
+let addChecklistBtn = document.getElementById('add-checklist-btn');
+let commentInput = document.getElementById('comment-input');
+let commentsList = document.getElementById('comments-list');
+let addCommentBtn = document.getElementById('add-comment-btn');
+let imageInput = document.getElementById('image-input');
+let imagesList = document.getElementById('images-list');
+let fileInput = document.getElementById('file-input');
+let filesList = document.getElementById('files-list');
+let removeCardFromWorkspaceBtn = document.getElementById('remove-card-from-workspace-btn');
+let duplicateCardBtn = document.getElementById('duplicate-card-btn');
+let columnModal = document.getElementById('column-modal');
+let closeColumnModalBtn = document.getElementById('close-column-modal');
+let editColumnTitleInput = document.getElementById('edit-column-title');
+let saveColumnBtn = document.getElementById('save-column-btn');
+let deleteColumnBtn = document.getElementById('delete-column-btn');
+let createColumnBtn = document.getElementById('create-column-btn');
+let moveColumnLeftBtn = document.getElementById('move-column-left-btn');
+let moveColumnRightBtn = document.getElementById('move-column-right-btn');
+let columnReorderActions = document.getElementById('column-reorder-actions');
 
-const editTitleInput = document.getElementById('edit-card-title');
-const editDescriptionInput = document.getElementById('edit-card-description');
-const editPlatformInput = document.getElementById('edit-card-platform');
-const editDateInput = document.getElementById('edit-card-date');
-const editTimeInput = document.getElementById('edit-card-time');
-const editRecurrenceInput = document.getElementById('edit-card-recurrence');
-const saveCardBtn = document.getElementById('save-card-btn');
-const memberInput = document.getElementById('member-input');
-const membersList = document.getElementById('members-list');
-const addMemberBtn = document.getElementById('add-member-btn');
-const labelsEditor = document.getElementById('labels-editor');
-const presetLabelsList = document.getElementById('preset-labels-list');
-const checklistInput = document.getElementById('checklist-input');
-const checklistItems = document.getElementById('checklist-items');
-const addChecklistBtn = document.getElementById('add-checklist-btn');
-const commentInput = document.getElementById('comment-input');
-const commentsList = document.getElementById('comments-list');
-const addCommentBtn = document.getElementById('add-comment-btn');
-const imageInput = document.getElementById('image-input');
-const imagesList = document.getElementById('images-list');
-const fileInput = document.getElementById('file-input');
-const filesList = document.getElementById('files-list');
-const removeCardFromWorkspaceBtn = document.getElementById('remove-card-from-workspace-btn');
-const duplicateCardBtn = document.getElementById('duplicate-card-btn');
-const columnModal = document.getElementById('column-modal');
-const closeColumnModalBtn = document.getElementById('close-column-modal');
-const editColumnTitleInput = document.getElementById('edit-column-title');
-const saveColumnBtn = document.getElementById('save-column-btn');
-const deleteColumnBtn = document.getElementById('delete-column-btn');
-const createColumnBtn = document.getElementById('create-column-btn');
-const moveColumnLeftBtn = document.getElementById('move-column-left-btn');
-const moveColumnRightBtn = document.getElementById('move-column-right-btn');
-const columnReorderActions = document.getElementById('column-reorder-actions');
+// FAB / New Card Selectors
+let fabGlobalCreate = document.getElementById('fab-global-create');
+let newCardModal = document.getElementById('new-card-modal');
+let closeNewModal = document.getElementById('close-new-modal');
+let submitNewCardBtn = document.getElementById('submit-new-card');
+let ncTitle = document.getElementById('nc-title');
+let ncPlatform = document.getElementById('nc-platform');
+let ncDate = document.getElementById('nc-date');
+let ncTime = document.getElementById('nc-time');
+let ncRecurrence = document.getElementById('nc-recurrence');
+let ncAssignee = document.getElementById('nc-assignee');
+let ncWorkspaces = document.getElementById('new-card-workspaces');
+
+// Perform dynamic injection now that variables are ready
+injectModalsIfNeeded();
+
+function injectModalsIfNeeded() {
+    if (document.getElementById('card-modal')) return;
+
+    const modalContainer = document.createElement('div');
+    modalContainer.innerHTML = `
+        <!-- Card Detail Modal Overlay -->
+        <div class="modal-overlay" id="card-modal">
+            <div class="card-modal-content">
+                <button class="close-modal"><i class="fa-solid fa-times"></i></button>
+                <div class="modal-header">
+                    <div class="modal-label">Na lista <strong id="modal-list-name">...</strong></div>
+                    <h2 id="modal-title">Título do Card</h2>
+                </div>
+                
+                <div class="modal-body-layout">
+                    <div class="modal-main">
+                        <div class="modal-section">
+                            <h3><i class="fa-solid fa-pen-to-square"></i> Editar Card</h3>
+                            <div style="display:flex; flex-direction:column; gap:16px; margin-top:16px;">
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">TÍTULO / PAUTA</label>
+                                    <input type="text" id="edit-card-title" autocomplete="off" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">REDE SOCIAL</label>
+                                    <select id="edit-card-platform" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                        <option value="">Nenhuma / Geral</option>
+                                        <option value="instagram">Instagram</option>
+                                        <option value="tiktok">TikTok</option>
+                                        <option value="youtube">YouTube</option>
+                                        <option value="facebook">Facebook</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DATA DO POST</label>
+                                    <input type="date" id="edit-card-date" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">HORÁRIO DO POST</label>
+                                    <input type="time" id="edit-card-time" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">RECORRÊNCIA</label>
+                                    <div style="display:flex; gap:8px;">
+                                        <select id="edit-card-recurrence" style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                            <option value="none">Sem recorrência</option>
+                                            <option value="weekly">Semanal</option>
+                                            <option value="monthly">Mensal</option>
+                                        </select>
+                                        <button type="button" id="remove-recurrence-btn" title="Remover recorrência" style="padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-app); color:var(--text-main); cursor:pointer; display:none;">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DESCRIÇÃO</label>
+                                    <textarea id="edit-card-description" class="desc-editor" placeholder="Detalhes da demanda, briefing e observacoes..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-section">
+                            <h3><i class="fa-regular fa-user"></i> Membros</h3>
+                            <div class="inline-form-row">
+                                <input type="text" id="member-input" class="modal-text-input" placeholder="Email do membro" list="member-suggestions">
+                                <datalist id="member-suggestions"></datalist>
+                                <button type="button" class="sidebar-btn compact-btn" id="add-member-btn"><i class="fa-solid fa-plus"></i> Adicionar</button>
+                            </div>
+                            <div id="members-list" class="pill-list"></div>
+                        </div>
+                        <div class="modal-section">
+                            <h3><i class="fa-solid fa-layer-group"></i> Contas / Collab</h3>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Escolha em quais workspaces a demanda deve aparecer.</p>
+                            <div id="edit-card-workspaces" class="workspace-selector"></div>
+                        </div>
+                        <div class="modal-section">
+                            <h3><i class="fa-solid fa-tag"></i> Etiquetas</h3>
+                            <div id="preset-labels-list" class="preset-labels-list"></div>
+                            <div id="labels-editor" class="pill-list"></div>
+                        </div>
+                        <div class="modal-section">
+                            <h3><i class="fa-solid fa-list-check"></i> Checklist</h3>
+                            <div class="inline-form-row">
+                                <input type="text" id="checklist-input" class="modal-text-input" placeholder="Novo item do checklist">
+                                <button type="button" class="sidebar-btn compact-btn" id="add-checklist-btn"><i class="fa-solid fa-plus"></i> Adicionar</button>
+                            </div>
+                            <ul class="checklist-items" id="checklist-items"></ul>
+                        </div>
+                        <div class="modal-section">
+                            <h3><i class="fa-regular fa-image"></i> Imagens da Demanda</h3>
+                            <div class="inline-form-row">
+                                <input type="file" id="image-input" class="modal-text-input" accept="image/*" multiple>
+                            </div>
+                            <div id="images-list" class="image-grid"></div>
+                        </div>
+                        <div class="modal-section">
+                            <h3><i class="fa-solid fa-paperclip"></i> Arquivos Anexos</h3>
+                            <div class="inline-form-row">
+                                <input type="file" id="file-input" class="modal-text-input" multiple>
+                            </div>
+                            <div id="files-list" class="file-list"></div>
+                        </div>
+                        <div class="modal-section">
+                            <h3><i class="fa-regular fa-comments"></i> Atividade</h3>
+                            <div id="comments-list" class="comments-list"></div>
+                            <div class="inline-form-row" style="margin-top:12px;">
+                                <input type="text" id="comment-input" class="modal-text-input" placeholder="Escreva um comentario...">
+                                <button type="button" class="sidebar-btn compact-btn" id="add-comment-btn"><i class="fa-solid fa-paper-plane"></i> Publicar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-sidebar">
+                        <span class="sidebar-title">Ações</span>
+                        <button class="sidebar-btn" id="save-card-btn"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+                        <button class="sidebar-btn" id="remove-card-from-workspace-btn"><i class="fa-solid fa-layer-group"></i> Remover desta conta</button>
+                        <button class="sidebar-btn" id="duplicate-card-btn"><i class="fa-solid fa-copy"></i> Duplicar</button>
+                        <button class="sidebar-btn danger" id="delete-card-btn"><i class="fa-solid fa-trash"></i> Excluir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="column-modal">
+            <div class="modal-box" style="width: 420px; max-width: 90%;">
+                <button class="close-modal" id="close-column-modal"><i class="fa-solid fa-xmark"></i></button>
+                <h2 style="margin-bottom: 20px; color: var(--text-main);">Editar Quadro</h2>
+                <div style="margin-bottom: 20px;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">NOME DO QUADRO</label>
+                    <input type="text" id="edit-column-title" class="modal-text-input" autocomplete="off">
+                </div>
+                <div id="column-reorder-actions" style="display:flex; gap:8px; margin-bottom:12px;">
+                    <button id="move-column-left-btn" style="flex:1; padding: 10px; border-radius: 8px; background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;"><i class="fa-solid fa-arrow-left"></i> Esquerda</button>
+                    <button id="move-column-right-btn" style="flex:1; padding: 10px; border-radius: 8px; background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;">Direita <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+                <button id="save-column-btn" style="width: 100%; padding: 14px; border-radius: 8px; background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px;">Salvar Quadro</button>
+                <button id="delete-column-btn" style="width: 100%; padding: 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.18); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; margin-top: 12px; display:none;">Excluir Quadro</button>
+            </div>
+        </div>
+
+        <!-- FAB / Novo Card Modal se necessário -->
+        <div class="modal-overlay" id="new-card-modal">
+            <div class="modal-box" style="width: 400px; max-width: 90%;">
+                <button class="close-modal" id="close-new-modal"><i class="fa-solid fa-xmark"></i></button>
+                <h2 style="margin-bottom: 24px; color: var(--text-main);">Programar Conteúdo</h2>
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">TÍTULO / PAUTA</label>
+                    <input type="text" id="nc-title" autocomplete="off" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">REDE SOCIAL</label>
+                    <select id="nc-platform" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                        <option value="">Nenhuma / Geral</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="facebook">Facebook</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">DATA DO POST</label>
+                    <input type="date" id="nc-date" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">HORÁRIO DO POST</label>
+                    <input type="time" id="nc-time" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">RECORRÊNCIA</label>
+                    <select id="nc-recurrence" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                        <option value="none">Sem recorrência</option>
+                        <option value="weekly">Semanal</option>
+                        <option value="monthly">Mensal</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 24px;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">ATRIBUIR PARA (MEU EMAIL)</label>
+                    <input type="text" id="nc-assignee" placeholder="Deixe em branco ou email do membro" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                </div>
+                <div style="margin-bottom: 24px;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">ONDE ESSA DEMANDA APARECE</label>
+                    <div id="new-card-workspaces" class="workspace-selector"></div>
+                </div>
+                <button id="submit-new-card" style="width: 100%; padding: 14px; border-radius: 8px; background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px;">Criar Cartão <i class="fa-solid fa-check" style="margin-left: 6px;"></i></button>
+            </div>
+        </div>
+
+        <!-- FAB GLOBAL se necessário -->
+        <button id="fab-global-create" style="position: fixed; bottom: 32px; right: 32px; width: 64px; height: 64px; border-radius: 32px; background: var(--primary); color: white; display: none; align-items: center; justify-content: center; font-size: 24px; border: none; cursor: pointer; box-shadow: 0 10px 25px rgba(79,70,229,0.4); z-index: 100; transition: 0.3s;"><i class="fa-solid fa-plus"></i></button>
+    `;
+    document.body.appendChild(modalContainer);
+
+    // Re-attach listeners to ensure everything is bound
+    reinitializeModalElements();
+}
 
 function normalizeArray(value) {
     if (!value) return [];
@@ -1034,9 +1460,21 @@ function openModal(card, colId) {
         files: normalizeArray(card.files),
         visible_workspaces: Array.from(new Set([card.workspace_id || activeWorkspaceId, ...normalizeArray(card.visible_workspaces)]))
     };
-    const colName = boardState.columns.find(c => c.id === colId).title;
-    document.getElementById('modal-list-name').innerText = colName;
-    document.getElementById('modal-title').innerText = card.title;
+    let colName = 'Demanda';
+    if (colId) {
+        const foundCol = boardState.columns.find(c => c.id === colId);
+        if (foundCol) colName = foundCol.title;
+        else if (card.column_name) colName = card.column_name;
+    } else if (card.column_name) {
+        colName = card.column_name;
+    }
+
+    if (document.getElementById('modal-list-name')) {
+        document.getElementById('modal-list-name').innerText = colName;
+    }
+    if (document.getElementById('modal-title')) {
+        document.getElementById('modal-title').innerText = card.title;
+    }
     if (editTitleInput) editTitleInput.value = card.title || '';
     if (editDescriptionInput) editDescriptionInput.value = card.description || '';
     if (editPlatformInput) editPlatformInput.value = card.platform || '';
