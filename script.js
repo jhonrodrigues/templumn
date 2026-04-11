@@ -43,8 +43,20 @@ let activeCardColId = null;
 let activeColumnId = null;
 let suppressCardClickOnce = false;
 
-// Modal elements
+// Modal elements - declare all here to avoid redeclaration
 let modalOverlay, modalBox, closeModalBtn, saveCardBtn, deleteCardBtn;
+let editTitleInput, editDescriptionInput, editPlatformInput, editDateInput, editTimeInput, editRecurrenceInput;
+let modalListName, modalTitle, memberInput, membersList, addMemberBtn;
+let labelsEditor, presetLabelsList;
+let checklistInput, checklistItems, addChecklistBtn;
+let commentInput, commentsList, addCommentBtn;
+let imageInput, imagesList, fileInput, filesList;
+let removeCardFromWorkspaceBtn, duplicateCardBtn;
+let columnModal, closeColumnModalBtn, editColumnTitleInput;
+let saveColumnBtn, deleteColumnBtn, createColumnBtn;
+let moveColumnLeftBtn, moveColumnRightBtn, columnReorderActions;
+let fabGlobalCreate, newCardModal, closeNewModal, submitNewCardBtn;
+let ncTitle, ncPlatform, ncDate, ncTime, ncRecurrence, ncAssignee, ncWorkspaces;
 let memberSuggestionsCache = [];
 
 function getSaoPauloNowParts() {
@@ -999,57 +1011,6 @@ function handleDrop(e) {
 }
 
 // --- Modal Selection & Event Logic --- //
-// Using let for dynamic re-binding if needed
-let modalBox = document.querySelector('.card-modal-content');
-let saveCardBtn = document.getElementById('save-card-btn');
-let deleteCardBtn = document.getElementById('delete-card-btn');
-let editTitleInput = document.getElementById('edit-card-title');
-let editDescriptionInput = document.getElementById('edit-card-description');
-let editPlatformInput = document.getElementById('edit-card-platform');
-let editDateInput = document.getElementById('edit-card-date');
-let editTimeInput = document.getElementById('edit-card-time');
-let editRecurrenceInput = document.getElementById('edit-card-recurrence');
-let modalListName = document.getElementById('modal-list-name');
-let modalTitle = document.getElementById('modal-title');
-let memberInput = document.getElementById('member-input');
-let membersList = document.getElementById('members-list');
-let addMemberBtn = document.getElementById('add-member-btn');
-let labelsEditor = document.getElementById('labels-editor');
-let presetLabelsList = document.getElementById('preset-labels-list');
-let checklistInput = document.getElementById('checklist-input');
-let checklistItems = document.getElementById('checklist-items');
-let addChecklistBtn = document.getElementById('add-checklist-btn');
-let commentInput = document.getElementById('comment-input');
-let commentsList = document.getElementById('comments-list');
-let addCommentBtn = document.getElementById('add-comment-btn');
-let imageInput = document.getElementById('image-input');
-let imagesList = document.getElementById('images-list');
-let fileInput = document.getElementById('file-input');
-let filesList = document.getElementById('files-list');
-let removeCardFromWorkspaceBtn = document.getElementById('remove-card-from-workspace-btn');
-let duplicateCardBtn = document.getElementById('duplicate-card-btn');
-let columnModal = document.getElementById('column-modal');
-let closeColumnModalBtn = document.getElementById('close-column-modal');
-let editColumnTitleInput = document.getElementById('edit-column-title');
-let saveColumnBtn = document.getElementById('save-column-btn');
-let deleteColumnBtn = document.getElementById('delete-column-btn');
-let createColumnBtn = document.getElementById('create-column-btn');
-let moveColumnLeftBtn = document.getElementById('move-column-left-btn');
-let moveColumnRightBtn = document.getElementById('move-column-right-btn');
-let columnReorderActions = document.getElementById('column-reorder-actions');
-
-// FAB / New Card Selectors
-let fabGlobalCreate = document.getElementById('fab-global-create');
-let newCardModal = document.getElementById('new-card-modal');
-let closeNewModal = document.getElementById('close-new-modal');
-let submitNewCardBtn = document.getElementById('submit-new-card');
-let ncTitle = document.getElementById('nc-title');
-let ncPlatform = document.getElementById('nc-platform');
-let ncDate = document.getElementById('nc-date');
-let ncTime = document.getElementById('nc-time');
-let ncRecurrence = document.getElementById('nc-recurrence');
-let ncAssignee = document.getElementById('nc-assignee');
-let ncWorkspaces = document.getElementById('new-card-workspaces');
 
 function injectModalsIfNeeded() {
     if (document.getElementById('card-modal')) return;
