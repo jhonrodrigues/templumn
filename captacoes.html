@@ -209,9 +209,12 @@
                 }
                 
                 list.innerHTML = data.map(card => {
-                    const isVideo = card.labels.some(l => l.text.includes('Vídeo') || l.text.includes('Video'));
-                    const isPhoto = card.labels.some(l => l.text.includes('foto'));
+                    const labels = Array.isArray(card.labels) ? card.labels : [];
+                    const isVideo = labels.some(l => l.text.toLowerCase().includes('vídeo') || l.text.toLowerCase().includes('video'));
+                    const isPhoto = labels.some(l => l.text.toLowerCase().includes('foto'));
                     
+                    if (!isVideo && !isPhoto) return '';
+
                     return `
                         <div class="captacao-item" onclick="openModalById('${card.id}')">
                             <div class="captacao-info">
@@ -221,9 +224,8 @@
                                 <div class="captacao-details">
                                     <h3>${card.title}</h3>
                                     <div class="captacao-meta">
-                                        <span class="badge-capture ${isVideo ? 'badge-video' : 'badge-photo'}">
-                                            ${isVideo ? 'Captação de Vídeo' : 'Captação de Foto'}
-                                        </span>
+                                        ${isVideo ? '<span class="badge-capture badge-video">Captação de Vídeo</span>' : ''}
+                                        ${isPhoto ? '<span class="badge-capture badge-photo">Captação de Foto</span>' : ''}
                                         ${card.assignee ? `<span><i class="fa-regular fa-user"></i> ${card.assignee}</span>` : ''}
                                     </div>
                                 </div>

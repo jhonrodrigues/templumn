@@ -748,7 +748,6 @@ app.get('/api/captacoes', authGuard, async (req, res) => {
                    OR l->>'text' ILIKE '%Captação de foto%'
                    OR l->>'text' ILIKE '%Captacao de Video%'
                    OR l->>'text' ILIKE '%Captacao de foto%'
-                   OR l->>'text' ILIKE '%Captação%'
               )
             ORDER BY post_date ASC NULLS LAST, post_time ASC NULLS LAST;
         `;
