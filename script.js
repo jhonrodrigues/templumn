@@ -614,7 +614,8 @@ async function loadNotifications() {
 const boardCanvas = document.getElementById('board-canvas');
 const themeToggleBtn = document.getElementById('theme-toggle');
 const modalOverlay = document.getElementById('card-modal');
-const closeModalBtn = document.querySelector('.close-modal');
+// Reference to DOM elements (line 614 had duplicates, using only top declaration)
+let closeModalBtn = document.querySelector('#card-modal .close-modal');
 const notificationsBtn = document.getElementById('notifications-btn');
 const notificationsPanel = document.getElementById('notifications-panel');
 
@@ -997,9 +998,7 @@ function handleDrop(e) {
 
 // --- Modal Selection & Event Logic --- //
 // Using let for dynamic re-binding if needed
-let modalOverlay = document.getElementById('card-modal');
 let modalBox = document.querySelector('.card-modal-content');
-let closeModalBtn = document.querySelector('#card-modal .close-modal');
 let saveCardBtn = document.getElementById('save-card-btn');
 let deleteCardBtn = document.getElementById('delete-card-btn');
 let editTitleInput = document.getElementById('edit-card-title');
