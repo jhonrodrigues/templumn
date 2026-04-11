@@ -1889,3 +1889,5 @@ window.openCardDetail = async (cardId) => {
 // Initialize theme and modals
 initTheme();
 injectModalsIfNeeded();
+
+console.log('Script initialized', { saveCardBtn, closeModalBtn, modalOverlay });
