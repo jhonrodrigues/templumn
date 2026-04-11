@@ -170,11 +170,6 @@
                     <h1 class="board-title">Agendamento de Captações</h1>
                     <p style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Planejamento de Vídeos e Fotos com Ministérios</p>
                 </div>
-                <div style="margin-top: 16px;">
-                    <select id="ws-switcher" data-include-all="true" style="padding: 10px 16px; border-radius: 10px; background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border); font-weight: 600; outline:none; font-family:var(--font); cursor: pointer;">
-                        <!-- JS INJECT -->
-                    </select>
-                </div>
             </header>
 
             <div class="captacoes-container" id="captacoes-list">
@@ -265,15 +260,8 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             renderCaptacoes();
-            // Listen for workspace changes from script.js
-            const wsSwitcher = document.getElementById('ws-switcher');
-            if (wsSwitcher) {
-                const originalOnChange = wsSwitcher.onchange;
-                wsSwitcher.onchange = (e) => {
-                    if (originalOnChange) originalOnChange(e);
-                    renderCaptacoes();
-                };
-            }
+            // Hook into global workspace switch
+            window.renderCalendarPage = renderCaptacoes;
         });
     </script>
 </body>
