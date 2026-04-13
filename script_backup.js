@@ -38,26 +38,8 @@ let activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaal
 let activeCardData = null;
 let availableWorkspaces = [];
 let labelPresets = [];
-let activeCardId = null;
-let activeCardColId = null;
-let activeColumnId = null;
-let suppressCardClickOnce = false;
-
-// Modal elements - declare all here to avoid redeclaration
-let modalOverlay, modalBox, closeModalBtn, saveCardBtn, deleteCardBtn;
-let editTitleInput, editDescriptionInput, editPlatformInput, editDateInput, editTimeInput, editRecurrenceInput;
-let modalListName, modalTitle, memberInput, membersList, addMemberBtn;
-let labelsEditor, presetLabelsList;
-let checklistInput, checklistItems, addChecklistBtn;
-let commentInput, commentsList, addCommentBtn;
-let imageInput, imagesList, fileInput, filesList;
-let removeCardFromWorkspaceBtn, duplicateCardBtn;
-let columnModal, closeColumnModalBtn, editColumnTitleInput;
-let saveColumnBtn, deleteColumnBtn, createColumnBtn;
-let moveColumnLeftBtn, moveColumnRightBtn, columnReorderActions;
-let fabGlobalCreate, newCardModal, closeNewModal, submitNewCardBtn;
-let ncTitle, ncPlatform, ncDate, ncTime, ncRecurrence, ncAssignee, ncWorkspaces;
 let memberSuggestionsCache = [];
+let suppressCardClickOnce = false;
 
 function getSaoPauloNowParts() {
     const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -629,16 +611,17 @@ async function loadNotifications() {
 }
 
 // Reference to DOM elements
-let themeToggleBtn = document.getElementById('theme-toggle');
+const boardCanvas = document.getElementById('board-canvas');
+const themeToggleBtn = document.getElementById('theme-toggle');
+const modalOverlay = document.getElementById('card-modal');
+const closeModalBtn = document.querySelector('.close-modal');
 const notificationsBtn = document.getElementById('notifications-btn');
 const notificationsPanel = document.getElementById('notifications-panel');
 
 // --- Render Logic --- //
 
 function renderBoard() {
-    const boardCanvasEl = document.getElementById('board-canvas');
-    if (!boardCanvasEl) return;
-    boardCanvasEl.innerHTML = '';
+    boardCanvas.innerHTML = '';
     
     boardState.columns.forEach(column => {
         // Create Column
@@ -721,7 +704,7 @@ function renderBoard() {
         };
         colEl.appendChild(addBtn);
         
-        boardCanvasEl.appendChild(colEl);
+        boardCanvas.appendChild(colEl);
     });
 }
 
@@ -1011,6 +994,63 @@ function handleDrop(e) {
 }
 
 // --- Modal Selection & Event Logic --- //
+// Using let for dynamic re-binding if needed
+let modalOverlay = document.getElementById('card-modal');
+let modalBox = document.querySelector('.card-modal-content');
+let closeModalBtn = document.querySelector('#card-modal .close-modal');
+let saveCardBtn = document.getElementById('save-card-btn');
+let deleteCardBtn = document.getElementById('delete-card-btn');
+let editTitleInput = document.getElementById('edit-card-title');
+let editDescriptionInput = document.getElementById('edit-card-description');
+let editPlatformInput = document.getElementById('edit-card-platform');
+let editDateInput = document.getElementById('edit-card-date');
+let editTimeInput = document.getElementById('edit-card-time');
+let editRecurrenceInput = document.getElementById('edit-card-recurrence');
+let removeRecurrenceBtn = document.getElementById('remove-recurrence-btn');
+let modalListName = document.getElementById('modal-list-name');
+let modalTitle = document.getElementById('modal-title');
+let memberInput = document.getElementById('member-input');
+let membersList = document.getElementById('members-list');
+let addMemberBtn = document.getElementById('add-member-btn');
+let labelsEditor = document.getElementById('labels-editor');
+let presetLabelsList = document.getElementById('preset-labels-list');
+let checklistInput = document.getElementById('checklist-input');
+let checklistItems = document.getElementById('checklist-items');
+let addChecklistBtn = document.getElementById('add-checklist-btn');
+let commentInput = document.getElementById('comment-input');
+let commentsList = document.getElementById('comments-list');
+let addCommentBtn = document.getElementById('add-comment-btn');
+let imageInput = document.getElementById('image-input');
+let imagesList = document.getElementById('images-list');
+let fileInput = document.getElementById('file-input');
+let filesList = document.getElementById('files-list');
+let removeCardFromWorkspaceBtn = document.getElementById('remove-card-from-workspace-btn');
+let duplicateCardBtn = document.getElementById('duplicate-card-btn');
+let columnModal = document.getElementById('column-modal');
+let closeColumnModalBtn = document.getElementById('close-column-modal');
+let editColumnTitleInput = document.getElementById('edit-column-title');
+let saveColumnBtn = document.getElementById('save-column-btn');
+let deleteColumnBtn = document.getElementById('delete-column-btn');
+let createColumnBtn = document.getElementById('create-column-btn');
+let moveColumnLeftBtn = document.getElementById('move-column-left-btn');
+let moveColumnRightBtn = document.getElementById('move-column-right-btn');
+let columnReorderActions = document.getElementById('column-reorder-actions');
+
+// FAB / New Card Selectors
+let fabGlobalCreate = document.getElementById('fab-global-create');
+let newCardModal = document.getElementById('new-card-modal');
+let closeNewModal = document.getElementById('close-new-modal');
+let submitNewCardBtn = document.getElementById('submit-new-card');
+let ncTitle = document.getElementById('nc-title');
+let ncPlatform = document.getElementById('nc-platform');
+let ncDate = document.getElementById('nc-date');
+let ncTime = document.getElementById('nc-time');
+let ncRecurrence = document.getElementById('nc-recurrence');
+let ncAssignee = document.getElementById('nc-assignee');
+let ncWorkspaces = document.getElementById('new-card-workspaces');
+
+// Perform dynamic injection now that variables are ready
+injectModalsIfNeeded();
 
 function injectModalsIfNeeded() {
     if (document.getElementById('card-modal')) return;
@@ -1578,7 +1618,8 @@ if (removeCardFromWorkspaceBtn) {
     };
 }
 
-if (typeof removeRecurrenceBtn !== 'undefined' && removeRecurrenceBtn) {
+const removeRecurrenceBtn = document.getElementById('remove-recurrence-btn');
+if (removeRecurrenceBtn) {
     removeRecurrenceBtn.onclick = () => {
         if (!activeCardId || !activeCardData) return;
         if (!confirm('Remover a recorrência desta demanda? Os cards futuros já criados continuarão existindo.')) return;
@@ -1681,31 +1722,125 @@ if (moveColumnRightBtn) {
     };
 }
 
-if (document.getElementById('close-column-modal') && document.getElementById('column-modal')) {
-    const closeColBtn = document.getElementById('close-column-modal');
-    const colModalEl = document.getElementById('column-modal');
-    
-    closeColBtn.onclick = () => {
-        colModalEl.classList.remove('active');
+if (closeColumnModalBtn && columnModal) {
+    closeColumnModalBtn.onclick = () => {
+        columnModal.classList.remove('active');
     };
-    colModalEl.addEventListener('click', (event) => {
-        if (event.target === colModalEl) {
-            colModalEl.classList.remove('active');
+    columnModal.addEventListener('click', (event) => {
+        if (event.target === columnModal) {
+            columnModal.classList.remove('active');
         }
     });
 }
 
-if (document.getElementById('card-modal') && document.querySelector('#card-modal .close-modal')) {
-    const closeBtn = document.querySelector('#card-modal .close-modal');
-    const modalOverlayEl = document.getElementById('card-modal');
-    
-    closeBtn.addEventListener('click', () => {
-        modalOverlayEl.classList.remove('active');
+if (saveCardBtn) {
+    saveCardBtn.onclick = async () => {
+        if (!activeCardId || !activeCardData) return;
+        const title = editTitleInput ? editTitleInput.value.trim() : '';
+        const description = editDescriptionInput ? editDescriptionInput.value.trim() : '';
+        const platform = editPlatformInput ? editPlatformInput.value : '';
+        const post_date = editDateInput ? editDateInput.value : '';
+        const post_time = editTimeInput ? editTimeInput.value : '';
+        const recurrence_type = editRecurrenceInput ? editRecurrenceInput.value : 'none';
+        const assignee = activeCardData.members.length > 0 ? activeCardData.members[0] : '';
+        const visible_workspaces = getSelectedWorkspaceIds('edit-card-workspaces');
+        activeCardData.visible_workspaces = visible_workspaces;
+
+        if (!title) return alert('Preencha o titulo do card.');
+
+        const originalText = saveCardBtn.innerHTML;
+        saveCardBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Salvando';
+
+        try {
+            const response = await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), {
+                method: 'PUT',
+                headers: authHeaders,
+                body: JSON.stringify({ title, description, platform, post_date, post_time, recurrence_type, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id })
+            });
+
+            if (!response.ok) throw new Error('save failed');
+
+            const activeColumn = boardState.columns.find(c => c.id === activeCardColId);
+            const activeCard = activeColumn && activeColumn.cards.find(c => c.id === activeCardId);
+            if (activeCard) {
+                activeCard.title = title;
+                activeCard.description = description;
+                activeCard.platform = platform;
+                activeCard.post_date = post_date;
+                activeCard.post_time = post_time;
+                activeCard.recurrence_type = recurrence_type;
+                activeCard.assignee = assignee;
+                activeCard.labels = activeCardData.labels;
+                activeCard.members = activeCardData.members;
+                activeCard.checklist = activeCardData.checklist;
+                activeCard.comments_data = activeCardData.comments;
+                activeCard.images = activeCardData.images;
+                activeCard.files = activeCardData.files;
+                activeCard.visible_workspaces = visible_workspaces;
+                activeCard.comments = activeCardData.comments.length;
+                activeCard.attachments = activeCardData.images.length + activeCardData.files.length;
+            }
+
+            document.getElementById('modal-title').innerText = title;
+            modalOverlay.classList.remove('active');
+            loadStateFromServer();
+        } catch (e) {
+            alert('Erro ao salvar card');
+        } finally {
+            saveCardBtn.innerHTML = originalText;
+        }
+    };
+}
+
+const delBtn = document.getElementById('delete-card-btn');
+if (delBtn) {
+    delBtn.onclick = async () => {
+        if (!activeCardId) return;
+        if(confirm('Tem certeza que deseja excluir DEIFINITIVAMENTE este cartão do Banco de Dados?')) {
+            try {
+                await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), { method: 'DELETE', headers: authHeaders });
+                modalOverlay.classList.remove('active');
+                loadStateFromServer();
+            } catch(e) {
+                alert('Erro ao excluir card');
+            }
+        }
+    };
+}
+
+if (duplicateCardBtn) {
+    duplicateCardBtn.onclick = async () => {
+        if (!activeCardId) return;
+        if (!confirm('Deseja duplicar esta demanda?')) return;
+        
+        const originalText = duplicateCardBtn.innerHTML;
+        duplicateCardBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Duplicando';
+        
+        try {
+            const response = await fetch(`/api/cards/${activeCardId}/duplicate?workspace=${encodeURIComponent(activeWorkspaceId)}`, {
+                method: 'POST',
+                headers: authHeaders
+            });
+            if (!response.ok) throw new Error('duplicate failed');
+            
+            modalOverlay.classList.remove('active');
+            loadStateFromServer();
+        } catch (e) {
+            alert('Erro ao duplicar card');
+        } finally {
+            duplicateCardBtn.innerHTML = originalText;
+        }
+    };
+}
+
+if (closeModalBtn && modalOverlay) {
+    closeModalBtn.addEventListener('click', () => {
+        modalOverlay.classList.remove('active');
     });
 
-    modalOverlayEl.addEventListener('click', (e) => {
-        if (e.target === modalOverlayEl) {
-            modalOverlayEl.classList.remove('active');
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            modalOverlay.classList.remove('active');
         }
     });
 }
@@ -1716,11 +1851,10 @@ function initTheme() {
     const savedTheme = localStorage.getItem('templum-theme');
     if (savedTheme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
+        if (themeToggleBtn) themeToggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
     } else {
         document.documentElement.removeAttribute('data-theme');
-    }
-    if (themeToggleBtn) {
-        themeToggleBtn.innerHTML = savedTheme === 'dark' ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+        if (themeToggleBtn) themeToggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
     }
 }
 
@@ -1786,92 +1920,4 @@ window.openCardDetail = async (cardId) => {
     } catch(e) { console.error(e); }
 };
 
-// Initialize theme and modals
 initTheme();
-injectModalsIfNeeded();
-
-console.log('Script initialized', { saveCardBtn, closeModalBtn, modalOverlay });
-
-// Re-attach event handlers after modal injection
-function attachModalHandlers() {
-    if (saveCardBtn) {
-        saveCardBtn.onclick = async () => {
-            console.log('Save button clicked', { saveCardBtn, editTitleInput });
-            if (!activeCardId || !activeCardData) return;
-            const title = editTitleInput ? editTitleInput.value.trim() : '';
-            const description = editDescriptionInput ? editDescriptionInput.value.trim() : '';
-            const platform = editPlatformInput ? editPlatformInput.value : '';
-            const post_date = editDateInput ? editDateInput.value : '';
-            const post_time = editTimeInput ? editTimeInput.value : '';
-            const recurrence_type = editRecurrenceInput ? editRecurrenceInput.value : 'none';
-            const assignee = activeCardData.members.length > 0 ? activeCardData.members[0] : '';
-            const visible_workspaces = getSelectedWorkspaceIds('edit-card-workspaces');
-            activeCardData.visible_workspaces = visible_workspaces;
-            if (!title) return alert('Preencha o titulo do card.');
-            const originalText = saveCardBtn.innerHTML;
-            saveCardBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Salvando';
-            try {
-                const response = await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), {
-                    method: 'PUT',
-                    headers: authHeaders,
-                    body: JSON.stringify({ title, description, platform, post_date, post_time, recurrence_type, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id })
-                });
-                if (!response.ok) throw new Error('save failed');
-                const activeColumn = boardState.columns.find(c => c.id === activeCardColId);
-                const activeCard = activeColumn && activeColumn.cards.find(c => c.id === activeCardId);
-                if (activeCard) {
-                    activeCard.title = title; activeCard.description = description;
-                    activeCard.platform = platform; activeCard.post_date = post_date;
-                    activeCard.post_time = post_time; activeCard.recurrence_type = recurrence_type;
-                    activeCard.assignee = assignee; activeCard.labels = activeCardData.labels;
-                    activeCard.members = activeCardData.members; activeCard.checklist = activeCardData.checklist;
-                    activeCard.comments_data = activeCardData.comments; activeCard.images = activeCardData.images;
-                    activeCard.files = activeCardData.files; activeCard.visible_workspaces = visible_workspaces;
-                    activeCard.comments = activeCardData.comments.length;
-                    activeCard.attachments = activeCardData.images.length + activeCardData.files.length;
-                }
-                document.getElementById('modal-title').innerText = title;
-                modalOverlay.classList.remove('active');
-                loadStateFromServer();
-            } catch (e) { alert('Erro ao salvar card'); }
-            finally { saveCardBtn.innerHTML = originalText; }
-        };
-    }
-    
-    if (closeModalBtn) {
-        closeModalBtn.onclick = () => modalOverlay.classList.remove('active');
-    }
-    
-    if (deleteCardBtn) {
-        deleteCardBtn.onclick = async () => {
-            if (!activeCardId) return;
-            if(confirm('Tem certeza que deseja excluir DEIFINITIVAMENTE este cartão do Banco de Dados?')) {
-                try {
-                    await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), { method: 'DELETE', headers: authHeaders });
-                    modalOverlay.classList.remove('active');
-                    loadStateFromServer();
-                } catch(e) { alert('Erro ao excluir card'); }
-            }
-        };
-    }
-    
-    if (duplicateCardBtn) {
-        duplicateCardBtn.onclick = async () => {
-            if (!activeCardId || !confirm('Deseja duplicar esta demanda?')) return;
-            const originalText = duplicateCardBtn.innerHTML;
-            duplicateCardBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Duplicando';
-            try {
-                const res = await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), { headers: authHeaders });
-                const card = await res.json();
-                delete card.id; delete card.created_at;
-                card.title = card.title + ' (cópia)';
-                await fetch('/api/cards?workspace=' + encodeURIComponent(activeWorkspaceId), { method: 'POST', headers: authHeaders, body: JSON.stringify(card) });
-                modalOverlay.classList.remove('active');
-                loadStateFromServer();
-            } catch(e) { alert('Erro ao duplicar card'); }
-            finally { duplicateCardBtn.innerHTML = originalText; }
-        };
-    }
-}
-
-attachModalHandlers();
