@@ -127,7 +127,11 @@
                         <div style="font-size: clamp(26px, 2.2vw, 36px); font-weight: 800;">Calendário do Mês</div>
                         <div id="tv-calendar-subtitle" style="font-size: clamp(16px, 1.1vw, 20px); color: var(--text-muted);">Todas as contas</div>
                     </div>
-                    <div class="tv-chip" id="tv-calendar-month"></div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <button class="tv-toggle-btn" id="tv-prev-month"><i class="fa-solid fa-chevron-left"></i></button>
+                        <div class="tv-chip" id="tv-calendar-month" style="min-width: clamp(200px, 18vw, 300px); text-align: center;"></div>
+                        <button class="tv-toggle-btn" id="tv-next-month"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
                 </div>
                 <div class="tv-calendar-grid" id="tv-calendar-grid"></div>
             </section>
@@ -140,6 +144,7 @@
         const TV_TOKEN_KEY = 'templum-tv-token';
         let activeTvView = 'calendar';
         let tvCalendarDayMap = {};
+        let viewingMonthKey = getCurrentMonthKey();
 
         function getTvHeaders() {
             return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem(TV_TOKEN_KEY) };
@@ -165,7 +170,7 @@
         }
 
         function renderTvCalendar(columns) {
-            const monthKey = getCurrentMonthKey();
+            const monthKey = viewingMonthKey;
             const [year, month] = monthKey.split('-').map(Number);
             const daysInMonth = new Date(year, month, 0).getDate();
             const firstDay = new Date(year, month - 1, 1).getDay();
@@ -182,7 +187,7 @@
             const grid = document.getElementById('tv-calendar-grid');
             const totalCells = firstDay + daysInMonth;
             const weekRows = Math.ceil(totalCells / 7);
-            document.getElementById('tv-calendar-month').innerText = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', month: 'long', year: 'numeric' }).format(new Date(`${monthKey}-01T00:00:00`));
+            document.getElementById('tv-calendar-month').innerText = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
             grid.style.gridTemplateRows = `auto repeat(${weekRows}, minmax(0, 1fr))`;
             grid.innerHTML = labels.map((label) => `<div class="tv-calendar-label">${label}</div>`).join('');
             for (let i = 0; i < firstDay; i++) grid.innerHTML += '<div class="tv-day empty"></div>';
@@ -211,6 +216,15 @@
             if (scheduled.length === 0) {
                 grid.innerHTML += '<div style="grid-column: 1 / -1; color: var(--text-muted); padding: 18px 4px;">Nenhuma demanda agendada para este mês.</div>';
             }
+        }
+
+        function changeMonth(offset) {
+            const [year, month] = viewingMonthKey.split('-').map(Number);
+            const date = new Date(year, month - 1 + offset, 1);
+            const nextYear = date.getFullYear();
+            const nextMonth = String(date.getMonth() + 1).padStart(2, '0');
+            viewingMonthKey = `${nextYear}-${nextMonth}`;
+            loadTvView();
         }
 
         function openTvDayModal(dayKey) {
@@ -319,6 +333,8 @@
             if (!dayEl) return;
             openTvDayModal(dayEl.dataset.tvDay);
         });
+        document.getElementById('tv-prev-month').addEventListener('click', () => changeMonth(-1));
+        document.getElementById('tv-next-month').addEventListener('click', () => changeMonth(1));
         document.getElementById('tv-day-modal-close').addEventListener('click', () => document.getElementById('tv-day-modal').classList.remove('active'));
         document.getElementById('tv-day-modal').addEventListener('click', (event) => {
             if (event.target.id === 'tv-day-modal') document.getElementById('tv-day-modal').classList.remove('active');
