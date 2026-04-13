@@ -1681,21 +1681,28 @@ if (moveColumnRightBtn) {
     };
 }
 
-if (document.getElementById('close-column-modal') && document.getElementById('column-modal')) {
-    const closeColBtn = document.getElementById('close-column-modal');
-    const colModalEl = document.getElementById('column-modal');
+function attachModalHandlers() {
+    // Card modal handlers
+    if (document.getElementById('card-modal') && document.querySelector('#card-modal .close-modal')) {
+        const closeBtn = document.querySelector('#card-modal .close-modal');
+        const modalOverlayEl = document.getElementById('card-modal');
+        closeBtn.addEventListener('click', () => modalOverlayEl.classList.remove('active'));
+        modalOverlayEl.addEventListener('click', (e) => { if (e.target === modalOverlayEl) modalOverlayEl.classList.remove('active'); });
+    }
     
-    closeColBtn.onclick = () => {
-        colModalEl.classList.remove('active');
-    };
-    colModalEl.addEventListener('click', (event) => {
-        if (event.target === colModalEl) {
-            colModalEl.classList.remove('active');
-        }
-    });
-}
-
-if (document.getElementById('card-modal') && document.querySelector('#card-modal .close-modal')) {
+    // Column modal handlers
+    if (document.getElementById('close-column-modal') && document.getElementById('column-modal')) {
+        const closeColBtn = document.getElementById('close-column-modal');
+        const colModalEl = document.getElementById('column-modal');
+        closeColBtn.onclick = () => colModalEl.classList.remove('active');
+        colModalEl.addEventListener('click', (event) => { if (event.target === colModalEl) colModalEl.classList.remove('active'); });
+    }
+    
+    if (document.getElementById('new-card-modal') && document.getElementById('close-new-modal')) {
+        const closeNewBtn = document.getElementById('close-new-modal');
+        const newCardModalEl = document.getElementById('new-card-modal');
+        closeNewBtn.onclick = () => newCardModalEl.classList.remove('active');
+    }
     const closeBtn = document.querySelector('#card-modal .close-modal');
     const modalOverlayEl = document.getElementById('card-modal');
     
