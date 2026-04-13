@@ -99,18 +99,14 @@
 
     <div class="tv-shell">
         <div class="tv-header">
-            <div class="tv-title">
-                <h1>Painel TV</h1>
-                <p>Visão geral com Kanban e calendário de todas as contas.</p>
+            <div class="tv-title" id="tv-logo-container">
+                <!-- Logo injected by initBranding() -->
             </div>
             <div class="tv-meta">
                 <div class="tv-view-toggle">
                     <button class="tv-toggle-btn active" data-tv-view="calendar">Calendário</button>
-                    <button class="tv-toggle-btn" data-tv-view="kanban">Kanban</button>
                 </div>
                 <span class="tv-chip" id="tv-clock">--:--</span>
-                <span class="tv-chip">Atualiza a cada 10s</span>
-                <span class="tv-chip">URL rápida: <strong>/tv</strong></span>
             </div>
         </div>
 
@@ -137,7 +133,7 @@
             </section>
         </div>
 
-        <div class="tv-footer" id="tv-footer">Última atualização: --</div>
+        <div class="tv-footer" id="tv-footer"></div>
     </div>
 
     <script>
@@ -287,7 +283,7 @@
                 }).join('');
 
                 renderTvCalendar(boardData.columns || []);
-                document.getElementById('tv-footer').innerText = 'Última atualização: ' + new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date());
+
             } catch (err) {
                 document.getElementById('tv-board').innerHTML = '<div style="color: var(--text-muted);">Não foi possível carregar o painel da TV.</div>';
                 document.getElementById('tv-calendar-grid').innerHTML = '<div style="color: var(--text-muted);">Não foi possível carregar o calendário da TV.</div>';
@@ -336,6 +332,22 @@
         setInterval(() => {
             if (localStorage.getItem(TV_TOKEN_KEY)) loadTvView();
         }, 10000);
+        
+        // Load logo from branding settings
+        async function initTvBranding() {
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                const logoContainer = document.getElementById('tv-logo-container');
+                if (logoContainer && data.logo_light_url) {
+                    const img = document.createElement('img');
+                    img.src = data.logo_light_url;
+                    img.style.cssText = 'max-height: clamp(40px, 5vw, 60px); border-radius: 8px;';
+                    logoContainer.appendChild(img);
+                }
+            } catch(err) { console.log('No branding settings'); }
+        }
+        initTvBranding();
     </script>
 </body>
 </html>
