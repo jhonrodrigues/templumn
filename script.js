@@ -1873,6 +1873,81 @@ function attachModalHandlers() {
         const newCardModal = document.getElementById('new-card-modal');
         closeNewBtn.addEventListener('click', () => newCardModal.classList.remove('active'));
     }
+    
+    // Column (Quadro) handlers
+    const saveColumnBtnEl = document.getElementById('save-column-btn');
+    if (saveColumnBtnEl) {
+        saveColumnBtnEl.onclick = async () => {
+            const editColumnTitleInputEl = document.getElementById('edit-column-title');
+            if (!editColumnTitleInputEl) return;
+            const nextTitle = editColumnTitleInputEl.value.trim();
+            if (!nextTitle) return alert('Preencha o nome do quadro.');
+            const originalText = saveColumnBtnEl.innerHTML;
+            saveColumnBtnEl.innerHTML = 'Salvando...';
+            try {
+                const isEditing = Boolean(activeColumnId);
+                const response = await fetch(isEditing ? '/api/columns/' + activeColumnId : '/api/columns', {
+                    method: isEditing ? 'PUT' : 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify({ title: nextTitle })
+                });
+                if (!response.ok) throw new Error('column update failed');
+                const data = await response.json().catch(() => ({}));
+                if (isEditing) {
+                    const column = boardState.columns.find((item) => item.id === activeColumnId);
+                    if (column) column.title = nextTitle;
+                } else if (data.id) {
+                    boardState.columns.push({ id: data.id, title: data.title || nextTitle, col_order: data.col_order || (boardState.columns.length + 1), cards: [] });
+                    boardState.columns.sort((a, b) => (a.col_order || 0) - (b.col_order || 0));
+                }
+                const columnModalEl = document.getElementById('column-modal');
+                if (columnModalEl) columnModalEl.classList.remove('active');
+                renderBoard();
+            } catch (err) {
+                alert('Nao foi possivel editar esse quadro.');
+            } finally {
+                saveColumnBtnEl.innerHTML = originalText;
+            }
+        };
+    }
+    
+    const deleteColumnBtnEl = document.getElementById('delete-column-btn');
+    if (deleteColumnBtnEl) {
+        deleteColumnBtnEl.onclick = async () => {
+            if (!activeColumnId) return;
+            if (!confirm('Excluir este quadro? Ele precisa estar vazio para ser removido.')) return;
+            const originalText = deleteColumnBtnEl.innerHTML;
+            deleteColumnBtnEl.innerHTML = 'Excluindo...';
+            try {
+                const response = await fetch('/api/columns/' + activeColumnId, { method: 'DELETE', headers: authHeaders });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || 'delete failed');
+                boardState.columns = boardState.columns.filter((item) => item.id !== activeColumnId);
+                const columnModalEl = document.getElementById('column-modal');
+                if (columnModalEl) columnModalEl.classList.remove('active');
+                renderBoard();
+            } catch (err) {
+                alert(err.message || 'Nao foi possivel excluir esse quadro.');
+            } finally {
+                deleteColumnBtnEl.innerHTML = originalText;
+            }
+        };
+    }
+    
+    const createColumnBtnEl = document.getElementById('create-column-btn');
+    if (createColumnBtnEl) {
+        createColumnBtnEl.onclick = () => openColumnModal(null);
+    }
+    
+    const moveColumnLeftBtnEl = document.getElementById('move-column-left-btn');
+    if (moveColumnLeftBtnEl) {
+        moveColumnLeftBtnEl.onclick = () => { if (activeColumnId) moveColumn(activeColumnId, 'left'); };
+    }
+    
+    const moveColumnRightBtnEl = document.getElementById('move-column-right-btn');
+    if (moveColumnRightBtnEl) {
+        moveColumnRightBtnEl.onclick = () => { if (activeColumnId) moveColumn(activeColumnId, 'right'); };
+    }
 }
 
 attachModalHandlers();
