@@ -1681,20 +1681,6 @@ if (moveColumnRightBtn) {
     };
 }
 
-if (document.getElementById('close-column-modal') && document.getElementById('column-modal')) {
-    const closeColBtn = document.getElementById('close-column-modal');
-    const colModalEl = document.getElementById('column-modal');
-    
-    closeColBtn.onclick = () => {
-        colModalEl.classList.remove('active');
-    };
-    colModalEl.addEventListener('click', (event) => {
-        if (event.target === colModalEl) {
-            colModalEl.classList.remove('active');
-        }
-    });
-}
-
 if (document.getElementById('card-modal') && document.querySelector('#card-modal .close-modal')) {
     const closeBtn = document.querySelector('#card-modal .close-modal');
     const modalOverlayEl = document.getElementById('card-modal');
@@ -1871,6 +1857,21 @@ function attachModalHandlers() {
             } catch(e) { alert('Erro ao duplicar card'); }
             finally { duplicateCardBtn.innerHTML = originalText; }
         };
+    }
+    
+    // Column modal handlers
+    if (document.getElementById('close-column-modal') && document.getElementById('column-modal')) {
+        const closeColBtn = document.getElementById('close-column-modal');
+        const colModalEl = document.getElementById('column-modal');
+        closeColBtn.addEventListener('click', () => colModalEl.classList.remove('active'));
+        colModalEl.addEventListener('click', (e) => { if (e.target === colModalEl) colModalEl.classList.remove('active'); });
+    }
+    
+    // New card modal handlers
+    if (document.getElementById('close-new-modal') && document.getElementById('new-card-modal')) {
+        const closeNewBtn = document.getElementById('close-new-modal');
+        const newCardModal = document.getElementById('new-card-modal');
+        closeNewBtn.addEventListener('click', () => newCardModal.classList.remove('active'));
     }
 }
 
