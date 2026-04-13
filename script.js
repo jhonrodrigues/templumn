@@ -1875,9 +1875,12 @@ function attachModalHandlers() {
     }
     
     // Column (Quadro) handlers
+    console.log('Attaching column handlers...');
     const saveColumnBtnEl = document.getElementById('save-column-btn');
+    console.log('save-column-btn found:', !!saveColumnBtnEl);
     if (saveColumnBtnEl) {
         saveColumnBtnEl.onclick = async () => {
+            console.log('Save column clicked');
             const editColumnTitleInputEl = document.getElementById('edit-column-title');
             if (!editColumnTitleInputEl) return;
             const nextTitle = editColumnTitleInputEl.value.trim();
