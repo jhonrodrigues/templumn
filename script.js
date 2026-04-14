@@ -251,158 +251,7 @@ initWorkspaces();
 initMobileMenu();
 // injection moved below variable declarations
 
-function injectModalsIfNeeded() {
-    if (document.getElementById('card-modal')) return;
-
-    const modalContainer = document.createElement('div');
-    modalContainer.innerHTML = `
-        <!-- Card Detail Modal Overlay -->
-        <div class="modal-overlay" id="card-modal">
-            <div class="card-modal-content">
-                <button class="close-modal"><i class="fa-solid fa-times"></i></button>
-                <div class="modal-header">
-                    <div class="modal-label">Na lista <strong id="modal-list-name">...</strong></div>
-                    <h2 id="modal-title">Título do Card</h2>
-                </div>
-                
-                <div class="modal-body-layout">
-                    <div class="modal-main">
-                        <div class="modal-section">
-                            <h3><i class="fa-solid fa-pen-to-square"></i> Editar Card</h3>
-                            <div style="display:flex; flex-direction:column; gap:16px; margin-top:16px;">
-                                <div>
-                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">TÍTULO / PAUTA</label>
-                                    <input type="text" id="edit-card-title" autocomplete="off" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
-                                </div>
-                                <div>
-                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">REDE SOCIAL</label>
-                                    <select id="edit-card-platform" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
-                                        <option value="">Nenhuma / Geral</option>
-                                        <option value="instagram">Instagram</option>
-                                        <option value="tiktok">TikTok</option>
-                                        <option value="youtube">YouTube</option>
-                                        <option value="facebook">Facebook</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DATA DO POST</label>
-                                    <input type="date" id="edit-card-date" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
-                                </div>
-                                <div>
-                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">HORÁRIO DO POST</label>
-                                    <input type="time" id="edit-card-time" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
-                                </div>
-                                <div>
-                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">RECORRÊNCIA</label>
-                                    <div style="display:flex; gap:8px;">
-                                        <select id="edit-card-recurrence" style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
-                                            <option value="none">Sem recorrência</option>
-                                            <option value="weekly">Semanal</option>
-                                            <option value="monthly">Mensal</option>
-                                        </select>
-                                        <button type="button" id="remove-recurrence-btn" title="Remover recorrência" style="padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-app); color:var(--text-main); cursor:pointer; display:none;">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DESCRIÇÃO</label>
-                                    <textarea id="edit-card-description" class="desc-editor" placeholder="Detalhes da demanda, briefing e observacoes..."></textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="modal-section">
-                            <h3><i class="fa-regular fa-user"></i> Membros</h3>
-                            <div class="inline-form-row">
-                                <input type="text" id="member-input" class="modal-text-input" placeholder="Email do membro" list="member-suggestions">
-                                <datalist id="member-suggestions"></datalist>
-                                <button type="button" class="sidebar-btn compact-btn" id="add-member-btn"><i class="fa-solid fa-plus"></i> Adicionar</button>
-                            </div>
-                            <div id="members-list" class="pill-list"></div>
-                        </div>
-
-                        <div class="modal-section">
-                            <h3><i class="fa-solid fa-layer-group"></i> Contas / Collab</h3>
-                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Escolha em quais workspaces a demanda deve aparecer.</p>
-                            <div id="edit-card-workspaces" class="workspace-selector"></div>
-                        </div>
-
-                        <div class="modal-section">
-                            <h3><i class="fa-solid fa-tag"></i> Etiquetas</h3>
-                            <div id="preset-labels-list" class="preset-labels-list"></div>
-                            <div id="labels-editor" class="pill-list"></div>
-                        </div>
-
-                        <div class="modal-section">
-                            <h3><i class="fa-solid fa-list-check"></i> Checklist</h3>
-                            <div class="inline-form-row">
-                                <input type="text" id="checklist-input" class="modal-text-input" placeholder="Novo item do checklist">
-                                <button type="button" class="sidebar-btn compact-btn" id="add-checklist-btn"><i class="fa-solid fa-plus"></i> Adicionar</button>
-                            </div>
-                            <ul class="checklist-items" id="checklist-items"></ul>
-                        </div>
-
-                        <div class="modal-section">
-                            <h3><i class="fa-regular fa-image"></i> Imagens da Demanda</h3>
-                            <div class="inline-form-row">
-                                <input type="file" id="image-input" class="modal-text-input" accept="image/*" multiple>
-                            </div>
-                            <div id="images-list" class="image-grid"></div>
-                        </div>
-
-                        <div class="modal-section">
-                            <h3><i class="fa-solid fa-paperclip"></i> Arquivos Anexos</h3>
-                            <div class="inline-form-row">
-                                <input type="file" id="file-input" class="modal-text-input" multiple>
-                            </div>
-                            <div id="files-list" class="file-list"></div>
-                        </div>
-
-                        <div class="modal-section">
-                            <h3><i class="fa-regular fa-comments"></i> Atividade</h3>
-                            <div id="comments-list" class="comments-list"></div>
-                            <div class="inline-form-row" style="margin-top:12px;">
-                                <input type="text" id="comment-input" class="modal-text-input" placeholder="Escreva um comentario...">
-                                <button type="button" class="sidebar-btn compact-btn" id="add-comment-btn"><i class="fa-solid fa-paper-plane"></i> Publicar</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="modal-sidebar">
-                        <span class="sidebar-title">Ações</span>
-                        <button class="sidebar-btn" id="save-card-btn"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
-                        <button class="sidebar-btn" id="remove-card-from-workspace-btn"><i class="fa-solid fa-layer-group"></i> Remover desta conta</button>
-                        <button class="sidebar-btn" id="duplicate-card-btn"><i class="fa-solid fa-copy"></i> Duplicar</button>
-                        <button class="sidebar-btn danger" id="delete-card-btn"><i class="fa-solid fa-trash"></i> Excluir</button>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-        <div class="modal-overlay" id="column-modal">
-            <div class="modal-box" style="width: 420px; max-width: 90%;">
-                <button class="close-modal" id="close-column-modal"><i class="fa-solid fa-xmark"></i></button>
-                <h2 style="margin-bottom: 20px; color: var(--text-main);">Editar Quadro</h2>
-                <div style="margin-bottom: 20px;">
-                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">NOME DO QUADRO</label>
-                    <input type="text" id="edit-column-title" class="modal-text-input" autocomplete="off">
-                </div>
-                <div id="column-reorder-actions" style="display:flex; gap:8px; margin-bottom:12px;">
-                    <button id="move-column-left-btn" style="flex:1; padding: 10px; border-radius: 8px; background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;"><i class="fa-solid fa-arrow-left"></i> Esquerda</button>
-                    <button id="move-column-right-btn" style="flex:1; padding: 10px; border-radius: 8px; background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;">Direita <i class="fa-solid fa-arrow-right"></i></button>
-                </div>
-                <button id="save-column-btn" style="width: 100%; padding: 14px; border-radius: 8px; background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px;">Salvar Quadro</button>
-                <button id="delete-column-btn" style="width: 100%; padding: 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.18); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; margin-top: 12px; display:none;">Excluir Quadro</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modalContainer);
-
-    // Re-attach listeners is handled by the script initializing AFTER injection
-    reinitializeModalElements();
-}
+// injection moved below variable declarations
 
 function reinitializeModalElements() {
     modalOverlay = document.getElementById('card-modal');
@@ -1500,33 +1349,8 @@ if (addMemberBtn) {
     };
 }
 
-if (memberInput) {
-    memberInput.addEventListener('input', () => {
-        loadMemberSuggestions(memberInput.value.trim());
-    });
-}
 
-if (addChecklistBtn) {
-    addChecklistBtn.onclick = () => {
-        if (!activeCardData || !checklistInput) return;
-        const text = checklistInput.value.trim();
-        if (!text) return;
-        activeCardData.checklist.push({ text, done: false });
-        checklistInput.value = '';
-        renderChecklistEditor();
-    };
-}
 
-if (addCommentBtn) {
-    addCommentBtn.onclick = () => {
-        if (!activeCardData || !commentInput) return;
-        const text = commentInput.value.trim();
-        if (!text) return;
-        activeCardData.comments.push({ author: localStorage.getItem('templum-auth-user') || 'Usuario', text, created_at: new Date().toLocaleString('pt-BR') });
-        commentInput.value = '';
-        renderCommentsEditor();
-    };
-}
 
 if (imageInput) {
     imageInput.onchange = async () => {
@@ -1859,6 +1683,107 @@ function attachModalHandlers() {
         };
     }
     
+    if (memberInput) {
+        memberInput.addEventListener('input', () => {
+            loadMemberSuggestions(memberInput.value.trim());
+        });
+    }
+
+    if (addMemberBtn) {
+        addMemberBtn.onclick = async () => {
+            if (!activeCardData || !memberInput) return;
+            const email = memberInput.value.trim().toLowerCase();
+            if (!email) return;
+            if (activeCardData.members.some(m => m.toLowerCase() === email)) return alert('Membro ja adicionado.');
+            if (!(await isValidMemberEmail(email))) return alert('Usuario não encontrado no sistema.');
+            activeCardData.members.push(email);
+            memberInput.value = '';
+            renderMembersEditor();
+        };
+    }
+
+    if (addChecklistBtn) {
+        addChecklistBtn.onclick = () => {
+            if (!activeCardData || !checklistInput) return;
+            const text = checklistInput.value.trim();
+            if (!text) return;
+            activeCardData.checklist.push({ text, done: false });
+            checklistInput.value = '';
+            renderChecklistEditor();
+        };
+    }
+
+    if (addCommentBtn) {
+        addCommentBtn.onclick = () => {
+            if (!activeCardData || !commentInput) return;
+            const text = commentInput.value.trim();
+            if (!text) return;
+            activeCardData.comments.push({ author: localStorage.getItem('templum-auth-user') || 'Usuario', text, created_at: new Date().toLocaleString('pt-BR') });
+            commentInput.value = '';
+            renderCommentsEditor();
+        };
+    }
+
+    if (imageInput) {
+        imageInput.onchange = async () => {
+            if (!activeCardData) return;
+            try {
+                const loadedImages = await readFilesAsDataUrls(imageInput.files);
+                activeCardData.images.push(...loadedImages);
+                renderImagesEditor();
+                imageInput.value = '';
+            } catch (e) {
+                alert('Erro ao carregar imagem');
+            }
+        };
+    }
+
+    if (fileInput) {
+        fileInput.onchange = async () => {
+            if (!activeCardData) return;
+            try {
+                const loadedFiles = await readFilesAsDataUrls(fileInput.files);
+                activeCardData.files.push(...formatFilePayload(fileInput.files, loadedFiles));
+                renderFilesEditor();
+                fileInput.value = '';
+            } catch (e) {
+                alert('Erro ao carregar arquivo');
+            }
+        };
+    }
+
+    if (removeCardFromWorkspaceBtn) {
+        removeCardFromWorkspaceBtn.onclick = async () => {
+            if (!activeCardId || !activeCardData) return;
+            if ((activeCardData.visible_workspaces || []).length <= 1) {
+                return alert('Esse card so aparece nesta conta. Use excluir para apagar de vez.');
+            }
+            if (!confirm('Remover esta demanda apenas da conta atual? Ela continuara visivel nas outras contas selecionadas.')) return;
+
+            try {
+                const response = await fetch('/api/cards/' + activeCardId + '/remove-workspace?workspace=' + encodeURIComponent(activeWorkspaceId), {
+                    method: 'POST',
+                    headers: authHeaders
+                });
+                if (!response.ok) throw new Error('remove workspace failed');
+                modalOverlay.classList.remove('active');
+                loadStateFromServer();
+            } catch (e) {
+                alert('Erro ao remover card desta conta');
+            }
+        };
+    }
+
+    if (typeof removeRecurrenceBtn !== 'undefined' && removeRecurrenceBtn) {
+        removeRecurrenceBtn.onclick = () => {
+            if (!activeCardId || !activeCardData) return;
+            if (!confirm('Remover a recorrência desta demanda? Os cards futuros já criados continuarão existindo.')) return;
+            if (editRecurrenceInput) editRecurrenceInput.value = 'none';
+            const removeBtn = document.getElementById('remove-recurrence-btn');
+            if (removeBtn) removeBtn.style.display = 'none';
+        };
+    }
+
     // Column modal handlers
     if (document.getElementById('close-column-modal') && document.getElementById('column-modal')) {
         const closeColBtn = document.getElementById('close-column-modal');
@@ -1875,12 +1800,9 @@ function attachModalHandlers() {
     }
     
     // Column (Quadro) handlers
-    console.log('Attaching column handlers...');
     const saveColumnBtnEl = document.getElementById('save-column-btn');
-    console.log('save-column-btn found:', !!saveColumnBtnEl);
     if (saveColumnBtnEl) {
         saveColumnBtnEl.onclick = async () => {
-            console.log('Save column clicked');
             const editColumnTitleInputEl = document.getElementById('edit-column-title');
             if (!editColumnTitleInputEl) return;
             const nextTitle = editColumnTitleInputEl.value.trim();
