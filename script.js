@@ -253,8 +253,6 @@ async function initWorkspaces() {
         }
     }
 }
-initWorkspaces();
-initMobileMenu();
 // injection moved below variable declarations
 
 // injection moved below variable declarations
@@ -1474,10 +1472,6 @@ window.openCardDetail = async (cardId) => {
     } catch(e) { console.error(e); }
 };
 
-initTheme();
-injectModalsIfNeeded();
-
-console.log('Script initialized', { saveCardBtn, closeModalBtn, modalOverlay });
 
 // Re-attach event handlers after modal injection
 function attachModalHandlers() {
@@ -1750,7 +1744,11 @@ function attachModalHandlers() {
     const moveColumnRightBtnEl = document.getElementById('move-column-right-btn');
     if (moveColumnRightBtnEl) {
         moveColumnRightBtnEl.onclick = () => { if (activeColumnId) moveColumn(activeColumnId, 'right'); };
-    }
-}
-
+// --- GLOBAL INITIALIZATION ---
+// Ensure modals are injected first so that subsequent initializations
+// can find and bind to their DOM elements.
+injectModalsIfNeeded();
+initTheme();
 attachModalHandlers();
+initWorkspaces();
+initMobileMenu();
