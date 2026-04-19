@@ -69,7 +69,11 @@ async function initDb() {
         await pool.query('INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING', ['admin@templum.com', hash, 'master']);
         try { await pool.query("ALTER TABLE users ADD COLUMN name VARCHAR(255) DEFAULT '';"); } catch(e){}
         
-        // Auto Migration para fase 6 e 7
+        // Auto Migration para fase 6 e 7 e Multicategorias
+        try { await pool.query('ALTER TABLE columns ADD COLUMN category VARCHAR(50) DEFAULT \'editorial\';'); } catch(e){}
+        try { await pool.query('ALTER TABLE cards ADD COLUMN category VARCHAR(50) DEFAULT \'editorial\';'); } catch(e){}
+        try { await pool.query('ALTER TABLE cards ADD COLUMN parent_id VARCHAR(50) REFERENCES cards(id) ON DELETE SET NULL;'); } catch(e){}
+        
         try { await pool.query('ALTER TABLE cards ADD COLUMN platform VARCHAR(50);'); } catch(e){}
         try { await pool.query('ALTER TABLE cards ADD COLUMN post_date VARCHAR(50);'); } catch(e){}
         try { await pool.query('ALTER TABLE cards ADD COLUMN post_time VARCHAR(10);'); } catch(e){}
@@ -81,7 +85,12 @@ async function initDb() {
         try { await pool.query("ALTER TABLE cards ADD COLUMN images JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN visible_workspaces JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN files JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
-        await pool.query("INSERT INTO columns (id, title, col_order) VALUES ('col-1', 'Backlog / Pedidos', 1), ('col-2', 'To Do (Fazer)', 2), ('col-3', 'In Progress (Fazendo)', 3), ('col-4', 'Aprovação', 4), ('col-5', 'Concluído', 5), ('col-6', 'Postados', 6) ON CONFLICT (id) DO NOTHING;");
+
+        // Initial columns for editorial
+        await pool.query("INSERT INTO columns (id, title, col_order, category) VALUES ('col-1', 'Backlog / Pedidos', 1, 'editorial'), ('col-2', 'To Do (Fazer)', 2, 'editorial'), ('col-3', 'In Progress (Fazendo)', 3, 'editorial'), ('col-4', 'Aprovação', 4, 'editorial'), ('col-5', 'Concluído', 5, 'editorial'), ('col-6', 'Postados', 6, 'editorial') ON CONFLICT (id) DO NOTHING;");
+        
+        // Initial columns for design
+        await pool.query("INSERT INTO columns (id, title, col_order, category) VALUES ('design-1', 'Pedidos de Arte', 1, 'design'), ('design-2', 'Pauta Design', 2, 'design'), ('design-3', 'Em Produção', 3, 'design'), ('design-4', 'Aprovação Arte', 4, 'design'), ('design-5', 'Arte Finalizada', 5, 'design') ON CONFLICT (id) DO NOTHING;");
         
         // Dynamic Workspaces Table
         await pool.query(`
@@ -249,6 +258,8 @@ async function ensureLabelPresetSchema() {
 }
 
 async function ensureCardSchema() {
+    try { await pool.query("ALTER TABLE cards ADD COLUMN category VARCHAR(50) DEFAULT 'editorial';"); } catch (e) {}
+    try { await pool.query("ALTER TABLE cards ADD COLUMN parent_id VARCHAR(50) REFERENCES cards(id) ON DELETE SET NULL;"); } catch (e) {}
     try { await pool.query("ALTER TABLE cards ADD COLUMN recurrence_type VARCHAR(20) DEFAULT 'none';"); } catch (e) {}
     try { await pool.query("ALTER TABLE cards ADD COLUMN post_time VARCHAR(10);"); } catch (e) {}
 }
@@ -430,9 +441,10 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
     try {
         await ensureCardSchema();
         const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
+        const category = req.query.category || 'editorial';
         const isAllWorkspaces = workspace === '__all__';
         const cardVisibilityCondition = isAllWorkspaces ? '1=1' : workspaceVisibilityClause(1);
-        const params = isAllWorkspaces ? [] : [workspace];
+        const params = isAllWorkspaces ? [category] : [workspace, category];
         const query = `
             SELECT 
                 c.id, c.title, c.col_order,
@@ -458,13 +470,16 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
                             'post_date', k.post_date,
                             'post_time', k.post_time,
                             'recurrence_type', k.recurrence_type,
-                            'assignee', k.assignee
+                            'assignee', k.assignee,
+                            'category', k.category,
+                            'parent_id', k.parent_id
                         ) ORDER BY k.post_date ASC NULLS LAST, k.post_time ASC NULLS LAST, k.card_order ASC
                     ) FILTER (WHERE k.id IS NOT NULL), '[]'
                 ) as cards
             FROM columns c
-            LEFT JOIN cards k ON c.id = k.column_id AND ${cardVisibilityCondition}
+            LEFT JOIN cards k ON c.id = k.column_id AND ${cardVisibilityCondition} AND k.category = $${isAllWorkspaces ? 1 : 2}
             LEFT JOIN workspaces ws ON ws.id = k.workspace_id
+            WHERE c.category = $${isAllWorkspaces ? 1 : 2}
             GROUP BY c.id
             ORDER BY c.col_order ASC;
         `;
@@ -494,21 +509,22 @@ app.post('/api/board/move', authGuard, async (req, res) => {
 // --- API: Create & Delete Cards ---
 app.post('/api/cards', authGuard, async (req, res) => {
     await ensureCardSchema();
-    const { title, column_id, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files } = req.body;
+    const { title, column_id, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, category, parent_id } = req.body;
     const normalizedRecurrenceType = normalizeRecurrenceType(recurrence_type);
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
+    const resolvedCategory = category || 'editorial';
     const visibleWorkspaces = normalizeWorkspaceList(resolvedWS, visible_workspaces);
     const serializedVisibleWorkspaces = JSON.stringify(visibleWorkspaces);
     const serializedImages = JSON.stringify(Array.isArray(images) ? images : []);
     const serializedFiles = JSON.stringify(Array.isArray(files) ? files : []);
     const id = 'card-' + Date.now() + Math.floor(Math.random()*1000);
     try {
-        console.log('Creating card with:', { column_id, title, post_date, post_time, recurrence_type: normalizedRecurrenceType, resolvedWS });
+        console.log('Creating card with:', { column_id, title, post_date, post_time, recurrence_type: normalizedRecurrenceType, resolvedWS, category: resolvedCategory });
         const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND ${workspaceVisibilityClause(2)}`, [column_id, resolvedWS]);
         const order = maxRes.rows[0].next_order;
         await pool.query(
-            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, attachments_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14)',
-            [id, column_id, title, order, platform, post_date, post_time || null, normalizedRecurrenceType, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0)]
+            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, attachments_count, category, parent_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14, $15, $16)',
+            [id, column_id, title, order, platform, post_date, post_time || null, normalizedRecurrenceType, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0), resolvedCategory, parent_id || null]
         );
         res.json({ success: true, id, title });
     } catch (err) {
@@ -520,7 +536,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
 app.put('/api/cards/:id', authGuard, async (req, res) => {
     await ensureCardSchema();
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
-    const { title, description, platform, post_date, post_time, recurrence_type, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id } = req.body;
+    const { title, description, platform, post_date, post_time, recurrence_type, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id, category, parent_id } = req.body;
     const normalizedRecurrenceType = normalizeRecurrenceType(recurrence_type);
     try {
         const serializedLabels = Array.isArray(labels) ? JSON.stringify(labels) : '[]';
@@ -537,9 +553,10 @@ app.put('/api/cards/:id', authGuard, async (req, res) => {
             `UPDATE cards
              SET title = $1, description = $2, platform = $3, post_date = $4, post_time = $5, recurrence_type = $6, assignee = $7,
                  labels = $8::jsonb, members = $9::jsonb, checklist = $10::jsonb, comments = $11::jsonb, comments_count = $12,
-                 images = $13::jsonb, files = $14::jsonb, visible_workspaces = $15::jsonb, attachments_count = $16
-             WHERE id = $17 AND ${workspaceVisibilityClause(18)}`,
-            [title, description || '', platform || null, post_date || null, post_time || null, normalizedRecurrenceType, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedFiles, serializedVisibleWorkspaces, attachmentsCount, req.params.id, workspace]
+                 images = $13::jsonb, files = $14::jsonb, visible_workspaces = $15::jsonb, attachments_count = $16,
+                 category = COALESCE($17, category), parent_id = COALESCE($18, parent_id)
+             WHERE id = $19 AND ${workspaceVisibilityClause(20)}`,
+            [title, description || '', platform || null, post_date || null, post_time || null, normalizedRecurrenceType, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedFiles, serializedVisibleWorkspaces, attachmentsCount, category || null, parent_id || null, req.params.id, workspace]
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
         res.json({ success: true });
@@ -577,6 +594,57 @@ app.post('/api/cards/:id/remove-workspace', authGuard, async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao remover card deste workspace' });
+    }
+});
+
+app.post('/api/cards/:id/request-design', authGuard, async (req, res) => {
+    try {
+        await ensureCardSchema();
+        const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
+        
+        // 1. Fetch source card
+        const cardRes = await pool.query(
+            `SELECT * FROM cards WHERE id = $1 AND ${workspaceVisibilityClause(2)}`,
+            [req.params.id, workspace]
+        );
+        if (cardRes.rows.length === 0) return res.status(404).json({ error: 'Card não encontrado' });
+        const sourceCard = cardRes.rows[0];
+
+        // 2. Check if already has a design card
+        const existingRes = await pool.query('SELECT id FROM cards WHERE parent_id = $1 AND category = \'design\'', [sourceCard.id]);
+        if (existingRes.rows.length > 0) return res.status(400).json({ error: 'Já existe um pedido de design para esta demanda.' });
+
+        // 3. Create design card in 'design-1' (Pedidos de Arte)
+        const nextId = 'card-design-' + Date.now() + Math.floor(Math.random() * 1000);
+        const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = 'design-1' AND workspace_id = $1`, [sourceCard.workspace_id]);
+        const order = maxRes.rows[0].next_order;
+
+        await pool.query(
+            `INSERT INTO cards (id, column_id, title, description, labels, members, checklist, comments, images, files, visible_workspaces, card_order, workspace_id, category, parent_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+            [
+                nextId, 
+                'design-1', 
+                `[ARTE] ${sourceCard.title}`, 
+                sourceCard.description || '', 
+                '[]', 
+                '[]', 
+                '[]', 
+                '[]', 
+                '[]', 
+                '[]', 
+                sourceCard.visible_workspaces || '[]', 
+                order, 
+                sourceCard.workspace_id, 
+                'design', 
+                sourceCard.id
+            ]
+        );
+
+        res.json({ success: true, id: nextId });
+    } catch (err) {
+        console.error('Request design error:', err);
+        res.status(500).json({ error: 'Erro ao solicitar arte' });
     }
 });
 

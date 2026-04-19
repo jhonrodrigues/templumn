@@ -35,6 +35,7 @@ function updateRoleBasedNavigation(role) {
 // State Object to track the dynamic state
 let boardState = { columns: [] };
 let activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
+let activeCategory = new URLSearchParams(window.location.search).get('category') || 'editorial';
 let activeCardData = null;
 let availableWorkspaces = [];
 let labelPresets = [];
@@ -57,6 +58,7 @@ let saveColumnBtn, deleteColumnBtn, createColumnBtn;
 let moveColumnLeftBtn, moveColumnRightBtn, columnReorderActions;
 let fabGlobalCreate, newCardModal, closeNewModal, submitNewCardBtn;
 let ncTitle, ncPlatform, ncDate, ncTime, ncRecurrence, ncAssignee, ncWorkspaces;
+let requestDesignBtn, linkedDesignInfo;
 let memberSuggestionsCache = [];
 
 function getSaoPauloNowParts() {
@@ -188,7 +190,11 @@ async function initWorkspaces() {
             });
             sw.value = activeWorkspaceId;
             const dynamicTitle = document.getElementById('dyn-board-title');
-            if (dynamicTitle) dynamicTitle.innerText = activeWorkspaceId === '__all__' ? 'Todas as contas' : (wss.find(w => w.id === activeWorkspaceId)?.name || 'Board');
+            if (dynamicTitle) {
+                const wsName = activeWorkspaceId === '__all__' ? 'Todas as contas' : (wss.find(w => w.id === activeWorkspaceId)?.name || 'Board');
+                const catName = activeCategory === 'design' ? ' (Produção Agência)' : ' (Editorial)';
+                dynamicTitle.innerText = wsName + catName;
+            }
             sw.onchange = (e) => {
                 activeWorkspaceId = e.target.value;
                 if (activeWorkspaceId !== '__all__') {
@@ -310,6 +316,8 @@ function reinitializeModalElements() {
     
     // Re-bind theme toggle if it was missing
     themeToggleBtn = document.getElementById('theme-toggle');
+    requestDesignBtn = document.getElementById('request-design-btn');
+    linkedDesignInfo = document.getElementById('linked-design-info');
 }
 
 async function loadStateFromServer() {
@@ -317,7 +325,7 @@ async function loadStateFromServer() {
     if (!boardCanvas) return; // Not on the Kanban page
     
     try {
-        const response = await fetch('/api/board?workspace=' + activeWorkspaceId, { headers: getAuthHeaders() });
+        const response = await fetch(`/api/board?workspace=${activeWorkspaceId}&category=${activeCategory}`, { headers: getAuthHeaders() });
         if (response.status === 401 || response.status === 403) {
             window.location.href = '/login.html';
             return;
@@ -551,11 +559,10 @@ function renderBoard() {
                 if (!title || title.trim() === '') return alert('Preencha a pauta!');
                 
                 document.getElementById('submit-new-card').innerHTML = 'Gravando...';
-                try {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
-                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, post_time, recurrence_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [] })
+                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, post_time, recurrence_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], category: activeCategory })
                     });
                     m.classList.remove('active');
                     loadStateFromServer();
@@ -602,7 +609,7 @@ if (fabBtn) {
                 await fetch('/api/cards', {
                     method: 'POST',
                     headers: authHeaders,
-                    body: JSON.stringify({ title, column_id: colId, platform, post_date, post_time, recurrence_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [] })
+                    body: JSON.stringify({ title, column_id: colId, platform, post_date, post_time, recurrence_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], category: activeCategory })
                 });
                 m.classList.remove('active');
                 loadStateFromServer();
@@ -665,6 +672,7 @@ function createCardElement(card, colId) {
         <div class="card-title">${card.title}</div>
         <div class="card-footer">
             <div class="card-badges">
+                ${card.parent_id ? `<span title="Vinculado a uma postagem" style="color: var(--primary); font-weight: bold;"><i class="fa-solid fa-link"></i> Arte</span>` : ''}
                 ${card.comments > 0 ? `<span><i class="fa-regular fa-comment"></i> ${card.comments}</span>` : ''}
                 ${card.attachments > 0 ? `<span><i class="fa-solid fa-paperclip"></i> ${card.attachments}</span>` : ''}
             </div>
@@ -873,6 +881,7 @@ function injectModalsIfNeeded() {
                 <div class="modal-header">
                     <div class="modal-label">Na lista <strong id="modal-list-name">...</strong></div>
                     <h2 id="modal-title">Título do Card</h2>
+                    <div id="modal-parent-link" style="margin-top: 8px; font-size: 13px;"></div>
                 </div>
                 
                 <div class="modal-body-layout">
@@ -974,6 +983,8 @@ function injectModalsIfNeeded() {
                     <div class="modal-sidebar">
                         <span class="sidebar-title">Ações</span>
                         <button class="sidebar-btn" id="save-card-btn"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+                        <button class="sidebar-btn" id="request-design-btn" style="background: #fbbf24; color: #78350f; display:none;"><i class="fa-solid fa-palette"></i> Solicitar Arte</button>
+                        <div id="linked-design-info" style="margin-top: 8px; margin-bottom: 8px; font-size: 12px; padding: 10px; background: var(--bg-app); border-radius: 8px; border: 1px dashed var(--border); display:none;"></div>
                         <button class="sidebar-btn" id="remove-card-from-workspace-btn"><i class="fa-solid fa-layer-group"></i> Remover desta conta</button>
                         <button class="sidebar-btn" id="duplicate-card-btn"><i class="fa-solid fa-copy"></i> Duplicar</button>
                         <button class="sidebar-btn danger" id="delete-card-btn"><i class="fa-solid fa-trash"></i> Excluir</button>
@@ -1313,6 +1324,48 @@ function openModal(card, colId) {
     renderCommentsEditor();
     renderImagesEditor();
     renderFilesEditor();
+    renderFilesEditor();
+
+    // Custom Sector Logic
+    if (requestDesignBtn) {
+        requestDesignBtn.style.display = (activeCategory === 'editorial') ? 'block' : 'none';
+        requestDesignBtn.onclick = async () => {
+            const originalText = requestDesignBtn.innerHTML;
+            requestDesignBtn.disabled = true;
+            requestDesignBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Solicitando...';
+            try {
+                const res = await fetch(`/api/cards/${card.id}/request-design?workspace=${activeWorkspaceId}`, {
+                    method: 'POST',
+                    headers: authHeaders
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('Pedido de arte criado com sucesso no setor de Design!');
+                    modalOverlay.classList.remove('active');
+                    // Opcional: redirecionar para o board de design
+                    // window.location.href = 'index.html?category=design';
+                } else {
+                    alert(data.error || 'Erro ao solicitar arte');
+                }
+            } catch (err) {
+                alert('Erro na requisição');
+            } finally {
+                requestDesignBtn.disabled = false;
+                requestDesignBtn.innerHTML = originalText;
+            }
+        };
+    }
+
+    const parentLinkEl = document.getElementById('modal-parent-link');
+    if (parentLinkEl) {
+        if (card.parent_id) {
+            parentLinkEl.innerHTML = `<a href="#" onclick="event.preventDefault(); window.location.href='index.html?category=editorial&open=${card.parent_id}'" style="color: var(--primary); text-decoration: none;"><i class="fa-solid fa-link"></i> Ver Postagem Original</a>`;
+            parentLinkEl.style.display = 'block';
+        } else {
+            parentLinkEl.style.display = 'none';
+        }
+    }
+
     modalOverlay.classList.add('active');
 }
 
@@ -1624,7 +1677,7 @@ function attachModalHandlers() {
                 const response = await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), {
                     method: 'PUT',
                     headers: authHeaders,
-                    body: JSON.stringify({ title, description, platform, post_date, post_time, recurrence_type, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id })
+                    body: JSON.stringify({ title, description, platform, post_date, post_time, recurrence_type, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id, category: activeCardData.category, parent_id: activeCardData.parent_id })
                 });
                 if (!response.ok) throw new Error('save failed');
                 const activeColumn = boardState.columns.find(c => c.id === activeCardColId);
@@ -1675,6 +1728,7 @@ function attachModalHandlers() {
                 const card = await res.json();
                 delete card.id; delete card.created_at;
                 card.title = card.title + ' (cópia)';
+                card.category = card.category || 'editorial';
                 await fetch('/api/cards?workspace=' + encodeURIComponent(activeWorkspaceId), { method: 'POST', headers: authHeaders, body: JSON.stringify(card) });
                 modalOverlay.classList.remove('active');
                 loadStateFromServer();

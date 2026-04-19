@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS columns (
     id VARCHAR(50) PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    col_order INTEGER NOT NULL
+    col_order INTEGER NOT NULL,
+    category VARCHAR(50) DEFAULT 'editorial'
 );
 
 -- Criar tabela de cards vinculados às colunas
@@ -35,7 +36,9 @@ CREATE TABLE IF NOT EXISTS cards (
     post_time VARCHAR(10),
     recurrence_type VARCHAR(20) DEFAULT 'none',
     workspace_id VARCHAR(50) DEFAULT 'igreja',
-    assignee VARCHAR(100)
+    assignee VARCHAR(100),
+    category VARCHAR(50) DEFAULT 'editorial',
+    parent_id VARCHAR(50) REFERENCES cards(id) ON DELETE SET NULL
 );
 
 -- Configurações Globais (Primary Color)
@@ -59,13 +62,19 @@ CREATE TABLE IF NOT EXISTS label_presets (
 );
 
 -- Inserir dados mockados base para testes no primeiro deploy
-INSERT INTO columns (id, title, col_order) VALUES
-('col-1', 'Backlog / Pedidos', 1),
-('col-2', 'To Do (Fazer)', 2),
-('col-3', 'In Progress (Fazendo)', 3),
-('col-4', 'Aprovação', 4),
-('col-5', 'Concluído', 5),
-('col-6', 'Postados', 6)
+INSERT INTO columns (id, title, col_order, category) VALUES
+('col-1', 'Backlog / Pedidos', 1, 'editorial'),
+('col-2', 'To Do (Fazer)', 2, 'editorial'),
+('col-3', 'In Progress (Fazendo)', 3, 'editorial'),
+('col-4', 'Aprovação', 4, 'editorial'),
+('col-5', 'Concluído', 5, 'editorial'),
+('col-6', 'Postados', 6, 'editorial'),
+-- Colunas do Setor de Design
+('design-1', 'Pedidos de Arte', 1, 'design'),
+('design-2', 'Pauta Design', 2, 'design'),
+('design-3', 'Em Produção', 3, 'design'),
+('design-4', 'Aprovação Arte', 4, 'design'),
+('design-5', 'Arte Finalizada', 5, 'design')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO system_settings (id, primary_color, tv_access_code) VALUES (1, '#4F46E5', '0000')
