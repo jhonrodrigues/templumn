@@ -23,20 +23,32 @@
 <body>
     <div class="app-layout">
         <aside class="sidebar">
-            <div class="sidebar-header"><div class="logo"><div class="logo-icon"><i class="fa-solid fa-shapes"></i></div><span class="logo-text">Templum</span></div></div>
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon"><i class="fa-solid fa-shapes"></i></div>
+                    <span class="logo-text">Templum</span>
+                </div>
+            </div>
+
             <div class="sidebar-menu">
-                <div class="menu-section"><span class="section-title">Contas / Workspaces</span><ul id="sidebar-ws-list"></ul></div>
+                <div class="menu-section">
+                    <span class="section-title">Contas / Workspaces</span>
+                    <ul id="sidebar-ws-list"></ul>
+                </div>
+
                 <div class="menu-section">
                     <span class="section-title">Minha Mesa</span>
                     <ul>
                         <li onclick="window.location.href='index.html'"><i class="fa-solid fa-table-columns"></i> Planejamento de Postagem</li>
+                        <li onclick="window.location.href='index.html?category=design'"><i class="fa-solid fa-palette"></i> Produção Agência (Design)</li>
                         <li onclick="window.location.href='mesa.html'"><i class="fa-solid fa-user-check"></i> Minhas Tarefas</li>
                         <li onclick="window.location.href='captacoes.html'"><i class="fa-solid fa-video"></i> Agendamento Captações</li>
                         <li onclick="window.location.href='calendario.html'"><i class="fa-regular fa-calendar-days"></i> Calendário do Mês</li>
                         <li onclick="window.location.href='postados.html'"><i class="fa-solid fa-square-check"></i> Checklist de Postagem</li>
-                        <li class="active" onclick="window.location.href='minha-conta.html'"><i class="fa-solid fa-user-gear"></i> Minha Conta</li>
+                        <li onclick="window.location.href='minha-conta.html'"><i class="fa-solid fa-user-gear"></i> Minha Conta</li>
                     </ul>
                 </div>
+                
                 <div class="menu-section">
                     <span class="section-title">Gestão e Liderança</span>
                     <ul>
@@ -47,7 +59,12 @@
                     </ul>
                 </div>
             </div>
-            <div class="user-profile"><div class="user-info" style="width:100%;"><button onclick="localStorage.clear(); window.location.href='/login.html';" style="width:100%; padding: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border:none; border-radius:8px; cursor:pointer; font-weight: 600;"><i class="fa-solid fa-right-from-bracket"></i> Sair do Sistema</button></div></div>
+            
+            <div class="user-profile">
+                <div class="user-info" style="width:100%;">
+                    <button onclick="localStorage.clear(); window.location.href='/login.html';" style="width:100%; padding: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border:none; border-radius:8px; cursor:pointer; font-weight: 600;"><i class="fa-solid fa-right-from-bracket"></i> Sair do Sistema</button>
+                </div>
+            </div>
         </aside>
         <main class="main-content" style="overflow-y:auto;">
             <header class="topbar"><div class="search-container"><i class="fa-solid fa-user-gear"></i><input type="text" value="Atualize seus dados de acesso" readonly></div><div class="topbar-actions"><button class="icon-btn theme-toggle" id="theme-toggle"><i class="fa-solid fa-moon"></i></button></div></header>
