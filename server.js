@@ -594,19 +594,22 @@ app.post('/api/cards/:id/request-design', authGuard, async (req, res) => {
         const existingRes = await pool.query('SELECT id FROM cards WHERE parent_id = $1 AND category = \'design\'', [sourceCard.id]);
         if (existingRes.rows.length > 0) return res.status(400).json({ error: 'Já existe um pedido de design para esta demanda.' });
 
-        // 3. Create design card in 'design-1' (Pedidos de Arte)
+        // 3. Create design card in 'design-1' (Pedidos de Arte) — copy briefing, images, files and labels
         const nextId = 'card-design-' + Date.now() + Math.floor(Math.random() * 1000);
         const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = 'design-1' AND workspace_id = $1`, [sourceCard.workspace_id]);
         const order = maxRes.rows[0].next_order;
 
         await pool.query(
             `INSERT INTO cards (id, column_id, title, description, labels, members, checklist, comments, images, files, visible_workspaces, card_order, workspace_id, category, parent_id)
-             VALUES ($1, $2, $3, $4, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $5::jsonb, $6, $7, $8, $9)`,
+             VALUES ($1, $2, $3, $4, $5::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9, $10, $11, $12)`,
             [
                 nextId, 
                 'design-1', 
                 `[ARTE] ${sourceCard.title}`, 
-                sourceCard.description || '', 
+                sourceCard.description || '',
+                JSON.stringify(sourceCard.labels || []),
+                JSON.stringify(sourceCard.images || []),
+                JSON.stringify(sourceCard.files || []),
                 JSON.stringify(sourceCard.visible_workspaces || []),
                 order, 
                 sourceCard.workspace_id, 
@@ -619,6 +622,49 @@ app.post('/api/cards/:id/request-design', authGuard, async (req, res) => {
     } catch (err) {
         console.error('Request design error:', err);
         res.status(500).json({ error: 'Erro ao solicitar arte' });
+    }
+});
+
+// --- API: Get Linked Design Card for an Editorial Card ---
+app.get('/api/cards/:id/linked-design', authGuard, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT c.id, c.title, c.description, c.images, c.files, c.column_id, c.comments,
+                    col.title as column_name
+             FROM cards c 
+             LEFT JOIN columns col ON c.column_id = col.id
+             WHERE c.parent_id = $1 AND c.category = 'design'
+             LIMIT 1`,
+            [req.params.id]
+        );
+        if (result.rows.length === 0) return res.json({ linked: false });
+        
+        const designCard = result.rows[0];
+        // Determine status based on column
+        const isFinished = designCard.column_id === 'design-5'; // "Arte Finalizada"
+        const isInProgress = ['design-3', 'design-4'].includes(designCard.column_id);
+        
+        let status = 'Aguardando';
+        let statusColor = '#94a3b8';
+        if (isFinished) { status = 'Arte Finalizada ✅'; statusColor = '#22c55e'; }
+        else if (isInProgress) { status = 'Em Produção 🎨'; statusColor = '#f59e0b'; }
+        else if (designCard.column_id === 'design-2') { status = 'Na Pauta Design'; statusColor = '#3b82f6'; }
+        
+        res.json({
+            linked: true,
+            id: designCard.id,
+            title: designCard.title,
+            description: designCard.description || '',
+            images: designCard.images || [],
+            files: designCard.files || [],
+            column_name: designCard.column_name || '',
+            status,
+            statusColor,
+            isFinished
+        });
+    } catch (err) {
+        console.error('Linked design fetch error:', err);
+        res.status(500).json({ error: 'Erro ao buscar design vinculado' });
     }
 });
 
