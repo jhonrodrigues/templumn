@@ -86,6 +86,10 @@ async function initDb() {
         try { await pool.query("ALTER TABLE cards ADD COLUMN visible_workspaces JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
         try { await pool.query("ALTER TABLE cards ADD COLUMN files JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
 
+        // Ensure existing columns and cards have a default category if they were created before multi-board support
+        await pool.query("UPDATE columns SET category = 'editorial' WHERE category IS NULL");
+        await pool.query("UPDATE cards SET category = 'editorial' WHERE category IS NULL");
+
         // Initial columns for editorial
         await pool.query("INSERT INTO columns (id, title, col_order, category) VALUES ('col-1', 'Backlog / Pedidos', 1, 'editorial'), ('col-2', 'To Do (Fazer)', 2, 'editorial'), ('col-3', 'In Progress (Fazendo)', 3, 'editorial'), ('col-4', 'Aprovação', 4, 'editorial'), ('col-5', 'Concluído', 5, 'editorial'), ('col-6', 'Postados', 6, 'editorial') ON CONFLICT (id) DO NOTHING;");
         
