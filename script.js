@@ -559,6 +559,7 @@ function renderBoard() {
                 if (!title || title.trim() === '') return alert('Preencha a pauta!');
                 
                 document.getElementById('submit-new-card').innerHTML = 'Gravando...';
+                try {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
