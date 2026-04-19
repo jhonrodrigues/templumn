@@ -308,7 +308,7 @@ app.put('/api/workspaces/:id', authGuard, requireRole(['master', 'gestor']), asy
 
 app.delete('/api/workspaces/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
-        await ensureWorkspaceSchema();
+        // Schema already ensured by initDb()
         const cardsRes = await pool.query(`SELECT COUNT(*) as total FROM cards WHERE workspace_id = $1 OR COALESCE(visible_workspaces, '[]'::jsonb) ? $1`, [req.params.id]);
         if (Number(cardsRes.rows[0].total) > 0) {
             return res.status(400).json({ error: 'Existem cards vinculados a este workspace. Remova ou mova as demandas antes de excluir.' });
@@ -355,7 +355,7 @@ app.post('/api/label-presets', authGuard, requireRole(['master', 'gestor']), asy
 
 app.put('/api/label-presets/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
-        await ensureLabelPresetSchema();
+        // Schema already ensured by initDb()
         const name = (req.body.name || '').trim();
         const color = (req.body.color || '').trim();
         if (!name || !color) return res.status(400).json({ error: 'Nome e cor obrigatorios' });
@@ -368,7 +368,7 @@ app.put('/api/label-presets/:id', authGuard, requireRole(['master', 'gestor']), 
 
 app.delete('/api/label-presets/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
-        await ensureLabelPresetSchema();
+        // Schema already ensured by initDb()
         await pool.query('DELETE FROM label_presets WHERE id = $1', [req.params.id]);
         res.json({ success: true });
     } catch (err) {
@@ -488,7 +488,7 @@ app.post('/api/board/move', authGuard, async (req, res) => {
 
 // --- API: Create & Delete Cards ---
 app.post('/api/cards', authGuard, async (req, res) => {
-    await ensureCardSchema();
+    // Schema already ensured by initDb()
     const { title, column_id, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, category, parent_id } = req.body;
     const normalizedRecurrenceType = normalizeRecurrenceType(recurrence_type);
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
@@ -514,7 +514,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
 });
 
 app.put('/api/cards/:id', authGuard, async (req, res) => {
-    await ensureCardSchema();
+    // Schema already ensured by initDb()
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
     const { title, description, platform, post_date, post_time, recurrence_type, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id, category, parent_id } = req.body;
     const normalizedRecurrenceType = normalizeRecurrenceType(recurrence_type);
@@ -579,7 +579,7 @@ app.post('/api/cards/:id/remove-workspace', authGuard, async (req, res) => {
 
 app.post('/api/cards/:id/request-design', authGuard, async (req, res) => {
     try {
-        await ensureCardSchema();
+        // Schema already ensured by initDb()
         const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
         
         // 1. Fetch source card
@@ -631,7 +631,7 @@ app.post('/api/cards/:id/request-design', authGuard, async (req, res) => {
 app.post('/api/cards/:id/mark-posted', authGuard, async (req, res) => {
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
     try {
-        await ensureCardSchema();
+        // Schema already ensured by initDb()
         const cardRes = await pool.query(
             `SELECT * FROM cards WHERE id = $1 AND ${workspaceVisibilityClause(2)}`,
             [req.params.id, workspace]
@@ -1005,7 +1005,7 @@ app.get('/api/notifications', authGuard, async (req, res) => {
 
 app.get('/api/tv-access-code', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
-        await ensureSystemSettingsSchema();
+        // Schema already ensured by initDb()
         const result = await pool.query('SELECT tv_access_code FROM system_settings WHERE id = 1');
         res.json({ code: result.rows[0]?.tv_access_code || '0000' });
     } catch (err) {
@@ -1015,7 +1015,7 @@ app.get('/api/tv-access-code', authGuard, requireRole(['master', 'gestor']), asy
 
 app.post('/api/tv-access-code', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
-        await ensureSystemSettingsSchema();
+        // Schema already ensured by initDb()
         const code = generateFourDigitCode();
         await pool.query(`
             INSERT INTO system_settings (id, primary_color, tv_access_code) VALUES (1, '#4F46E5', $1)
@@ -1029,7 +1029,7 @@ app.post('/api/tv-access-code', authGuard, requireRole(['master', 'gestor']), as
 
 app.post('/api/tv/auth', async (req, res) => {
     try {
-        await ensureSystemSettingsSchema();
+        // Schema already ensured by initDb()
         const code = String(req.body.code || '').trim();
         if (!/^\d{4}$/.test(code)) return res.status(400).json({ error: 'Código inválido' });
         const result = await pool.query('SELECT tv_access_code FROM system_settings WHERE id = 1');
@@ -1044,7 +1044,7 @@ app.post('/api/tv/auth', async (req, res) => {
 // --- API: Settings (Admin Master) ---
 app.get('/api/settings', async (req, res) => {
     try {
-        await ensureSystemSettingsSchema();
+        // Schema already ensured by initDb()
         const result = await pool.query('SELECT primary_color, logo_light, logo_dark FROM system_settings LIMIT 1');
         if (result.rows.length > 0) {
             res.json({ 
