@@ -129,6 +129,10 @@ async function initDb() {
             try { await pool.query("ALTER TABLE cards ADD COLUMN assignee VARCHAR(100);"); } catch(e2){}
         }
 
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS design_column_id VARCHAR(50) REFERENCES columns(id) ON DELETE SET NULL;"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN design_column_id VARCHAR(50) REFERENCES columns(id) ON DELETE SET NULL;"); } catch(e2){}
+        }
+
         // 2. Executar init.sql para garantir estrutura base e dados iniciais
         const sql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
         await pool.query(sql);
@@ -419,12 +423,19 @@ app.delete('/api/users/:id', authGuard, async (req, res) => {
 // --- API: Board API (Columns & Cards) ---
 app.get('/api/board', authOrTvGuard, async (req, res) => {
     try {
-        // await ensureCardSchema();
         const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
         const category = req.query.category || 'editorial';
         const isAllWorkspaces = workspace === '__all__';
         const cardVisibilityCondition = isAllWorkspaces ? '1=1' : workspaceVisibilityClause(1);
         const params = isAllWorkspaces ? [category] : [workspace, category];
+        const catParam = isAllWorkspaces ? 1 : 2;
+        
+        // For design boards, join cards via design_column_id instead of column_id
+        const isDesign = category === 'design';
+        const cardJoinCondition = isDesign
+            ? `c.id = k.design_column_id AND ${cardVisibilityCondition}`
+            : `c.id = k.column_id AND ${cardVisibilityCondition} AND k.category = $${catParam}`;
+        
         const query = `
             SELECT 
                 c.id, c.title, c.col_order,
@@ -452,14 +463,16 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
                             'recurrence_type', k.recurrence_type,
                             'assignee', k.assignee,
                             'category', k.category,
-                            'parent_id', k.parent_id
+                            'parent_id', k.parent_id,
+                            'design_column_id', k.design_column_id,
+                            'column_id', k.column_id
                         ) ORDER BY k.post_date ASC NULLS LAST, k.post_time ASC NULLS LAST, k.card_order ASC
                     ) FILTER (WHERE k.id IS NOT NULL), '[]'
                 ) as cards
             FROM columns c
-            LEFT JOIN cards k ON c.id = k.column_id AND ${cardVisibilityCondition} AND k.category = $${isAllWorkspaces ? 1 : 2}
+            LEFT JOIN cards k ON ${cardJoinCondition}
             LEFT JOIN workspaces ws ON ws.id = k.workspace_id
-            WHERE c.category = $${isAllWorkspaces ? 1 : 2}
+            WHERE c.category = $${catParam}
             GROUP BY c.id
             ORDER BY c.col_order ASC;
         `;
@@ -472,11 +485,13 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
 });
 
 app.post('/api/board/move', authGuard, async (req, res) => {
-    const { cardId, targetColId, newOrder, workspace_id } = req.body;
+    const { cardId, targetColId, newOrder, workspace_id, category } = req.body;
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     try {
+        // If moving in the design board, update design_column_id instead of column_id
+        const columnField = category === 'design' ? 'design_column_id' : 'column_id';
         const result = await pool.query(
-            `UPDATE cards SET column_id = $1, card_order = $2 WHERE id = $3 AND ${workspaceVisibilityClause(4)}`,
+            `UPDATE cards SET ${columnField} = $1, card_order = $2 WHERE id = $3 AND ${workspaceVisibilityClause(4)}`,
             [targetColId, newOrder, cardId, resolvedWS]
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
@@ -579,7 +594,6 @@ app.post('/api/cards/:id/remove-workspace', authGuard, async (req, res) => {
 
 app.post('/api/cards/:id/request-design', authGuard, async (req, res) => {
     try {
-        // Schema already ensured by initDb()
         const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
         
         // 1. Fetch source card
@@ -590,81 +604,21 @@ app.post('/api/cards/:id/request-design', authGuard, async (req, res) => {
         if (cardRes.rows.length === 0) return res.status(404).json({ error: 'Card não encontrado' });
         const sourceCard = cardRes.rows[0];
 
-        // 2. Check if already has a design card
-        const existingRes = await pool.query('SELECT id FROM cards WHERE parent_id = $1 AND category = \'design\'', [sourceCard.id]);
-        if (existingRes.rows.length > 0) return res.status(400).json({ error: 'Já existe um pedido de design para esta demanda.' });
+        // 2. Check if already in design
+        if (sourceCard.design_column_id) {
+            return res.status(400).json({ error: 'Esta demanda já está no setor de Design.' });
+        }
 
-        // 3. Create design card in 'design-1' (Pedidos de Arte) — copy briefing, images, files and labels
-        const nextId = 'card-design-' + Date.now() + Math.floor(Math.random() * 1000);
-        const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = 'design-1' AND workspace_id = $1`, [sourceCard.workspace_id]);
-        const order = maxRes.rows[0].next_order;
-
+        // 3. Simply set design_column_id on the SAME card — no duplication!
         await pool.query(
-            `INSERT INTO cards (id, column_id, title, description, labels, members, checklist, comments, images, files, visible_workspaces, card_order, workspace_id, category, parent_id)
-             VALUES ($1, $2, $3, $4, $5::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9, $10, $11, $12)`,
-            [
-                nextId, 
-                'design-1', 
-                `[ARTE] ${sourceCard.title}`, 
-                sourceCard.description || '',
-                JSON.stringify(sourceCard.labels || []),
-                JSON.stringify(sourceCard.images || []),
-                JSON.stringify(sourceCard.files || []),
-                JSON.stringify(sourceCard.visible_workspaces || []),
-                order, 
-                sourceCard.workspace_id, 
-                'design', 
-                sourceCard.id
-            ]
+            `UPDATE cards SET design_column_id = 'design-1' WHERE id = $1`,
+            [sourceCard.id]
         );
 
-        res.json({ success: true, id: nextId });
+        res.json({ success: true, id: sourceCard.id });
     } catch (err) {
         console.error('Request design error:', err);
         res.status(500).json({ error: 'Erro ao solicitar arte' });
-    }
-});
-
-// --- API: Get Linked Design Card for an Editorial Card ---
-app.get('/api/cards/:id/linked-design', authGuard, async (req, res) => {
-    try {
-        const result = await pool.query(
-            `SELECT c.id, c.title, c.description, c.images, c.files, c.column_id, c.comments,
-                    col.title as column_name
-             FROM cards c 
-             LEFT JOIN columns col ON c.column_id = col.id
-             WHERE c.parent_id = $1 AND c.category = 'design'
-             LIMIT 1`,
-            [req.params.id]
-        );
-        if (result.rows.length === 0) return res.json({ linked: false });
-        
-        const designCard = result.rows[0];
-        // Determine status based on column
-        const isFinished = designCard.column_id === 'design-5'; // "Arte Finalizada"
-        const isInProgress = ['design-3', 'design-4'].includes(designCard.column_id);
-        
-        let status = 'Aguardando';
-        let statusColor = '#94a3b8';
-        if (isFinished) { status = 'Arte Finalizada ✅'; statusColor = '#22c55e'; }
-        else if (isInProgress) { status = 'Em Produção 🎨'; statusColor = '#f59e0b'; }
-        else if (designCard.column_id === 'design-2') { status = 'Na Pauta Design'; statusColor = '#3b82f6'; }
-        
-        res.json({
-            linked: true,
-            id: designCard.id,
-            title: designCard.title,
-            description: designCard.description || '',
-            images: designCard.images || [],
-            files: designCard.files || [],
-            column_name: designCard.column_name || '',
-            status,
-            statusColor,
-            isFinished
-        });
-    } catch (err) {
-        console.error('Linked design fetch error:', err);
-        res.status(500).json({ error: 'Erro ao buscar design vinculado' });
     }
 });
 

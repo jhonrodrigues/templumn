@@ -201,7 +201,7 @@ function createCardElement(card, colId) {
         <div class="card-title">${card.title}</div>
         <div class="card-footer">
             <div class="card-badges">
-                ${card.parent_id ? `<span title="Vinculado a uma postagem" style="color: var(--primary); font-weight: bold;"><i class="fa-solid fa-link"></i> Arte</span>` : ''}
+                ${card.design_column_id ? `<span title="Enviado para Design" style="color: #f59e0b; font-weight: bold;"><i class="fa-solid fa-palette"></i> Design</span>` : ''}
                 ${card.comments > 0 ? `<span><i class="fa-regular fa-comment"></i> ${card.comments}</span>` : ''}
                 ${card.attachments > 0 ? `<span><i class="fa-solid fa-paperclip"></i> ${card.attachments}</span>` : ''}
             </div>
@@ -254,7 +254,8 @@ function moveCardToColumn(cardId, fromColId, targetColId) {
             cardId,
             targetColId,
             newOrder: targetCol.cards.length,
-            workspace_id: activeWorkspaceId
+            workspace_id: activeWorkspaceId,
+            category: activeCategory
         })
     }).catch(err => console.error('Failed pushing move to DB', err));
 }

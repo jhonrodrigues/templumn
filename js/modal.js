@@ -483,49 +483,73 @@ function openModal(card, colId) {
     renderImagesEditor();
     renderFilesEditor();
 
-    // Custom Sector Logic — Linked Design
+    // Custom Sector Logic — Design Status (same card, no duplication)
     if (linkedDesignInfo) linkedDesignInfo.style.display = 'none';
     if (requestDesignBtn) requestDesignBtn.style.display = 'none';
 
     if (activeCategory === 'editorial') {
-        // Fetch linked design card info
-        fetchLinkedDesign(card.id);
+        if (card.design_column_id) {
+            // Card is already in the design pipeline — show status
+            if (requestDesignBtn) requestDesignBtn.style.display = 'none';
+            if (linkedDesignInfo) {
+                const designColId = card.design_column_id;
+                let status = 'Aguardando';
+                let statusColor = '#94a3b8';
+                if (designColId === 'design-5') { status = 'Arte Finalizada ✅'; statusColor = '#22c55e'; }
+                else if (['design-3', 'design-4'].includes(designColId)) { status = 'Em Produção 🎨'; statusColor = '#f59e0b'; }
+                else if (designColId === 'design-2') { status = 'Na Pauta Design'; statusColor = '#3b82f6'; }
+                else if (designColId === 'design-1') { status = 'Pedido Enviado'; statusColor = '#94a3b8'; }
 
-        // Show "Solicitar Arte" button (will be hidden by fetchLinkedDesign if already linked)
-        if (requestDesignBtn) {
-            requestDesignBtn.style.display = 'block';
-            requestDesignBtn.onclick = async () => {
-                const originalText = requestDesignBtn.innerHTML;
-                requestDesignBtn.disabled = true;
-                requestDesignBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Solicitando...';
-                try {
-                    const res = await fetch(`/api/cards/${card.id}/request-design?workspace=${activeWorkspaceId}`, {
-                        method: 'POST',
-                        headers: authHeaders
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        alert('Pedido de arte criado com sucesso no setor de Design!');
-                        modalOverlay.classList.remove('active');
-                        loadStateFromServer();
-                    } else {
-                        alert(data.error || 'Erro ao solicitar arte');
+                linkedDesignInfo.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                        <i class="fa-solid fa-palette" style="color: ${statusColor};"></i>
+                        <span style="font-weight: 700; font-size: 12px; color: ${statusColor};">${status}</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Este card está no board de Design.</div>
+                    <button onclick="window.location.href='index.html?category=design&open=${card.id}'" style="margin-top: 10px; width: 100%; padding: 8px; border-radius: 6px; background: var(--primary); color: white; border: none; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s;">
+                        <i class="fa-solid fa-arrow-right"></i> Ver no Design
+                    </button>
+                `;
+                linkedDesignInfo.style.display = 'block';
+            }
+        } else {
+            // Card is NOT in design — show "Solicitar Arte" button
+            if (requestDesignBtn) {
+                requestDesignBtn.style.display = 'block';
+                requestDesignBtn.onclick = async () => {
+                    const originalText = requestDesignBtn.innerHTML;
+                    requestDesignBtn.disabled = true;
+                    requestDesignBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Solicitando...';
+                    try {
+                        const res = await fetch(`/api/cards/${card.id}/request-design?workspace=${activeWorkspaceId}`, {
+                            method: 'POST',
+                            headers: authHeaders
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            alert('Demanda enviada para o setor de Design!');
+                            modalOverlay.classList.remove('active');
+                            loadStateFromServer();
+                        } else {
+                            alert(data.error || 'Erro ao solicitar arte');
+                        }
+                    } catch (err) {
+                        console.error('Solicitar Arte error:', err);
+                        alert('Erro na requisição: ' + err.message);
+                    } finally {
+                        requestDesignBtn.disabled = false;
+                        requestDesignBtn.innerHTML = originalText;
                     }
-                } catch (err) {
-                    console.error('Solicitar Arte error:', err);
-                    alert('Erro na requisição: ' + err.message);
-                } finally {
-                    requestDesignBtn.disabled = false;
-                    requestDesignBtn.innerHTML = originalText;
-                }
-            };
+                };
+            }
         }
     }
 
+    // Show link to editorial board if viewing from design
     const parentLinkEl = document.getElementById('modal-parent-link');
     if (parentLinkEl) {
-        if (card.parent_id) {
-            parentLinkEl.innerHTML = `<a href="#" onclick="event.preventDefault(); window.location.href='index.html?category=editorial&open=${card.parent_id}'" style="color: var(--primary); text-decoration: none;"><i class="fa-solid fa-link"></i> Ver Postagem Original</a>`;
+        if (activeCategory === 'design' && card.column_id) {
+            parentLinkEl.innerHTML = `<a href="#" onclick="event.preventDefault(); window.location.href='index.html?category=editorial&open=${card.id}'" style="color: var(--primary); text-decoration: none;"><i class="fa-solid fa-link"></i> Ver no Editorial</a>`;
             parentLinkEl.style.display = 'block';
         } else {
             parentLinkEl.style.display = 'none';
@@ -533,72 +557,6 @@ function openModal(card, colId) {
     }
 
     modalOverlay.classList.add('active');
-}
-
-// Fetch and render the linked design card info in the sidebar
-async function fetchLinkedDesign(cardId) {
-    if (!linkedDesignInfo) return;
-    try {
-        const res = await fetch(`/api/cards/${cardId}/linked-design`, { headers: getAuthHeaders() });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!data.linked) return;
-
-        // Hide "Solicitar Arte" since it already exists
-        if (requestDesignBtn) requestDesignBtn.style.display = 'none';
-
-        const images = normalizeArray(data.images);
-        const files = normalizeArray(data.files);
-
-        let imagesHtml = '';
-        if (images.length > 0) {
-            imagesHtml = `
-                <div style="margin-top: 8px;">
-                    <div style="font-weight: 600; font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">ARTES DO DESIGN</div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px;">
-                        ${images.map(src => `<img src="${src}" alt="Arte" style="width: 100%; border-radius: 6px; cursor: pointer; border: 1px solid var(--border);" onclick="window.open('${src}', '_blank')">`).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        let filesHtml = '';
-        if (files.length > 0) {
-            filesHtml = `
-                <div style="margin-top: 8px;">
-                    <div style="font-weight: 600; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">ARQUIVOS</div>
-                    ${files.map(f => `<a href="${f.data || '#'}" download="${escapeHtml(f.name || 'arquivo')}" style="display: block; font-size: 12px; color: var(--primary); text-decoration: none; margin-bottom: 2px;"><i class="fa-solid fa-paperclip"></i> ${escapeHtml(f.name || 'Arquivo')}</a>`).join('')}
-                </div>
-            `;
-        }
-
-        let descHtml = '';
-        if (data.description && data.description.trim()) {
-            descHtml = `
-                <div style="margin-top: 8px;">
-                    <div style="font-weight: 600; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">OBSERVAÇÕES DO DESIGNER</div>
-                    <div style="font-size: 12px; color: var(--text-main); white-space: pre-wrap; line-height: 1.4;">${escapeHtml(data.description)}</div>
-                </div>
-            `;
-        }
-
-        linkedDesignInfo.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                <i class="fa-solid fa-palette" style="color: ${data.statusColor};"></i>
-                <span style="font-weight: 700; font-size: 12px; color: ${data.statusColor};">${data.status}</span>
-            </div>
-            <div style="font-size: 11px; color: var(--text-muted);">Etapa: ${escapeHtml(data.column_name)}</div>
-            ${imagesHtml}
-            ${filesHtml}
-            ${descHtml}
-            <button onclick="window.location.href='index.html?category=design&open=${data.id}'" style="margin-top: 10px; width: 100%; padding: 8px; border-radius: 6px; background: var(--primary); color: white; border: none; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s;">
-                <i class="fa-solid fa-arrow-right"></i> Abrir Card de Design
-            </button>
-        `;
-        linkedDesignInfo.style.display = 'block';
-    } catch (err) {
-        console.error('Fetch linked design error:', err);
-    }
 }
 
 function openColumnModal(column = null) {
