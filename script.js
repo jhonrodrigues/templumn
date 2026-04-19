@@ -1744,6 +1744,9 @@ function attachModalHandlers() {
     const moveColumnRightBtnEl = document.getElementById('move-column-right-btn');
     if (moveColumnRightBtnEl) {
         moveColumnRightBtnEl.onclick = () => { if (activeColumnId) moveColumn(activeColumnId, 'right'); };
+    }
+}
+
 // --- GLOBAL INITIALIZATION ---
 // Ensure modals are injected first so that subsequent initializations
 // can find and bind to their DOM elements.
