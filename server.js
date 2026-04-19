@@ -601,19 +601,13 @@ app.post('/api/cards/:id/request-design', authGuard, async (req, res) => {
 
         await pool.query(
             `INSERT INTO cards (id, column_id, title, description, labels, members, checklist, comments, images, files, visible_workspaces, card_order, workspace_id, category, parent_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+             VALUES ($1, $2, $3, $4, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $5::jsonb, $6, $7, $8, $9)`,
             [
                 nextId, 
                 'design-1', 
                 `[ARTE] ${sourceCard.title}`, 
                 sourceCard.description || '', 
-                '[]', 
-                '[]', 
-                '[]', 
-                '[]', 
-                '[]', 
-                '[]', 
-                sourceCard.visible_workspaces || '[]', 
+                JSON.stringify(sourceCard.visible_workspaces || []),
                 order, 
                 sourceCard.workspace_id, 
                 'design', 

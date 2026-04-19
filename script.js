@@ -1345,7 +1345,8 @@ function openModal(card, colId) {
                     alert(data.error || 'Erro ao solicitar arte');
                 }
             } catch (err) {
-                alert('Erro na requisição');
+                console.error('Solicitar Arte error:', err);
+                alert('Erro na requisição: ' + err.message);
             } finally {
                 requestDesignBtn.disabled = false;
                 requestDesignBtn.innerHTML = originalText;
