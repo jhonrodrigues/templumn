@@ -61,69 +61,92 @@ const pool = new Pool({
 // Inicialização Automática do Banco de Dados
 async function initDb() {
     try {
+        console.log('[TEMPLUM] Iniciando migrações de banco de dados...');
+        
+        // 1. Migrações Críticas (devem vir antes do init.sql que usa estas colunas)
+        try { await pool.query("ALTER TABLE columns ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'editorial';"); } catch(e){
+            // Fallback para versões do PG que não suportam IF NOT EXISTS em ADD COLUMN
+            try { await pool.query("ALTER TABLE columns ADD COLUMN category VARCHAR(50) DEFAULT 'editorial';"); } catch(e2){}
+        }
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'editorial';"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN category VARCHAR(50) DEFAULT 'editorial';"); } catch(e2){}
+        }
+
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS parent_id VARCHAR(50) REFERENCES cards(id) ON DELETE SET NULL;"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN parent_id VARCHAR(50) REFERENCES cards(id) ON DELETE SET NULL;"); } catch(e2){}
+        }
+
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS platform VARCHAR(50);"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN platform VARCHAR(50);"); } catch(e2){}
+        }
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS post_date VARCHAR(50);"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN post_date VARCHAR(50);"); } catch(e2){}
+        }
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS post_time VARCHAR(10);"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN post_time VARCHAR(10);"); } catch(e2){}
+        }
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS recurrence_type VARCHAR(20) DEFAULT 'none';"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN recurrence_type VARCHAR(20) DEFAULT 'none';"); } catch(e2){}
+        }
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN description TEXT DEFAULT '';"); } catch(e2){}
+        }
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS members JSONB DEFAULT '[]'::jsonb;"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN members JSONB DEFAULT '[]'::jsonb;"); } catch(e2){}
+        }
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS checklist JSONB DEFAULT '[]'::jsonb;"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN checklist JSONB DEFAULT '[]'::jsonb;"); } catch(e2){}
+        }
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS comments JSONB DEFAULT '[]'::jsonb;"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN comments JSONB DEFAULT '[]'::jsonb;"); } catch(e2){}
+        }
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]'::jsonb;"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN images JSONB DEFAULT '[]'::jsonb;"); } catch(e2){}
+        }
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS visible_workspaces JSONB DEFAULT '[]'::jsonb;"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN visible_workspaces JSONB DEFAULT '[]'::jsonb;"); } catch(e2){}
+        }
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS files JSONB DEFAULT '[]'::jsonb;"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN files JSONB DEFAULT '[]'::jsonb;"); } catch(e2){}
+        }
+
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS workspace_id VARCHAR(50) DEFAULT 'lagoinhaalphaville.sp';"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN workspace_id VARCHAR(50) DEFAULT 'lagoinhaalphaville.sp';"); } catch(e2){}
+        }
+        
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS assignee VARCHAR(100);"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN assignee VARCHAR(100);"); } catch(e2){}
+        }
+
+        // 2. Executar init.sql para garantir estrutura base e dados iniciais
         const sql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
         await pool.query(sql);
         
-        // Setup initial Admin Account
+        // 3. Setup initial Admin Account
         const hash = await bcrypt.hash('123456', 8);
         await pool.query('INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING', ['admin@templum.com', hash, 'master']);
-        try { await pool.query("ALTER TABLE users ADD COLUMN name VARCHAR(255) DEFAULT '';"); } catch(e){}
+        try { await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT '';"); } catch(e){
+            try { await pool.query("ALTER TABLE users ADD COLUMN name VARCHAR(255) DEFAULT '';"); } catch(e2){}
+        }
         
-        // Auto Migration para fase 6 e 7 e Multicategorias
-        try { await pool.query('ALTER TABLE columns ADD COLUMN category VARCHAR(50) DEFAULT \'editorial\';'); } catch(e){}
-        try { await pool.query('ALTER TABLE cards ADD COLUMN category VARCHAR(50) DEFAULT \'editorial\';'); } catch(e){}
-        try { await pool.query('ALTER TABLE cards ADD COLUMN parent_id VARCHAR(50) REFERENCES cards(id) ON DELETE SET NULL;'); } catch(e){}
-        
-        try { await pool.query('ALTER TABLE cards ADD COLUMN platform VARCHAR(50);'); } catch(e){}
-        try { await pool.query('ALTER TABLE cards ADD COLUMN post_date VARCHAR(50);'); } catch(e){}
-        try { await pool.query('ALTER TABLE cards ADD COLUMN post_time VARCHAR(10);'); } catch(e){}
-        try { await pool.query("ALTER TABLE cards ADD COLUMN recurrence_type VARCHAR(20) DEFAULT 'none';"); } catch(e){}
-        try { await pool.query("ALTER TABLE cards ADD COLUMN description TEXT DEFAULT '';"); } catch(e){}
-        try { await pool.query("ALTER TABLE cards ADD COLUMN members JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
-        try { await pool.query("ALTER TABLE cards ADD COLUMN checklist JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
-        try { await pool.query("ALTER TABLE cards ADD COLUMN comments JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
-        try { await pool.query("ALTER TABLE cards ADD COLUMN images JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
-        try { await pool.query("ALTER TABLE cards ADD COLUMN visible_workspaces JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
-        try { await pool.query("ALTER TABLE cards ADD COLUMN files JSONB DEFAULT '[]'::jsonb;"); } catch(e){}
-
-        // Ensure existing columns and cards have a default category if they were created before multi-board support
+        // 4. Garantir integridade dos dados existentes
         await pool.query("UPDATE columns SET category = 'editorial' WHERE category IS NULL");
         await pool.query("UPDATE cards SET category = 'editorial' WHERE category IS NULL");
 
-        // Initial columns for editorial
-        await pool.query("INSERT INTO columns (id, title, col_order, category) VALUES ('col-1', 'Backlog / Pedidos', 1, 'editorial'), ('col-2', 'To Do (Fazer)', 2, 'editorial'), ('col-3', 'In Progress (Fazendo)', 3, 'editorial'), ('col-4', 'Aprovação', 4, 'editorial'), ('col-5', 'Concluído', 5, 'editorial'), ('col-6', 'Postados', 6, 'editorial') ON CONFLICT (id) DO NOTHING;");
-        
-        // Initial columns for design
-        await pool.query("INSERT INTO columns (id, title, col_order, category) VALUES ('design-1', 'Pedidos de Arte', 1, 'design'), ('design-2', 'Pauta Design', 2, 'design'), ('design-3', 'Em Produção', 3, 'design'), ('design-4', 'Aprovação Arte', 4, 'design'), ('design-5', 'Arte Finalizada', 5, 'design') ON CONFLICT (id) DO NOTHING;");
-        
-        // Dynamic Workspaces Table
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS workspaces (
-                id VARCHAR(50) PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                priority INTEGER DEFAULT 100
-            )
-        `);
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS label_presets (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                color VARCHAR(50) NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        try { await pool.query('ALTER TABLE workspaces ADD COLUMN priority INTEGER DEFAULT 100;'); } catch(e){}
-        try { await pool.query("ALTER TABLE system_settings ADD COLUMN tv_access_code VARCHAR(4) DEFAULT '0000';"); } catch(e){}
-        await pool.query("INSERT INTO system_settings (id, primary_color, tv_access_code) VALUES (1, '#4F46E5', '0000') ON CONFLICT (id) DO NOTHING;");
-        // Inserir os 3 iniciais pedidos sob demanda
-        await pool.query("INSERT INTO workspaces (id, name, priority) VALUES ('lagoinhaalphaville.sp', 'Lagoinha Alphaville Principal', 1), ('heroalphaville', 'Hero Alphaville', 2), ('shinealphaville', 'Shine Alphaville', 3) ON CONFLICT DO NOTHING;");
-        
-        try { await pool.query("ALTER TABLE cards ADD COLUMN workspace_id VARCHAR(50) DEFAULT 'lagoinhaalphaville.sp';"); } catch(e){}
-        try { await pool.query("ALTER TABLE cards ADD COLUMN assignee VARCHAR(100);"); } catch(e){}
-
-        console.log('[TEMPLUM] Database schema e tabelas criadas com sucesso!');
+        console.log('[TEMPLUM] Database schema e tabelas inicializados com sucesso!');
     } catch (err) {
-        console.error('[TEMPLUM] Erro ao inicializar tabelas:', err);
+        console.error('[TEMPLUM] Erro crítico ao inicializar tabelas:', err);
     }
 }
 initDb();
@@ -236,53 +259,6 @@ function workspaceVisibilityClause(paramIndex) {
     return `(workspace_id = $${paramIndex} OR COALESCE(visible_workspaces, '[]'::jsonb) @> to_jsonb($${paramIndex}::text))`;
 }
 
-async function ensureWorkspaceSchema() {
-    await pool.query(`
-        CREATE TABLE IF NOT EXISTS workspaces (
-            id VARCHAR(50) PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            priority INTEGER DEFAULT 100
-        )
-    `);
-    try { await pool.query('ALTER TABLE workspaces ADD COLUMN priority INTEGER DEFAULT 100;'); } catch (e) {}
-    await pool.query(
-        "INSERT INTO workspaces (id, name, priority) VALUES ('lagoinhaalphaville.sp', 'Lagoinha Alphaville Principal', 1), ('heroalphaville', 'Hero Alphaville', 2), ('shinealphaville', 'Shine Alphaville', 3) ON CONFLICT (id) DO NOTHING;"
-    );
-}
-
-async function ensureLabelPresetSchema() {
-    await pool.query(`
-        CREATE TABLE IF NOT EXISTS label_presets (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            color VARCHAR(50) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-}
-
-async function ensureCardSchema() {
-    try { await pool.query("ALTER TABLE cards ADD COLUMN category VARCHAR(50) DEFAULT 'editorial';"); } catch (e) {}
-    try { await pool.query("ALTER TABLE cards ADD COLUMN parent_id VARCHAR(50) REFERENCES cards(id) ON DELETE SET NULL;"); } catch (e) {}
-    try { await pool.query("ALTER TABLE cards ADD COLUMN recurrence_type VARCHAR(20) DEFAULT 'none';"); } catch (e) {}
-    try { await pool.query("ALTER TABLE cards ADD COLUMN post_time VARCHAR(10);"); } catch (e) {}
-}
-
-async function ensureSystemSettingsSchema() {
-    await pool.query(`
-        CREATE TABLE IF NOT EXISTS system_settings (
-            id INTEGER PRIMARY KEY,
-            primary_color VARCHAR(10) NOT NULL,
-            tv_access_code VARCHAR(4) DEFAULT '0000',
-            logo_light TEXT DEFAULT '',
-            logo_dark TEXT DEFAULT ''
-        )
-    `);
-    try { await pool.query("ALTER TABLE system_settings ADD COLUMN tv_access_code VARCHAR(4) DEFAULT '0000';"); } catch (e) {}
-    try { await pool.query("ALTER TABLE system_settings ADD COLUMN logo_light TEXT DEFAULT '';"); } catch (e) {}
-    try { await pool.query("ALTER TABLE system_settings ADD COLUMN logo_dark TEXT DEFAULT '';"); } catch (e) {}
-    await pool.query("INSERT INTO system_settings (id, primary_color, tv_access_code, logo_light, logo_dark) VALUES (1, '#4F46E5', '0000', '', '') ON CONFLICT (id) DO NOTHING;");
-}
 
 // =======================
 //   ROUTES OVERVIEW
@@ -291,7 +267,7 @@ async function ensureSystemSettingsSchema() {
 // --- API: Workspaces ---
 app.get('/api/workspaces', authGuard, async (req, res) => {
     try {
-        await ensureWorkspaceSchema();
+        // await ensureWorkspaceSchema();
         const result = await pool.query('SELECT * FROM workspaces ORDER BY priority ASC, name ASC');
         res.json(result.rows);
     } catch(err) {
@@ -302,7 +278,7 @@ app.get('/api/workspaces', authGuard, async (req, res) => {
 
 app.post('/api/workspaces', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
-        await ensureWorkspaceSchema();
+        // await ensureWorkspaceSchema();
         const name = (req.body.name || '').trim();
         if (!name) return res.status(400).json({ error: 'Nome obrigatorio' });
         const id = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
@@ -319,7 +295,7 @@ app.post('/api/workspaces', authGuard, requireRole(['master', 'gestor']), async 
 
 app.put('/api/workspaces/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
-        await ensureWorkspaceSchema();
+        // await ensureWorkspaceSchema();
         const name = (req.body.name || '').trim();
         const priority = Number.isFinite(Number(req.body.priority)) ? Number(req.body.priority) : 100;
         if (!name) return res.status(400).json({ error: 'Nome obrigatorio' });
@@ -355,7 +331,7 @@ app.get('/api/users', authGuard, requireRole(['master', 'gestor']), async (req, 
 // --- API: Label Presets ---
 app.get('/api/label-presets', authGuard, async (req, res) => {
     try {
-        await ensureLabelPresetSchema();
+        // await ensureLabelPresetSchema();
         const result = await pool.query('SELECT id, name, color FROM label_presets ORDER BY name ASC');
         res.json(result.rows);
     } catch (err) {
@@ -366,7 +342,7 @@ app.get('/api/label-presets', authGuard, async (req, res) => {
 
 app.post('/api/label-presets', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
-        await ensureLabelPresetSchema();
+        // await ensureLabelPresetSchema();
         const name = (req.body.name || '').trim();
         const color = (req.body.color || '').trim();
         if (!name || !color) return res.status(400).json({ error: 'Nome e cor obrigatorios' });
@@ -443,7 +419,7 @@ app.delete('/api/users/:id', authGuard, async (req, res) => {
 // --- API: Board API (Columns & Cards) ---
 app.get('/api/board', authOrTvGuard, async (req, res) => {
     try {
-        await ensureCardSchema();
+        // await ensureCardSchema();
         const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
         const category = req.query.category || 'editorial';
         const isAllWorkspaces = workspace === '__all__';
