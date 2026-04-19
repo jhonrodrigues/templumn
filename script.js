@@ -1073,7 +1073,7 @@ function normalizeArray(value) {
     if (typeof value === 'string') {
         try {
             return JSON.parse(value);
-        } catch {
+        } catch (e) {
             return [];
         }
     }
@@ -1325,7 +1325,6 @@ function openModal(card, colId) {
     renderCommentsEditor();
     renderImagesEditor();
     renderFilesEditor();
-    renderFilesEditor();
 
     // Custom Sector Logic
     if (requestDesignBtn) {
@@ -1343,8 +1342,7 @@ function openModal(card, colId) {
                 if (res.ok) {
                     alert('Pedido de arte criado com sucesso no setor de Design!');
                     modalOverlay.classList.remove('active');
-                    // Opcional: redirecionar para o board de design
-                    // window.location.href = 'index.html?category=design';
+                    loadStateFromServer();
                 } else {
                     alert(data.error || 'Erro ao solicitar arte');
                 }
@@ -1386,146 +1384,6 @@ function openColumnModal(column = null) {
     if (columnModal) columnModal.classList.add('active');
 }
 
-if (addMemberBtn) {
-    addMemberBtn.onclick = async () => {
-        if (!activeCardData || !memberInput) return;
-        const member = memberInput.value.trim();
-        if (!member) return;
-        const validMember = await isValidMemberEmail(member);
-        if (!validMember) return alert('Adicione somente membros cadastrados no banco de dados.');
-        if (activeCardData.members.includes(member)) {
-            memberInput.value = '';
-            return;
-        }
-        activeCardData.members.push(member);
-        memberInput.value = '';
-        renderMembersEditor();
-    };
-}
-
-
-
-
-if (imageInput) {
-    imageInput.onchange = async () => {
-        if (!activeCardData) return;
-        try {
-            const loadedImages = await readFilesAsDataUrls(imageInput.files);
-            activeCardData.images.push(...loadedImages);
-            renderImagesEditor();
-            imageInput.value = '';
-        } catch (e) {
-            alert('Erro ao carregar imagem');
-        }
-    };
-}
-
-if (fileInput) {
-    fileInput.onchange = async () => {
-        if (!activeCardData) return;
-        try {
-            const loadedFiles = await readFilesAsDataUrls(fileInput.files);
-            activeCardData.files.push(...formatFilePayload(fileInput.files, loadedFiles));
-            renderFilesEditor();
-            fileInput.value = '';
-        } catch (e) {
-            alert('Erro ao carregar arquivo');
-        }
-    };
-}
-
-if (removeCardFromWorkspaceBtn) {
-    removeCardFromWorkspaceBtn.onclick = async () => {
-        if (!activeCardId || !activeCardData) return;
-        if ((activeCardData.visible_workspaces || []).length <= 1) {
-            return alert('Esse card so aparece nesta conta. Use excluir para apagar de vez.');
-        }
-        if (!confirm('Remover esta demanda apenas da conta atual? Ela continuara visivel nas outras contas selecionadas.')) return;
-
-        try {
-            const response = await fetch('/api/cards/' + activeCardId + '/remove-workspace?workspace=' + encodeURIComponent(activeWorkspaceId), {
-                method: 'POST',
-                headers: authHeaders
-            });
-            if (!response.ok) throw new Error('remove workspace failed');
-            modalOverlay.classList.remove('active');
-            loadStateFromServer();
-        } catch (e) {
-            alert('Erro ao remover card desta conta');
-        }
-    };
-}
-
-if (typeof removeRecurrenceBtn !== 'undefined' && removeRecurrenceBtn) {
-    removeRecurrenceBtn.onclick = () => {
-        if (!activeCardId || !activeCardData) return;
-        if (!confirm('Remover a recorrência desta demanda? Os cards futuros já criados continuarão existindo.')) return;
-        if (editRecurrenceInput) editRecurrenceInput.value = 'none';
-        const removeBtn = document.getElementById('remove-recurrence-btn');
-        if (removeBtn) removeBtn.style.display = 'none';
-    };
-}
-
-if (saveColumnBtn) {
-    saveColumnBtn.onclick = async () => {
-        if (!editColumnTitleInput) return;
-        const nextTitle = editColumnTitleInput.value.trim();
-        if (!nextTitle) return alert('Preencha o nome do quadro.');
-
-        const originalText = saveColumnBtn.innerHTML;
-        saveColumnBtn.innerHTML = 'Salvando...';
-        try {
-            const isEditing = Boolean(activeColumnId);
-            const response = await fetch(isEditing ? '/api/columns/' + activeColumnId : '/api/columns', {
-                method: isEditing ? 'PUT' : 'POST',
-                headers: authHeaders,
-                body: JSON.stringify({ title: nextTitle })
-            });
-            if (!response.ok) throw new Error('column update failed');
-            const data = await response.json().catch(() => ({}));
-
-            if (isEditing) {
-                const column = boardState.columns.find((item) => item.id === activeColumnId);
-                if (column) column.title = nextTitle;
-            } else if (data.id) {
-                boardState.columns.push({ id: data.id, title: data.title || nextTitle, col_order: data.col_order || (boardState.columns.length + 1), cards: [] });
-                boardState.columns.sort((a, b) => (a.col_order || 0) - (b.col_order || 0));
-            }
-            if (columnModal) columnModal.classList.remove('active');
-            renderBoard();
-        } catch (err) {
-            alert('Nao foi possivel editar esse quadro.');
-        } finally {
-            saveColumnBtn.innerHTML = originalText;
-        }
-    };
-}
-
-if (createColumnBtn) {
-    createColumnBtn.onclick = () => openColumnModal(null);
-}
-
-if (deleteColumnBtn) {
-    deleteColumnBtn.onclick = async () => {
-        if (!activeColumnId) return;
-        if (!confirm('Excluir este quadro? Ele precisa estar vazio para ser removido.')) return;
-        const originalText = deleteColumnBtn.innerHTML;
-        deleteColumnBtn.innerHTML = 'Excluindo...';
-        try {
-            const response = await fetch('/api/columns/' + activeColumnId, { method: 'DELETE', headers: authHeaders });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data.error || 'delete failed');
-            boardState.columns = boardState.columns.filter((item) => item.id !== activeColumnId);
-            if (columnModal) columnModal.classList.remove('active');
-            renderBoard();
-        } catch (err) {
-            alert(err.message || 'Nao foi possivel excluir esse quadro.');
-        } finally {
-            deleteColumnBtn.innerHTML = originalText;
-        }
-    };
-}
-
 async function moveColumn(id, direction) {
     console.log(`[FRONTEND] Move Column: ID=${id}, Direction=${direction}`);
     try {
@@ -1544,36 +1402,6 @@ async function moveColumn(id, direction) {
         alert('Erro ao mover quadro: ' + err.message);
     }
 }
-
-if (moveColumnLeftBtn) {
-    moveColumnLeftBtn.onclick = () => {
-        if (!activeColumnId) return;
-        moveColumn(activeColumnId, 'left');
-    };
-}
-
-if (moveColumnRightBtn) {
-    moveColumnRightBtn.onclick = () => {
-        if (!activeColumnId) return;
-        moveColumn(activeColumnId, 'right');
-    };
-}
-
-if (document.getElementById('card-modal') && document.querySelector('#card-modal .close-modal')) {
-    const closeBtn = document.querySelector('#card-modal .close-modal');
-    const modalOverlayEl = document.getElementById('card-modal');
-    
-    closeBtn.addEventListener('click', () => {
-        modalOverlayEl.classList.remove('active');
-    });
-
-    modalOverlayEl.addEventListener('click', (e) => {
-        if (e.target === modalOverlayEl) {
-            modalOverlayEl.classList.remove('active');
-        }
-    });
-}
-
 
 // --- Theme Toggle Logic --- //
 function initTheme() {
@@ -1617,10 +1445,8 @@ if (notificationsBtn && notificationsPanel) {
     });
 }
 
-// Initialization is now managed by async loadStateFromServer()
 window.openCardDetail = async (cardId) => {
     try {
-        // Find card in current state
         let found = null;
         if (boardState && boardState.columns) {
             boardState.columns.forEach(col => {
@@ -1632,8 +1458,6 @@ window.openCardDetail = async (cardId) => {
         if (found) {
             openModal(found.card, found.colId);
         } else {
-            // Not in current list (maybe on another page or workspace)
-            // Fetch directly from API
             try {
                 const ws = activeWorkspaceId || localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
                 const res = await fetch(`/api/cards/${cardId}?workspace=${encodeURIComponent(ws)}`, { 
@@ -1650,7 +1474,6 @@ window.openCardDetail = async (cardId) => {
     } catch(e) { console.error(e); }
 };
 
-// Initialize theme and modals
 initTheme();
 injectModalsIfNeeded();
 
