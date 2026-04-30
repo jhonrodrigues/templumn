@@ -934,9 +934,6 @@ app.get('/api/dashboard', authOrTvGuard, async (req, res) => {
 
         const usersRes = await pool.query('SELECT COUNT(*) AS total FROM users');
         const cards = cardsRes.rows;
-
-        const usersRes = await pool.query('SELECT COUNT(*) AS total FROM users');
-        const cards = cardsRes.rows;
         const total = cards.length;
         const completed = cards.filter((card) => card.column_id === 'col-5' || card.column_id === 'col-6').length;
         const posted = cards.filter((card) => card.column_id === 'col-6').length;
