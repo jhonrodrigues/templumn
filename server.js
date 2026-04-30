@@ -137,6 +137,12 @@ async function initDb() {
             try { await pool.query("ALTER TABLE cards ADD COLUMN created_by VARCHAR(255);"); } catch(e2){}
         }
 
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS demand_type VARCHAR(100);"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN demand_type VARCHAR(100);"); } catch(e2){}
+        }
+
+        try { await pool.query("CREATE TABLE IF NOT EXISTS demand_types (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, icon VARCHAR(50) DEFAULT 'fa-tag', color VARCHAR(50) DEFAULT '#6b7280', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"); } catch(e){}
+
         // 2. Executar init.sql para garantir estrutura base e dados iniciais
         const sql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
         await pool.query(sql);
@@ -383,6 +389,52 @@ app.delete('/api/label-presets/:id', authGuard, requireRole(['master', 'gestor']
         res.status(500).json({ error: 'Erro ao excluir etiqueta padrao' });
     }
 });
+
+// --- API: Demand Types ---
+app.get('/api/demand-types', authGuard, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, name, icon, color FROM demand_types ORDER BY name ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Demand types load error:', err);
+        res.status(500).json({ error: 'Erro ao carregar tipos de demanda' });
+    }
+});
+
+app.post('/api/demand-types', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const name = (req.body.name || '').trim();
+        const icon = (req.body.icon || 'fa-tag').trim();
+        const color = (req.body.color || '#6b7280').trim();
+        if (!name) return res.status(400).json({ error: 'Nome obrigatorio' });
+        await pool.query('INSERT INTO demand_types (name, icon, color) VALUES ($1, $2, $3)', [name, icon, color]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao criar tipo de demanda' });
+    }
+});
+
+app.put('/api/demand-types/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const name = (req.body.name || '').trim();
+        const icon = (req.body.icon || 'fa-tag').trim();
+        const color = (req.body.color || '#6b7280').trim();
+        if (!name) return res.status(400).json({ error: 'Nome obrigatorio' });
+        await pool.query('UPDATE demand_types SET name = $1, icon = $2, color = $3 WHERE id = $4', [name, icon, color, req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao atualizar tipo de demanda' });
+    }
+});
+
+app.delete('/api/demand-types/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        await pool.query('DELETE FROM demand_types WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao excluir tipo de demanda' });
+    }
+});
 app.get('/api/users/options', authGuard, async (req, res) => {
     try {
         const search = (req.query.q || '').trim();
@@ -470,7 +522,8 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
                             'parent_id', k.parent_id,
                             'design_column_id', k.design_column_id,
                             'column_id', k.column_id,
-                            'created_by', k.created_by
+                            'created_by', k.created_by,
+                            'demand_type', k.demand_type
                         ) ORDER BY k.post_date ASC NULLS LAST, k.post_time ASC NULLS LAST, k.card_order ASC
                     ) FILTER (WHERE k.id IS NOT NULL), '[]'
                 ) as cards
@@ -509,7 +562,7 @@ app.post('/api/board/move', authGuard, async (req, res) => {
 // --- API: Create & Delete Cards ---
 app.post('/api/cards', authGuard, async (req, res) => {
     // Schema already ensured by initDb()
-    const { title, column_id, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, labels, category, parent_id } = req.body;
+    const { title, column_id, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, labels, category, parent_id, demand_type } = req.body;
     const normalizedRecurrenceType = normalizeRecurrenceType(recurrence_type);
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     const resolvedCategory = category || 'editorial';
@@ -528,8 +581,8 @@ app.post('/api/cards', authGuard, async (req, res) => {
         const createdBy = userResult.rows.length > 0 ? (userResult.rows[0].name || userResult.rows[0].email) : null;
         
         await pool.query(
-            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, attachments_count, category, parent_id, created_by, labels) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18)',
-            [id, column_id, title, order, platform, post_date, post_time || null, normalizedRecurrenceType, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0), resolvedCategory, parent_id || null, createdBy, serializedLabels]
+            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, attachments_count, category, parent_id, created_by, labels, demand_type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18, $19)',
+            [id, column_id, title, order, platform, post_date, post_time || null, normalizedRecurrenceType, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0), resolvedCategory, parent_id || null, createdBy, serializedLabels, demand_type || null]
         );
         res.json({ success: true, id, title });
     } catch (err) {
@@ -541,7 +594,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
 app.put('/api/cards/:id', authGuard, async (req, res) => {
     // Schema already ensured by initDb()
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
-    const { title, description, platform, post_date, post_time, recurrence_type, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id, category, parent_id } = req.body;
+    const { title, description, platform, post_date, post_time, recurrence_type, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id, category, parent_id, demand_type } = req.body;
     const normalizedRecurrenceType = normalizeRecurrenceType(recurrence_type);
     try {
         const serializedLabels = Array.isArray(labels) ? JSON.stringify(labels) : '[]';
@@ -559,9 +612,9 @@ app.put('/api/cards/:id', authGuard, async (req, res) => {
              SET title = $1, description = $2, platform = $3, post_date = $4, post_time = $5, recurrence_type = $6, assignee = $7,
                  labels = $8::jsonb, members = $9::jsonb, checklist = $10::jsonb, comments = $11::jsonb, comments_count = $12,
                  images = $13::jsonb, files = $14::jsonb, visible_workspaces = $15::jsonb, attachments_count = $16,
-                 category = COALESCE($17, category), parent_id = COALESCE($18, parent_id)
-             WHERE id = $19 AND ${workspaceVisibilityClause(20)}`,
-            [title, description || '', platform || null, post_date || null, post_time || null, normalizedRecurrenceType, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedFiles, serializedVisibleWorkspaces, attachmentsCount, category || null, parent_id || null, req.params.id, workspace]
+                 category = COALESCE($17, category), parent_id = COALESCE($18, parent_id), demand_type = $19
+             WHERE id = $20 AND ${workspaceVisibilityClause(21)}`,
+            [title, description || '', platform || null, post_date || null, post_time || null, normalizedRecurrenceType, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedFiles, serializedVisibleWorkspaces, attachmentsCount, category || null, parent_id || null, demand_type || null, req.params.id, workspace]
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
         res.json({ success: true });

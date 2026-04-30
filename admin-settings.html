@@ -249,6 +249,20 @@
                     </div>
                     <div id="label-admin-list" class="label-admin-list"></div>
                 </div>
+
+                <div class="settings-card" style="margin-top: 24px;">
+                    <h2 style="font-size: 18px; margin-bottom: 16px; color: var(--text-main);"><i class="fa-solid fa-bullhorn"></i> Tipos de Demanda</h2>
+                    <div class="form-group">
+                        <label>Tipos de Demanda</label>
+                        <p>Defina os tipos de conteúdo como Carrossel, Reels, Story, etc.</p>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="new-demand-type-name" class="text-input" placeholder="Nome do tipo (ex: Carrossel)" style="flex:1;">
+                            <input type="color" id="new-demand-type-color" value="#6366f1" style="width: 50px; height: 42px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                            <button class="btn-save" id="create-demand-type-btn"><i class="fa-solid fa-plus"></i> Criar Tipo</button>
+                        </div>
+                    </div>
+                    <div id="demand-type-admin-list" class="label-admin-list"></div>
+                </div>
             </div>
         </main>
     </div>
@@ -487,6 +501,91 @@
 
         loadWorkspaceAdmin();
         loadLabelAdmin();
+        loadDemandTypeAdmin();
+
+        async function loadDemandTypeAdmin() {
+            const list = document.getElementById('demand-type-admin-list');
+            try {
+                const response = await fetch('/api/demand-types', { headers: getAuthHeaders() });
+                const types = await response.json();
+                list.innerHTML = types.length ? types.map((t) => `
+                    <div class="label-admin-item" data-type-id="${t.id}">
+                        <div>
+                            <label style="display:block; margin-bottom:8px; font-size:12px; color:var(--text-muted); font-weight:600;">NOME</label>
+                            <input type="text" class="text-input dt-name" value="${t.name}">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:8px; font-size:12px; color:var(--text-muted); font-weight:600;">COR</label>
+                            <input type="color" class="text-input dt-color" value="${t.color || '#6366f1'}" style="height:42px; padding:4px;">
+                        </div>
+                        <button class="btn-save dt-save-btn"><i class="fa-solid fa-save"></i> Salvar</button>
+                        <button class="danger-btn dt-delete-btn"><i class="fa-solid fa-trash"></i> Excluir</button>
+                    </div>
+                `).join('') : '<div style="color:var(--text-muted);">Nenhum tipo de demanda criado ainda.</div>';
+
+                list.querySelectorAll('.dt-save-btn').forEach((button) => {
+                    button.addEventListener('click', async () => {
+                        const item = button.closest('[data-type-id]');
+                        const id = item.dataset.typeId;
+                        const name = item.querySelector('.dt-name').value.trim();
+                        const color = item.querySelector('.dt-color').value;
+                        if (!name) return alert('Digite o nome do tipo.');
+                        const original = button.innerHTML;
+                        button.innerHTML = 'Salvando...';
+                        try {
+                            const response = await fetch('/api/demand-types/' + id, {
+                                method: 'PUT',
+                                headers: authHeaders,
+                                body: JSON.stringify({ name, color, icon: 'fa-tag' })
+                            });
+                            if (!response.ok) throw new Error('save failed');
+                            loadDemandTypeAdmin();
+                        } catch (err) {
+                            alert('Não foi possível salvar o tipo.');
+                        } finally {
+                            button.innerHTML = original;
+                        }
+                    });
+                });
+
+                list.querySelectorAll('.dt-delete-btn').forEach((button) => {
+                    button.addEventListener('click', async () => {
+                        const item = button.closest('[data-type-id]');
+                        const id = item.dataset.typeId;
+                        if (!confirm('Excluir este tipo de demanda?')) return;
+                        try {
+                            const response = await fetch('/api/demand-types/' + id, { method: 'DELETE', headers: authHeaders });
+                            if (!response.ok) throw new Error('delete failed');
+                            loadDemandTypeAdmin();
+                        } catch (err) {
+                            alert('Não foi possível excluir o tipo.');
+                        }
+                    });
+                });
+            } catch (err) {
+                list.innerHTML = '<div style="color:var(--text-muted);">Erro ao carregar tipos de demanda.</div>';
+            }
+        }
+
+        document.getElementById('create-demand-type-btn').addEventListener('click', async () => {
+            const nameInput = document.getElementById('new-demand-type-name');
+            const colorInput = document.getElementById('new-demand-type-color');
+            const name = nameInput.value.trim();
+            const color = colorInput.value;
+            if (!name) return alert('Digite o nome do tipo de demanda.');
+            try {
+                const response = await fetch('/api/demand-types', {
+                    method: 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify({ name, color, icon: 'fa-tag' })
+                });
+                if (!response.ok) throw new Error('create failed');
+                nameInput.value = '';
+                loadDemandTypeAdmin();
+            } catch (err) {
+                alert('Não foi possível criar o tipo de demanda.');
+            }
+        });
 
         const logoLightUpload = document.getElementById('logo-light-upload');
         const logoLightPreview = document.getElementById('logo-light-preview');

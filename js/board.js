@@ -23,6 +23,13 @@ function resetNewCardModal() {
     newCardLabels = [];
     renderNewCardLabels();
     renderNewCardPresetLabels();
+    const demandTypeSelect = document.getElementById('nc-demand-type');
+    if (demandTypeSelect) {
+        demandTypeSelect.value = '';
+    }
+    if (typeof loadDemandTypes === 'function') {
+        loadDemandTypes();
+    }
     renderWorkspaceSelector('new-card-workspaces', [activeWorkspaceId]);
 }
 
@@ -130,6 +137,8 @@ function renderBoard() {
                 const post_date = document.getElementById('nc-date').value;
                 const post_time = document.getElementById('nc-time').value;
                 const recurrence_type = document.getElementById('nc-recurrence').value;
+                const demandTypeSelect = document.getElementById('nc-demand-type');
+                const demand_type = demandTypeSelect ? demandTypeSelect.value : '';
                 const aField = document.getElementById('nc-assignee');
                 const assignee = aField ? aField.value.trim() : '';
                 const visible_workspaces = getSelectedWorkspaceIds('new-card-workspaces');
@@ -145,7 +154,7 @@ function renderBoard() {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
-                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, post_time, recurrence_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], labels: newCardLabels, category: activeCategory })
+                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, post_time, recurrence_type, demand_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], labels: newCardLabels, category: activeCategory })
                     });
                     m.classList.remove('active');
                     loadStateFromServer();
@@ -182,6 +191,8 @@ function initFAB() {
                 const post_date = document.getElementById('nc-date').value;
                 const post_time = document.getElementById('nc-time').value;
                 const recurrence_type = document.getElementById('nc-recurrence').value;
+                const demandTypeSelect = document.getElementById('nc-demand-type');
+                const demand_type = demandTypeSelect ? demandTypeSelect.value : '';
                 const assignee = aField ? aField.value.trim() : '';
                 const visible_workspaces = getSelectedWorkspaceIds('new-card-workspaces');
                 
@@ -196,7 +207,7 @@ function initFAB() {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
-                        body: JSON.stringify({ title, column_id: colId, platform, post_date, post_time, recurrence_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], labels: newCardLabels, category: activeCategory })
+                        body: JSON.stringify({ title, column_id: colId, platform, post_date, post_time, recurrence_type, demand_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], labels: newCardLabels, category: activeCategory })
                     });
                     m.classList.remove('active');
                     loadStateFromServer();
@@ -250,6 +261,7 @@ function createCardElement(card, colId) {
         : '';
 
     const creatorHtml = card.created_by ? `<span title="Criado por ${escapeHtml(card.created_by)}" style="color: var(--text-muted); font-size: 11px;"><i class="fa-regular fa-user"></i> ${escapeHtml(card.created_by)}</span>` : '';
+    const demandTypeHtml = card.demand_type ? `<span style="background: #6366f1; color: white; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">${escapeHtml(card.demand_type)}</span>` : '';
     
     cardEl.innerHTML = `
         ${(platformHtml || dateHtml || labelsHTML || workspaceTagHtml) ? `<div class="card-labels" style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
@@ -262,6 +274,7 @@ function createCardElement(card, colId) {
         <div class="card-title">${card.title}</div>
         <div class="card-footer">
             <div class="card-badges">
+                ${demandTypeHtml}
                 ${creatorHtml}
                 ${card.design_column_id ? `<span title="Enviado para Design" style="color: #f59e0b; font-weight: bold;"><i class="fa-solid fa-palette"></i> Design</span>` : ''}
                 ${card.comments > 0 ? `<span><i class="fa-regular fa-comment"></i> ${card.comments}</span>` : ''}

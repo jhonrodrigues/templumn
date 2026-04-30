@@ -16,6 +16,7 @@ function reinitializeModalElements() {
     editTimeInput = document.getElementById('edit-card-time');
     editRecurrenceInput = document.getElementById('edit-card-recurrence');
     removeRecurrenceBtn = document.getElementById('remove-recurrence-btn');
+    editDemandTypeInput = document.getElementById('edit-card-demand-type');
     modalListName = document.getElementById('modal-list-name');
     modalTitle = document.getElementById('modal-title');
     memberInput = document.getElementById('member-input');
@@ -122,6 +123,12 @@ function injectModalsIfNeeded() {
                                 <div>
                                     <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DESCRIÇÃO</label>
                                     <textarea id="edit-card-description" class="desc-editor" placeholder="Detalhes da demanda, briefing e observacoes..."></textarea>
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">TIPO DA DEMANDA</label>
+                                    <select id="edit-card-demand-type" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                        <option value="">Selecione o tipo (opcional)</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -246,6 +253,12 @@ function injectModalsIfNeeded() {
                     <datalist id="assignee-suggestions"></datalist>
                 </div>
                 <div style="margin-bottom: 16px;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">TIPO DA DEMANDA</label>
+                    <select id="nc-demand-type" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                        <option value="">Selecione o tipo (opcional)</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 16px;">
                     <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">ETIQUETAS</label>
                     <div id="new-card-preset-labels" class="preset-labels-list" style="margin-bottom: 8px;"></div>
                     <div id="new-card-labels" class="pill-list" style="min-height: 24px;"></div>
@@ -268,6 +281,24 @@ function injectModalsIfNeeded() {
 }
 
 // --- Sub-Editors --- //
+
+let demandTypesCache = [];
+
+async function loadDemandTypes() {
+    try {
+        const response = await fetch('/api/demand-types', { headers: getAuthHeaders() });
+        if (!response.ok) return;
+        demandTypesCache = await response.json();
+        const ncSelect = document.getElementById('nc-demand-type');
+        const editSelect = document.getElementById('edit-card-demand-type');
+        const optionsHTML = '<option value="">Selecione o tipo (opcional)</option>' + 
+            demandTypesCache.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`).join('');
+        if (ncSelect) ncSelect.innerHTML = optionsHTML;
+        if (editSelect) editSelect.innerHTML = optionsHTML;
+    } catch (err) {
+        console.error('Error loading demand types:', err);
+    }
+}
 
 function renderMembersEditor() {
     if (!membersList || !activeCardData) return;
@@ -471,6 +502,11 @@ function openModal(card, colId) {
             removeBtn.style.display = (card.recurrence_type && card.recurrence_type !== 'none') ? 'block' : 'none';
         }
     }
+    if (editDemandTypeInput) {
+        loadDemandTypes().then(() => {
+            editDemandTypeInput.value = card.demand_type || '';
+        });
+    }
     if (memberInput) memberInput.value = '';
     if (checklistInput) checklistInput.value = '';
     if (commentInput) commentInput.value = '';
@@ -593,6 +629,7 @@ function attachModalHandlers() {
             const post_date = editDateInput ? editDateInput.value : '';
             const post_time = editTimeInput ? editTimeInput.value : '';
             const recurrence_type = editRecurrenceInput ? editRecurrenceInput.value : 'none';
+            const demand_type = editDemandTypeInput ? editDemandTypeInput.value : '';
             const assignee = activeCardData.members.length > 0 ? activeCardData.members[0] : '';
             const visible_workspaces = getSelectedWorkspaceIds('edit-card-workspaces');
             activeCardData.visible_workspaces = visible_workspaces;
@@ -603,7 +640,7 @@ function attachModalHandlers() {
                 const response = await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), {
                     method: 'PUT',
                     headers: authHeaders,
-                    body: JSON.stringify({ title, description, platform, post_date, post_time, recurrence_type, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id, category: activeCardData.category, parent_id: activeCardData.parent_id })
+                    body: JSON.stringify({ title, description, platform, post_date, post_time, recurrence_type, demand_type, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id, category: activeCardData.category, parent_id: activeCardData.parent_id })
                 });
                 if (!response.ok) throw new Error('save failed');
                 const activeColumn = boardState.columns.find(c => c.id === activeCardColId);

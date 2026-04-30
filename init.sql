@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS cards (
     assignee VARCHAR(100),
     category VARCHAR(50) DEFAULT 'editorial',
     parent_id VARCHAR(50) REFERENCES cards(id) ON DELETE SET NULL,
-    created_by VARCHAR(255)
+    created_by VARCHAR(255),
+    demand_type VARCHAR(100)
 );
 
 -- Configurações Globais (Primary Color)
@@ -59,6 +60,14 @@ CREATE TABLE IF NOT EXISTS label_presets (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     color VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS demand_types (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    icon VARCHAR(50) DEFAULT 'fa-tag',
+    color VARCHAR(50) DEFAULT '#6b7280',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
