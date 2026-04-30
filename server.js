@@ -1092,6 +1092,71 @@ app.get('/api/reports/labels', authGuard, async (req, res) => {
     }
 });
 
+app.get('/api/reports/demand-types', authGuard, async (req, res) => {
+    try {
+        const workspace = req.query.workspace;
+        const typeFilter = req.query.type;
+        
+        let whereClause = '1=1';
+        let params = [];
+        
+        if (workspace && workspace !== '__all__') {
+            whereClause += ` AND (c.workspace_id = $${params.length + 1} OR c.visible_workspaces ? $${params.length + 1})`;
+            params.push(workspace);
+        }
+        
+        const query = `
+            SELECT 
+                c.workspace_id,
+                w.name as workspace_name,
+                c.demand_type
+            FROM cards c
+            LEFT JOIN workspaces w ON w.id = c.workspace_id
+            WHERE ${whereClause}
+        `;
+        
+        const result = await pool.query(query, params);
+        const cards = result.rows;
+        
+        const typeCounts = {};
+        
+        cards.forEach(card => {
+            const demandType = card.demand_type;
+            if (!demandType) return;
+            
+            const wsId = card.workspace_id || 'unknown';
+            const wsName = card.workspace_name || wsId;
+            
+            if (typeFilter && demandType.toLowerCase() !== typeFilter.toLowerCase()) return;
+            
+            if (!typeCounts[demandType]) {
+                typeCounts[demandType] = { total: 0, byWorkspace: {} };
+            }
+            typeCounts[demandType].total++;
+            
+            if (!typeCounts[demandType].byWorkspace[wsId]) {
+                typeCounts[demandType].byWorkspace[wsId] = { name: wsName, count: 0 };
+            }
+            typeCounts[demandType].byWorkspace[wsId].count++;
+        });
+        
+        const report = Object.entries(typeCounts).map(([typeName, data]) => ({
+            type: typeName,
+            total: data.total,
+            byWorkspace: Object.entries(data.byWorkspace).map(([wsId, wsData]) => ({
+                workspace_id: wsId,
+                workspace_name: wsData.name,
+                count: wsData.count
+            }))
+        })).sort((a, b) => b.total - a.total);
+        
+        res.json({ types: report });
+    } catch (err) {
+        console.error('Demand type report error:', err);
+        res.status(500).json({ error: 'Erro ao gerar relatório de tipos de demanda' });
+    }
+});
+
 app.get('/api/notifications', authGuard, async (req, res) => {
     try {
         const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
