@@ -509,7 +509,7 @@ app.post('/api/board/move', authGuard, async (req, res) => {
 // --- API: Create & Delete Cards ---
 app.post('/api/cards', authGuard, async (req, res) => {
     // Schema already ensured by initDb()
-    const { title, column_id, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, category, parent_id } = req.body;
+    const { title, column_id, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, labels, category, parent_id } = req.body;
     const normalizedRecurrenceType = normalizeRecurrenceType(recurrence_type);
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     const resolvedCategory = category || 'editorial';
@@ -517,6 +517,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
     const serializedVisibleWorkspaces = JSON.stringify(visibleWorkspaces);
     const serializedImages = JSON.stringify(Array.isArray(images) ? images : []);
     const serializedFiles = JSON.stringify(Array.isArray(files) ? files : []);
+    const serializedLabels = JSON.stringify(Array.isArray(labels) ? labels : []);
     const id = 'card-' + Date.now() + Math.floor(Math.random()*1000);
     try {
         console.log('Creating card with:', { column_id, title, post_date, post_time, recurrence_type: normalizedRecurrenceType, resolvedWS, category: resolvedCategory });
@@ -527,8 +528,8 @@ app.post('/api/cards', authGuard, async (req, res) => {
         const createdBy = userResult.rows.length > 0 ? (userResult.rows[0].name || userResult.rows[0].email) : null;
         
         await pool.query(
-            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, attachments_count, category, parent_id, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14, $15, $16, $17)',
-            [id, column_id, title, order, platform, post_date, post_time || null, normalizedRecurrenceType, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0), resolvedCategory, parent_id || null, createdBy]
+            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, attachments_count, category, parent_id, created_by, labels) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18)',
+            [id, column_id, title, order, platform, post_date, post_time || null, normalizedRecurrenceType, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0), resolvedCategory, parent_id || null, createdBy, serializedLabels]
         );
         res.json({ success: true, id, title });
     } catch (err) {

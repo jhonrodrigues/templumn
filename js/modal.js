@@ -245,6 +245,11 @@ function injectModalsIfNeeded() {
                     <input type="text" id="nc-assignee" placeholder="Digite o nome ou email do membro" list="assignee-suggestions" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
                     <datalist id="assignee-suggestions"></datalist>
                 </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">ETIQUETAS</label>
+                    <div id="new-card-preset-labels" class="preset-labels-list" style="margin-bottom: 8px;"></div>
+                    <div id="new-card-labels" class="pill-list" style="min-height: 24px;"></div>
+                </div>
                 <div style="margin-bottom: 24px;">
                     <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">ONDE ESSA DEMANDA APARECE</label>
                     <div id="new-card-workspaces" class="workspace-selector"></div>

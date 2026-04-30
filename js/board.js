@@ -3,6 +3,8 @@
 // Depends on: state.js, utils.js, api.js, ui.js
 // ===================================================
 
+let newCardLabels = [];
+
 function resetNewCardModal() {
     document.getElementById('nc-title').value = '';
     const nowParts = getSaoPauloNowParts();
@@ -18,7 +20,52 @@ function resetNewCardModal() {
         aField.oninput = () => loadMemberSuggestions(aField.value.trim(), 'assignee-suggestions');
     }
     loadMemberSuggestions('', 'assignee-suggestions');
+    newCardLabels = [];
+    renderNewCardLabels();
+    renderNewCardPresetLabels();
     renderWorkspaceSelector('new-card-workspaces', [activeWorkspaceId]);
+}
+
+function renderNewCardLabels() {
+    const container = document.getElementById('new-card-labels');
+    if (!container) return;
+    container.innerHTML = newCardLabels.length
+        ? newCardLabels.map((label, index) => `<span class="editor-pill"><span class="label ${label.color}">${escapeHtml(label.text)}</span><button type="button" data-new-label-index="${index}"><i class="fa-solid fa-xmark"></i></button></span>`).join('')
+        : '<span style="color: var(--text-muted); font-size: 13px;">Nenhuma etiqueta selecionada.</span>';
+    
+    container.querySelectorAll('[data-new-label-index]').forEach((btn) => {
+        btn.onclick = () => {
+            newCardLabels.splice(Number(btn.dataset.newLabelIndex), 1);
+            renderNewCardLabels();
+            renderNewCardPresetLabels();
+        };
+    });
+}
+
+function renderNewCardPresetLabels() {
+    const container = document.getElementById('new-card-preset-labels');
+    if (!container) return;
+    container.innerHTML = labelPresets.length
+        ? labelPresets.map((label) => {
+            const isSelected = newCardLabels.some(l => l.text === label.name && l.color === label.color);
+            return `<button type="button" class="preset-label-chip ${label.color}" data-new-preset-label-id="${label.id}" style="opacity: ${isSelected ? 0.5 : 1};">${escapeHtml(label.name)}</button>`;
+        }).join('')
+        : '<span style="color: var(--text-muted); font-size: 13px;">Nenhuma etiqueta cadastrada.</span>';
+
+    container.querySelectorAll('[data-new-preset-label-id]').forEach((button) => {
+        button.onclick = () => {
+            const preset = labelPresets.find((item) => String(item.id) === button.dataset.newPresetLabelId);
+            if (!preset) return;
+            const existsIndex = newCardLabels.findIndex(l => l.text === preset.name && l.color === preset.color);
+            if (existsIndex >= 0) {
+                newCardLabels.splice(existsIndex, 1);
+            } else {
+                newCardLabels.push({ text: preset.name, color: preset.color });
+            }
+            renderNewCardLabels();
+            renderNewCardPresetLabels();
+        };
+    });
 }
 
 // --- Render Logic --- //
@@ -98,7 +145,7 @@ function renderBoard() {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
-                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, post_time, recurrence_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], category: activeCategory })
+                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, post_time, recurrence_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], labels: newCardLabels, category: activeCategory })
                     });
                     m.classList.remove('active');
                     loadStateFromServer();
@@ -149,7 +196,7 @@ function initFAB() {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
-                        body: JSON.stringify({ title, column_id: colId, platform, post_date, post_time, recurrence_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], category: activeCategory })
+                        body: JSON.stringify({ title, column_id: colId, platform, post_date, post_time, recurrence_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], labels: newCardLabels, category: activeCategory })
                     });
                     m.classList.remove('active');
                     loadStateFromServer();
