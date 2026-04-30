@@ -133,6 +133,10 @@ async function initDb() {
             try { await pool.query("ALTER TABLE cards ADD COLUMN design_column_id VARCHAR(50) REFERENCES columns(id) ON DELETE SET NULL;"); } catch(e2){}
         }
 
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS created_by VARCHAR(255);"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN created_by VARCHAR(255);"); } catch(e2){}
+        }
+
         // 2. Executar init.sql para garantir estrutura base e dados iniciais
         const sql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
         await pool.query(sql);
@@ -465,7 +469,8 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
                             'category', k.category,
                             'parent_id', k.parent_id,
                             'design_column_id', k.design_column_id,
-                            'column_id', k.column_id
+                            'column_id', k.column_id,
+                            'created_by', k.created_by
                         ) ORDER BY k.post_date ASC NULLS LAST, k.post_time ASC NULLS LAST, k.card_order ASC
                     ) FILTER (WHERE k.id IS NOT NULL), '[]'
                 ) as cards
@@ -517,9 +522,13 @@ app.post('/api/cards', authGuard, async (req, res) => {
         console.log('Creating card with:', { column_id, title, post_date, post_time, recurrence_type: normalizedRecurrenceType, resolvedWS, category: resolvedCategory });
         const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND ${workspaceVisibilityClause(2)}`, [column_id, resolvedWS]);
         const order = maxRes.rows[0].next_order;
+        
+        const userResult = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.user.id]);
+        const createdBy = userResult.rows.length > 0 ? (userResult.rows[0].name || userResult.rows[0].email) : null;
+        
         await pool.query(
-            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, attachments_count, category, parent_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14, $15, $16)',
-            [id, column_id, title, order, platform, post_date, post_time || null, normalizedRecurrenceType, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0), resolvedCategory, parent_id || null]
+            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, attachments_count, category, parent_id, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14, $15, $16, $17)',
+            [id, column_id, title, order, platform, post_date, post_time || null, normalizedRecurrenceType, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0), resolvedCategory, parent_id || null, createdBy]
         );
         res.json({ success: true, id, title });
     } catch (err) {

@@ -13,7 +13,11 @@ function resetNewCardModal() {
     if (recurrenceField) recurrenceField.value = 'none';
     document.getElementById('nc-platform').value = '';
     const aField = document.getElementById('nc-assignee');
-    if (aField) aField.value = '';
+    if (aField) {
+        aField.value = '';
+        aField.oninput = () => loadMemberSuggestions(aField.value.trim(), 'assignee-suggestions');
+    }
+    loadMemberSuggestions('', 'assignee-suggestions');
     renderWorkspaceSelector('new-card-workspaces', [activeWorkspaceId]);
 }
 
@@ -80,10 +84,14 @@ function renderBoard() {
                 const post_time = document.getElementById('nc-time').value;
                 const recurrence_type = document.getElementById('nc-recurrence').value;
                 const aField = document.getElementById('nc-assignee');
-                const assignee = aField ? aField.value : '';
+                const assignee = aField ? aField.value.trim() : '';
                 const visible_workspaces = getSelectedWorkspaceIds('new-card-workspaces');
                 
                 if (!title || title.trim() === '') return alert('Preencha a pauta!');
+                
+                if (assignee && !(await isValidMember(assignee))) {
+                    return alert('Usuário não encontrado. Digite um nome ou email válido.');
+                }
                 
                 document.getElementById('submit-new-card').innerHTML = 'Gravando...';
                 try {
@@ -127,10 +135,14 @@ function initFAB() {
                 const post_date = document.getElementById('nc-date').value;
                 const post_time = document.getElementById('nc-time').value;
                 const recurrence_type = document.getElementById('nc-recurrence').value;
-                const assignee = aField ? aField.value : '';
+                const assignee = aField ? aField.value.trim() : '';
                 const visible_workspaces = getSelectedWorkspaceIds('new-card-workspaces');
                 
                 if (!title || title.trim() === '') return alert('Preencha a pauta!');
+                
+                if (assignee && !(await isValidMember(assignee))) {
+                    return alert('Usuário não encontrado. Digite um nome ou email válido.');
+                }
                 
                 document.getElementById('submit-new-card').innerHTML = 'Gravando...';
                 try {
@@ -190,6 +202,8 @@ function createCardElement(card, colId) {
         ? `<span class="label gray">${escapeHtml(card.workspace_name || card.workspace_id)}</span>`
         : '';
 
+    const creatorHtml = card.created_by ? `<span title="Criado por ${escapeHtml(card.created_by)}" style="color: var(--text-muted); font-size: 11px;"><i class="fa-regular fa-user"></i> ${escapeHtml(card.created_by)}</span>` : '';
+    
     cardEl.innerHTML = `
         ${(platformHtml || dateHtml || labelsHTML || workspaceTagHtml) ? `<div class="card-labels" style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
             ${platformHtml}
@@ -201,6 +215,7 @@ function createCardElement(card, colId) {
         <div class="card-title">${card.title}</div>
         <div class="card-footer">
             <div class="card-badges">
+                ${creatorHtml}
                 ${card.design_column_id ? `<span title="Enviado para Design" style="color: #f59e0b; font-weight: bold;"><i class="fa-solid fa-palette"></i> Design</span>` : ''}
                 ${card.comments > 0 ? `<span><i class="fa-regular fa-comment"></i> ${card.comments}</span>` : ''}
                 ${card.attachments > 0 ? `<span><i class="fa-solid fa-paperclip"></i> ${card.attachments}</span>` : ''}

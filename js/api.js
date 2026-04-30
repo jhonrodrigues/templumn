@@ -63,26 +63,32 @@ async function loadNotifications() {
     }
 }
 
-async function loadMemberSuggestions(search = '') {
-    const datalist = document.getElementById('member-suggestions');
+async function loadMemberSuggestions(search = '', datalistId = 'member-suggestions') {
+    const datalist = document.getElementById(datalistId);
     if (!datalist) return;
     try {
         const response = await fetch('/api/users/options?q=' + encodeURIComponent(search), { headers: getAuthHeaders() });
         if (!response.ok) return;
         const users = await response.json();
         memberSuggestionsCache = Array.isArray(users) ? users : [];
-        datalist.innerHTML = users.map((user) => `<option value="${user.email}"></option>`).join('');
+        datalist.innerHTML = users.map((user) => {
+            const displayName = user.name || user.email;
+            return `<option value="${displayName}"></option>`;
+        }).join('');
     } catch (err) {
         console.error('Member suggestions error', err);
     }
 }
 
-async function isValidMemberEmail(email) {
+async function isValidMember(value) {
     try {
-        const response = await fetch('/api/users/options?q=' + encodeURIComponent(email), { headers: getAuthHeaders() });
+        const response = await fetch('/api/users/options?q=' + encodeURIComponent(value), { headers: getAuthHeaders() });
         if (!response.ok) return false;
         const users = await response.json();
-        return users.some((user) => (user.email || '').toLowerCase() === email.toLowerCase());
+        return users.some((user) => 
+            (user.email || '').toLowerCase() === value.toLowerCase() || 
+            (user.name || '').toLowerCase() === value.toLowerCase()
+        );
     } catch (err) {
         return false;
     }

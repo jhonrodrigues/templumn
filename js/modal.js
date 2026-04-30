@@ -241,8 +241,9 @@ function injectModalsIfNeeded() {
                     </select>
                 </div>
                 <div style="margin-bottom: 24px;">
-                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">ATRIBUIR PARA (MEU EMAIL)</label>
-                    <input type="text" id="nc-assignee" placeholder="Deixe em branco ou email do membro" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">ATRIBUIR PARA (NOME OU EMAIL)</label>
+                    <input type="text" id="nc-assignee" placeholder="Digite o nome ou email do membro" list="assignee-suggestions" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                    <datalist id="assignee-suggestions"></datalist>
                 </div>
                 <div style="margin-bottom: 24px;">
                     <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">ONDE ESSA DEMANDA APARECE</label>
@@ -666,11 +667,11 @@ function attachModalHandlers() {
     if (addMemberBtn) {
         addMemberBtn.onclick = async () => {
             if (!activeCardData || !memberInput) return;
-            const email = memberInput.value.trim().toLowerCase();
-            if (!email) return;
-            if (activeCardData.members.some(m => m.toLowerCase() === email)) return alert('Membro ja adicionado.');
-            if (!(await isValidMemberEmail(email))) return alert('Usuario não encontrado no sistema.');
-            activeCardData.members.push(email);
+            const value = memberInput.value.trim();
+            if (!value) return;
+            if (activeCardData.members.some(m => m.toLowerCase() === value.toLowerCase())) return alert('Membro ja adicionado.');
+            if (!(await isValidMember(value))) return alert('Usuario não encontrado no sistema.');
+            activeCardData.members.push(value);
             memberInput.value = '';
             renderMembersEditor();
         };

@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS cards (
     workspace_id VARCHAR(50) DEFAULT 'igreja',
     assignee VARCHAR(100),
     category VARCHAR(50) DEFAULT 'editorial',
-    parent_id VARCHAR(50) REFERENCES cards(id) ON DELETE SET NULL
+    parent_id VARCHAR(50) REFERENCES cards(id) ON DELETE SET NULL,
+    created_by VARCHAR(255)
 );
 
 -- Configurações Globais (Primary Color)
