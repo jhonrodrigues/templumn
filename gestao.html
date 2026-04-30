@@ -242,6 +242,24 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="dash-panel" style="margin-top: 24px;">
+                    <div class="panel-header">
+                        <span class="panel-title">Relatório por Etiquetas</span>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <select id="label-filter-workspace" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-size: 13px;">
+                                <option value="__all__">Todas as contas</option>
+                            </select>
+                            <select id="label-filter-select" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-size: 13px;">
+                                <option value="">Todas as etiquetas</option>
+                            </select>
+                            <button id="label-filter-btn" style="padding: 8px 16px; border-radius: 8px; background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; font-size: 13px;"><i class="fa-solid fa-filter"></i> Filtrar</button>
+                        </div>
+                    </div>
+                    <div id="label-report-container">
+                        <p style="color: var(--text-muted); text-align: center; padding: 20px;">Carregando relatório...</p>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -316,6 +334,75 @@
 
         loadDashboard();
         loadTvCode();
+        loadLabelReport();
+
+        async function loadLabelReport() {
+            try {
+                const wsSelect = document.getElementById('label-filter-workspace');
+                const labelSelect = document.getElementById('label-filter-select');
+                
+                const wsRes = await fetch('/api/workspaces', { headers: getAuthHeaders() });
+                const workspaces = await wsRes.json();
+                workspaces.forEach(ws => {
+                    const opt = document.createElement('option');
+                    opt.value = ws.id;
+                    opt.textContent = ws.name || ws.id;
+                    wsSelect.appendChild(opt);
+                });
+                
+                const labelRes = await fetch('/api/label-presets', { headers: getAuthHeaders() });
+                const labels = await labelRes.json();
+                labels.forEach(lbl => {
+                    const opt = document.createElement('option');
+                    opt.value = lbl.name;
+                    opt.textContent = lbl.name;
+                    labelSelect.appendChild(opt);
+                });
+                
+                loadLabelReportData();
+                
+            } catch (e) {
+                console.error('Error loading filters:', e);
+            }
+        }
+
+        async function loadLabelReportData() {
+            const container = document.getElementById('label-report-container');
+            const workspace = document.getElementById('label-filter-workspace').value;
+            const label = document.getElementById('label-filter-select').value;
+            
+            try {
+                const url = '/api/reports/labels?workspace=' + encodeURIComponent(workspace) + (label ? '&label=' + encodeURIComponent(label) : '');
+                const res = await fetch(url, { headers: getAuthHeaders() });
+                const data = await res.json();
+                
+                if (!data.labels || data.labels.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Nenhum dado encontrado para os filtros selecionados.</p>';
+                    return;
+                }
+                
+                let html = '<table style="width: 100%; border-collapse: collapse; margin-top: 16px;">';
+                html += '<thead><tr style="border-bottom: 2px solid var(--border);"><th style="text-align: left; padding: 12px; color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Etiqueta</th><th style="text-align: center; padding: 12px; color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Total</th><th style="text-align: left; padding: 12px; color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Por Conta</th></tr></thead>';
+                html += '<tbody>';
+                
+                data.labels.forEach(item => {
+                    const workspaceBreakdown = item.byWorkspace.map(ws => `${ws.workspace_name}: ${ws.count}`).join(' • ');
+                    html += `<tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 14px; font-weight: 600;">${item.label}</td>
+                        <td style="padding: 14px; text-align: center; font-size: 18px; font-weight: 800; color: var(--primary);">${item.total}</td>
+                        <td style="padding: 14px; color: var(--text-muted); font-size: 13px;">${workspaceBreakdown}</td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+                
+            } catch (e) {
+                container.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 20px;">Erro ao carregar relatório.</p>';
+            }
+        }
+
+        document.getElementById('label-filter-btn').addEventListener('click', loadLabelReportData);
     </script>
 </body>
 </html>

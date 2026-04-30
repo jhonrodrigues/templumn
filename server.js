@@ -934,6 +934,9 @@ app.get('/api/dashboard', authOrTvGuard, async (req, res) => {
 
         const usersRes = await pool.query('SELECT COUNT(*) AS total FROM users');
         const cards = cardsRes.rows;
+
+        const usersRes = await pool.query('SELECT COUNT(*) AS total FROM users');
+        const cards = cardsRes.rows;
         const total = cards.length;
         const completed = cards.filter((card) => card.column_id === 'col-5' || card.column_id === 'col-6').length;
         const posted = cards.filter((card) => card.column_id === 'col-6').length;
@@ -967,6 +970,75 @@ app.get('/api/dashboard', authOrTvGuard, async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ error: 'Failed Dashboard' });
+    }
+});
+
+app.get('/api/reports/labels', authGuard, async (req, res) => {
+    try {
+        const workspace = req.query.workspace;
+        const labelFilter = req.query.label;
+        
+        let whereClause = '1=1';
+        let params = [];
+        
+        if (workspace && workspace !== '__all__') {
+            whereClause += ` AND (c.workspace_id = $${params.length + 1} OR c.visible_workspaces ? $${params.length + 1})`;
+            params.push(workspace);
+        }
+        
+        const query = `
+            SELECT 
+                c.workspace_id,
+                w.name as workspace_name,
+                c.labels
+            FROM cards c
+            LEFT JOIN workspaces w ON w.id = c.workspace_id
+            WHERE ${whereClause}
+        `;
+        
+        const result = await pool.query(query, params);
+        const cards = result.rows;
+        
+        const labelCounts = {};
+        const workspaceLabelCounts = {};
+        
+        cards.forEach(card => {
+            const labels = Array.isArray(card.labels) ? card.labels : (card.labels ? [card.labels] : []);
+            const wsId = card.workspace_id || 'unknown';
+            const wsName = card.workspace_name || wsId;
+            
+            labels.forEach(label => {
+                if (!label || !label.text) return;
+                const labelName = label.text;
+                
+                if (labelFilter && labelName.toLowerCase() !== labelFilter.toLowerCase()) return;
+                
+                if (!labelCounts[labelName]) {
+                    labelCounts[labelName] = { total: 0, byWorkspace: {} };
+                }
+                labelCounts[labelName].total++;
+                
+                if (!labelCounts[labelName].byWorkspace[wsId]) {
+                    labelCounts[labelName].byWorkspace[wsId] = { name: wsName, count: 0 };
+                }
+                labelCounts[labelName].byWorkspace[wsId].count++;
+            });
+        });
+        
+        const report = Object.entries(labelCounts).map(([labelName, data]) => ({
+            label: labelName,
+            total: data.total,
+            byWorkspace: Object.entries(data.byWorkspace).map(([wsId, wsData]) => ({
+                workspace_id: wsId,
+                workspace_name: wsData.name,
+                count: wsData.count
+            }))
+        })).sort((a, b) => b.total - a.total);
+        
+        res.json({ labels: report });
+    } catch (err) {
+        console.error('Label report error:', err);
+        res.status(500).json({ error: 'Erro ao gerar relatório de etiquetas' });
     }
 });
 
