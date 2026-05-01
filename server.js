@@ -1030,33 +1030,27 @@ app.get('/api/my-cards', authGuard, async (req, res) => {
         const userRes = await pool.query('SELECT name FROM users WHERE id = $1', [userId]);
         const userName = userRes.rows.length > 0 ? userRes.rows[0].name : null;
         
-        console.log('my-cards: userEmail=', userEmail, 'userName=', userName);
+        // Build query - search by email in assignee or JSONB members array
+        let params = [userEmail];
+        let query = `SELECT id, title, assignee, members, created_by, post_date, post_time, workspace_id, platform 
+                     FROM cards 
+                     WHERE (assignee = $1`;
         
-        // Build query - search by email in assignee or members
-        let params = [];
-        let query = 'SELECT id, title, assignee, members, created_by, post_date, post_time, workspace_id, platform FROM cards WHERE 1=1';
-        
-        // Search by assignee (email match)
+        // Search in members JSONB array - use jsonb comparison
         params.push(userEmail);
-        query += ` AND (assignee = $${params.length}`;
-        
-        // Also search in members array
-        params.push(userEmail);
-        query += ` OR assignee = $${params.length}`;
-        
-        params.push(userEmail);
-        query += ` OR $${params.length} = ANY(members)`;
+        query += ` OR members @> to_jsonb($${params.length}::text)`;
         
         // Also check created_by with name or email
         if (userName) {
             params.push(userName);
-            params.push(userEmail);
-            query += ` OR created_by = $${params.length} OR created_by = $${params.length}`;
+            query += ` OR created_by = $${params.length}`;
         }
+        params.push(userEmail);
+        query += ` OR created_by = $${params.length}`;
 
         if (workspace && workspace !== '__all__') {
             params.push(workspace);
-            query += ` AND (workspace_id = $${params.length} OR workspace_id = 'lagoinhaalphaville.sp')`;
+            query += ` AND workspace_id = $${params.length}`;
         }
 
         query += ') ORDER BY post_date ASC NULLS LAST, post_time ASC NULLS LAST';
