@@ -141,6 +141,10 @@ async function initDb() {
             try { await pool.query("ALTER TABLE cards ADD COLUMN demand_type VARCHAR(100);"); } catch(e2){}
         }
 
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS media_column_id VARCHAR(50) REFERENCES columns(id) ON DELETE SET NULL;"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN media_column_id VARCHAR(50) REFERENCES columns(id) ON DELETE SET NULL;"); } catch(e2){}
+        }
+
         try { await pool.query("CREATE TABLE IF NOT EXISTS demand_types (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, icon VARCHAR(50) DEFAULT 'fa-tag', color VARCHAR(50) DEFAULT '#6b7280', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"); } catch(e){}
 
         // 2. Executar init.sql para garantir estrutura base e dados iniciais
@@ -488,8 +492,11 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
         
         // For design boards, join cards via design_column_id instead of column_id
         const isDesign = category === 'design';
+        const isMedia = category === 'media';
         const cardJoinCondition = isDesign
             ? `c.id = k.design_column_id AND ${cardVisibilityCondition}`
+            : isMedia
+            ? `c.id = k.media_column_id AND ${cardVisibilityCondition}`
             : `c.id = k.column_id AND ${cardVisibilityCondition} AND k.category = $${catParam}`;
         
         const query = `
@@ -523,7 +530,8 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
                             'design_column_id', k.design_column_id,
                             'column_id', k.column_id,
                             'created_by', k.created_by,
-                            'demand_type', k.demand_type
+                            'demand_type', k.demand_type,
+                            'media_column_id', k.media_column_id
                         ) ORDER BY k.post_date ASC NULLS LAST, k.post_time ASC NULLS LAST, k.card_order ASC
                     ) FILTER (WHERE k.id IS NOT NULL), '[]'
                 ) as cards
@@ -546,8 +554,8 @@ app.post('/api/board/move', authGuard, async (req, res) => {
     const { cardId, targetColId, newOrder, workspace_id, category } = req.body;
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     try {
-        // If moving in the design board, update design_column_id instead of column_id
-        const columnField = category === 'design' ? 'design_column_id' : 'column_id';
+        // If moving in the design or media board, update the respective column_id instead of column_id
+        const columnField = category === 'design' ? 'design_column_id' : (category === 'media' ? 'media_column_id' : 'column_id');
         const result = await pool.query(
             `UPDATE cards SET ${columnField} = $1, card_order = $2 WHERE id = $3 AND ${workspaceVisibilityClause(4)}`,
             [targetColId, newOrder, cardId, resolvedWS]
@@ -682,6 +690,33 @@ app.post('/api/cards/:id/request-design', authGuard, async (req, res) => {
     } catch (err) {
         console.error('Request design error:', err);
         res.status(500).json({ error: 'Erro ao solicitar arte' });
+    }
+});
+
+app.post('/api/cards/:id/request-media', authGuard, async (req, res) => {
+    try {
+        const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
+        
+        const cardRes = await pool.query(
+            `SELECT * FROM cards WHERE id = $1 AND ${workspaceVisibilityClause(2)}`,
+            [req.params.id, workspace]
+        );
+        if (cardRes.rows.length === 0) return res.status(404).json({ error: 'Card não encontrado' });
+        const sourceCard = cardRes.rows[0];
+
+        if (sourceCard.media_column_id) {
+            return res.status(400).json({ error: 'Esta demanda já está no setor de Foto e Vídeo.' });
+        }
+
+        await pool.query(
+            `UPDATE cards SET media_column_id = 'media-1' WHERE id = $1`,
+            [sourceCard.id]
+        );
+
+        res.json({ success: true, id: sourceCard.id });
+    } catch (err) {
+        console.error('Request media error:', err);
+        res.status(500).json({ error: 'Erro ao solicitar produção de mídia' });
     }
 });
 
