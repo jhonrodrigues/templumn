@@ -62,9 +62,11 @@ function reinitializeModalElements() {
     // Re-bind theme toggle if it was missing
     themeToggleBtn = document.getElementById('theme-toggle');
     requestDesignBtn = document.getElementById('request-design-btn');
-    requestMediaBtn = document.getElementById('request-media-btn');
+    requestPhotoBtn = document.getElementById('request-photo-btn');
+    requestVideoBtn = document.getElementById('request-video-btn');
     linkedDesignInfo = document.getElementById('linked-design-info');
-    linkedMediaInfo = document.getElementById('linked-media-info');
+    linkedPhotoInfo = document.getElementById('linked-photo-info');
+    linkedVideoInfo = document.getElementById('linked-video-info');
 }
 
 function injectModalsIfNeeded() {
@@ -188,9 +190,11 @@ function injectModalsIfNeeded() {
                         <span class="sidebar-title">Ações</span>
                         <button class="sidebar-btn" id="save-card-btn"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
                         <button class="sidebar-btn" id="request-design-btn" style="background: #fbbf24; color: #78350f; display:none;"><i class="fa-solid fa-palette"></i> Solicitar Arte</button>
-                        <button class="sidebar-btn" id="request-media-btn" style="background: #8b5cf6; color: white; display:none;"><i class="fa-solid fa-video"></i> Solicitar Vídeo/Foto</button>
+                        <button class="sidebar-btn" id="request-photo-btn" style="background: #ec4899; color: white; display:none;"><i class="fa-solid fa-camera"></i> Solicitar Foto</button>
+                        <button class="sidebar-btn" id="request-video-btn" style="background: #8b5cf6; color: white; display:none;"><i class="fa-solid fa-video"></i> Solicitar Vídeo</button>
                         <div id="linked-design-info" style="margin-top: 8px; margin-bottom: 8px; font-size: 12px; padding: 10px; background: var(--bg-app); border-radius: 8px; border: 1px dashed var(--border); display:none;"></div>
-                        <div id="linked-media-info" style="margin-top: 8px; margin-bottom: 8px; font-size: 12px; padding: 10px; background: var(--bg-app); border-radius: 8px; border: 1px dashed var(--border); display:none;"></div>
+                        <div id="linked-photo-info" style="margin-top: 8px; margin-bottom: 8px; font-size: 12px; padding: 10px; background: var(--bg-app); border-radius: 8px; border: 1px dashed var(--border); display:none;"></div>
+                        <div id="linked-video-info" style="margin-top: 8px; margin-bottom: 8px; font-size: 12px; padding: 10px; background: var(--bg-app); border-radius: 8px; border: 1px dashed var(--border); display:none;"></div>
                         <button class="sidebar-btn" id="remove-card-from-workspace-btn"><i class="fa-solid fa-layer-group"></i> Remover desta conta</button>
                         <button class="sidebar-btn" id="duplicate-card-btn"><i class="fa-solid fa-copy"></i> Duplicar</button>
                         <button class="sidebar-btn danger" id="delete-card-btn"><i class="fa-solid fa-trash"></i> Excluir</button>
@@ -532,8 +536,10 @@ function openModal(card, colId) {
     // Custom Sector Logic — Design Status (same card, no duplication)
     if (linkedDesignInfo) linkedDesignInfo.style.display = 'none';
     if (requestDesignBtn) requestDesignBtn.style.display = 'none';
-    if (linkedMediaInfo) linkedMediaInfo.style.display = 'none';
-    if (requestMediaBtn) requestMediaBtn.style.display = 'none';
+    if (linkedPhotoInfo) linkedPhotoInfo.style.display = 'none';
+    if (requestPhotoBtn) requestPhotoBtn.style.display = 'none';
+    if (linkedVideoInfo) linkedVideoInfo.style.display = 'none';
+    if (requestVideoBtn) requestVideoBtn.style.display = 'none';
 
     if (activeCategory === 'editorial') {
         if (card.design_column_id) {
@@ -592,66 +598,121 @@ function openModal(card, colId) {
             }
         }
 
-        // Media / Foto e Vídeo
-        if (card.media_column_id) {
-            if (requestMediaBtn) requestMediaBtn.style.display = 'none';
-            if (linkedMediaInfo) {
-                const mediaColId = card.media_column_id;
+        // Foto
+        if (card.photo_column_id) {
+            if (requestPhotoBtn) requestPhotoBtn.style.display = 'none';
+            if (linkedPhotoInfo) {
+                const photoColId = card.photo_column_id;
                 let status = 'Aguardando';
                 let statusColor = '#94a3b8';
-                if (mediaColId === 'media-5') { status = 'Finalizado ✅'; statusColor = '#22c55e'; }
-                else if (['media-3', 'media-4'].includes(mediaColId)) { status = 'Em Produção 🎬'; statusColor = '#f59e0b'; }
-                else if (mediaColId === 'media-2') { status = 'Na Pauta'; statusColor = '#3b82f6'; }
-                else if (mediaColId === 'media-1') { status = 'Pedido Enviado'; statusColor = '#94a3b8'; }
+                if (photoColId === 'photo-5') { status = 'Finalizado ✅'; statusColor = '#22c55e'; }
+                else if (['photo-3', 'photo-4'].includes(photoColId)) { status = 'Em Produção 📸'; statusColor = '#f59e0b'; }
+                else if (photoColId === 'photo-2') { status = 'Na Pauta'; statusColor = '#3b82f6'; }
+                else if (photoColId === 'photo-1') { status = 'Pedido Enviado'; statusColor = '#94a3b8'; }
 
-                linkedMediaInfo.innerHTML = `
+                linkedPhotoInfo.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                        <i class="fa-solid fa-video" style="color: ${statusColor};"></i>
+                        <i class="fa-solid fa-camera" style="color: ${statusColor};"></i>
                         <span style="font-weight: 700; font-size: 12px; color: ${statusColor};">${status}</span>
                     </div>
-                    <div style="font-size: 11px; color: var(--text-muted);">Este card está no board de Foto e Vídeo.</div>
-                    <button onclick="window.location.href='index.html?category=media&open=${card.id}'" style="margin-top: 10px; width: 100%; padding: 8px; border-radius: 6px; background: #8b5cf6; color: white; border: none; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s;">
-                        <i class="fa-solid fa-arrow-right"></i> Ver em Foto e Vídeo
+                    <div style="font-size: 11px; color: var(--text-muted);">Este card está no board de Fotos.</div>
+                    <button onclick="window.location.href='index.html?category=photo&open=${card.id}'" style="margin-top: 10px; width: 100%; padding: 8px; border-radius: 6px; background: #ec4899; color: white; border: none; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s;">
+                        <i class="fa-solid fa-arrow-right"></i> Ver em Fotos
                     </button>
                 `;
-                linkedMediaInfo.style.display = 'block';
+                linkedPhotoInfo.style.display = 'block';
             }
         } else {
-            if (requestMediaBtn) {
-                requestMediaBtn.style.display = 'block';
-                requestMediaBtn.onclick = async () => {
-                    const originalText = requestMediaBtn.innerHTML;
-                    requestMediaBtn.disabled = true;
-                    requestMediaBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Solicitando...';
+            if (requestPhotoBtn) {
+                requestPhotoBtn.style.display = 'block';
+                requestPhotoBtn.onclick = async () => {
+                    const originalText = requestPhotoBtn.innerHTML;
+                    requestPhotoBtn.disabled = true;
+                    requestPhotoBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Solicitando...';
                     try {
-                        const res = await fetch(`/api/cards/${card.id}/request-media?workspace=${activeWorkspaceId}`, {
+                        const res = await fetch(`/api/cards/${card.id}/request-photo?workspace=${activeWorkspaceId}`, {
                             method: 'POST',
                             headers: authHeaders
                         });
                         const data = await res.json();
                         if (res.ok) {
-                            alert('Demanda enviada para o setor de Foto e Vídeo!');
+                            alert('Demanda enviada para o setor de Fotos!');
                             modalOverlay.classList.remove('active');
                             loadStateFromServer();
                         } else {
-                            alert(data.error || 'Erro ao solicitar produção');
+                            alert(data.error || 'Erro ao solicitar foto');
                         }
                     } catch (err) {
-                        console.error('Solicitar Mídia error:', err);
+                        console.error('Solicitar Foto error:', err);
                         alert('Erro na requisição: ' + err.message);
                     } finally {
-                        requestMediaBtn.disabled = false;
-                        requestMediaBtn.innerHTML = originalText;
+                        requestPhotoBtn.disabled = false;
+                        requestPhotoBtn.innerHTML = originalText;
+                    }
+                };
+            }
+        }
+
+        // Vídeo
+        if (card.video_column_id) {
+            if (requestVideoBtn) requestVideoBtn.style.display = 'none';
+            if (linkedVideoInfo) {
+                const videoColId = card.video_column_id;
+                let status = 'Aguardando';
+                let statusColor = '#94a3b8';
+                if (videoColId === 'video-5') { status = 'Finalizado ✅'; statusColor = '#22c55e'; }
+                else if (['video-3', 'video-4'].includes(videoColId)) { status = 'Em Produção 🎬'; statusColor = '#f59e0b'; }
+                else if (videoColId === 'video-2') { status = 'Na Pauta'; statusColor = '#3b82f6'; }
+                else if (videoColId === 'video-1') { status = 'Pedido Enviado'; statusColor = '#94a3b8'; }
+
+                linkedVideoInfo.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                        <i class="fa-solid fa-video" style="color: ${statusColor};"></i>
+                        <span style="font-weight: 700; font-size: 12px; color: ${statusColor};">${status}</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Este card está no board de Vídeos.</div>
+                    <button onclick="window.location.href='index.html?category=video&open=${card.id}'" style="margin-top: 10px; width: 100%; padding: 8px; border-radius: 6px; background: #8b5cf6; color: white; border: none; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s;">
+                        <i class="fa-solid fa-arrow-right"></i> Ver em Vídeos
+                    </button>
+                `;
+                linkedVideoInfo.style.display = 'block';
+            }
+        } else {
+            if (requestVideoBtn) {
+                requestVideoBtn.style.display = 'block';
+                requestVideoBtn.onclick = async () => {
+                    const originalText = requestVideoBtn.innerHTML;
+                    requestVideoBtn.disabled = true;
+                    requestVideoBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Solicitando...';
+                    try {
+                        const res = await fetch(`/api/cards/${card.id}/request-video?workspace=${activeWorkspaceId}`, {
+                            method: 'POST',
+                            headers: authHeaders
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            alert('Demanda enviada para o setor de Vídeos!');
+                            modalOverlay.classList.remove('active');
+                            loadStateFromServer();
+                        } else {
+                            alert(data.error || 'Erro ao solicitar vídeo');
+                        }
+                    } catch (err) {
+                        console.error('Solicitar Vídeo error:', err);
+                        alert('Erro na requisição: ' + err.message);
+                    } finally {
+                        requestVideoBtn.disabled = false;
+                        requestVideoBtn.innerHTML = originalText;
                     }
                 };
             }
         }
     }
 
-    // Show link to editorial board if viewing from design or media
+    // Show link to editorial board if viewing from design, photo or video
     const parentLinkEl = document.getElementById('modal-parent-link');
     if (parentLinkEl) {
-        if ((activeCategory === 'design' || activeCategory === 'media') && card.column_id) {
+        if ((activeCategory === 'design' || activeCategory === 'photo' || activeCategory === 'video') && card.column_id) {
             parentLinkEl.innerHTML = `<a href="#" onclick="event.preventDefault(); window.location.href='index.html?category=editorial&open=${card.id}'" style="color: var(--primary); text-decoration: none;"><i class="fa-solid fa-link"></i> Ver no Editorial</a>`;
             parentLinkEl.style.display = 'block';
         } else {

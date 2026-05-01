@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS cards (
     parent_id VARCHAR(50) REFERENCES cards(id) ON DELETE SET NULL,
     created_by VARCHAR(255),
     demand_type VARCHAR(100),
-    media_column_id VARCHAR(50) REFERENCES columns(id) ON DELETE SET NULL
+    photo_column_id VARCHAR(50) REFERENCES columns(id) ON DELETE SET NULL,
+    video_column_id VARCHAR(50) REFERENCES columns(id) ON DELETE SET NULL
 );
 
 -- Configurações Globais (Primary Color)
@@ -86,12 +87,18 @@ INSERT INTO columns (id, title, col_order, category) VALUES
 ('design-3', 'Em Produção', 3, 'design'),
 ('design-4', 'Aprovação Arte', 4, 'design'),
 ('design-5', 'Arte Finalizada', 5, 'design'),
--- Colunas do Setor de Foto e Vídeo
-('media-1', 'Pedidos de Mídia', 1, 'media'),
-('media-2', 'Pauta de Produção', 2, 'media'),
-('media-3', 'Em Produção', 3, 'media'),
-('media-4', 'Revisão', 4, 'media'),
-('media-5', 'Finalizado', 5, 'media')
+-- Colunas do Setor de Foto
+('photo-1', 'Pedidos de Foto', 1, 'photo'),
+('photo-2', 'Pauta de Produção', 2, 'photo'),
+('photo-3', 'Em Produção', 3, 'photo'),
+('photo-4', 'Revisão', 4, 'photo'),
+('photo-5', 'Finalizado', 5, 'photo'),
+-- Colunas do Setor de Vídeo
+('video-1', 'Pedidos de Vídeo', 1, 'video'),
+('video-2', 'Pauta de Produção', 2, 'video'),
+('video-3', 'Em Produção', 3, 'video'),
+('video-4', 'Revisão', 4, 'video'),
+('video-5', 'Finalizado', 5, 'video')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO system_settings (id, primary_color, tv_access_code) VALUES (1, '#4F46E5', '0000')
