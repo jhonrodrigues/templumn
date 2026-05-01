@@ -25,6 +25,10 @@
             color: white; border-radius: 16px; display: inline-flex;
             align-items: center; justify-content: center; font-size: 28px;
             margin-bottom: 24px; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
+            overflow: hidden;
+        }
+        .login-logo img {
+            width: 100%; height: 100%; object-fit: contain;
         }
         .login-box h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; color: var(--text-main); }
         .login-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 32px; }
@@ -51,8 +55,8 @@
 </head>
 <body>
 
-    <div class="login-box">
-        <div class="login-logo" style="width: 80px; height: 80px; border-radius: 20px; font-size: 40px;"><i class="fa-solid fa-shapes"></i></div>
+    <div class="login-box" id="login-logo-container">
+        <div class="login-logo" id="login-logo-img" style="width: 80px; height: 80px; border-radius: 20px; font-size: 40px;"><i class="fa-solid fa-shapes"></i></div>
         <p>Acesse seu painel executivo para gerenciar contas.</p>
 
         <div class="form-group">
@@ -70,7 +74,17 @@
     </div>
 
     <script>
-        // Init Branding via fetch ou localstorage if we wanted, but we keep default here
+        // Load branding logo
+        fetch('/api/settings').then(r => r.json()).then(data => {
+            const logoDiv = document.getElementById('login-logo-img');
+            if (data.logo_light_url) {
+                logoDiv.innerHTML = `<img src="${data.logo_light_url}" style="width: 100%; height: 100%; object-fit: contain;">`;
+                logoDiv.style.background = 'transparent';
+            } else if (data.primary_color) {
+                logoDiv.style.background = data.primary_color;
+            }
+        }).catch(() => {});
+
         const btn = document.getElementById('login-btn');
         const err = document.getElementById('error-msg');
 
