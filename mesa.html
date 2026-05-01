@@ -184,7 +184,7 @@
                     if(c.platform==='youtube') iconClass = 'fa-youtube';
                     if(c.platform==='facebook') iconClass = 'fa-facebook';
                     
-                    grid.innerHTML += `<div class="cal-item ${c.platform || ''}">
+                    grid.innerHTML += `<div class="cal-item ${c.platform || ''}" onclick="openCardModal('${c.id}', '${c.column_id}')">
                         <div style="display:flex; align-items:center; gap: 16px;">
                             <span class="platform-icon"><i class="fa-brands ${iconClass}"></i></span>
                             <span style="font-weight: 700; font-size: 16px; color: var(--text-main);">${c.title}</span>
@@ -199,6 +199,20 @@
             } catch (err) {
             }
         }
+        
+        window.openCardModal = async function(cardId, colId) {
+            try {
+                const activeWorkspaceId = localStorage.getItem('templum-active-ws') || 'lagoinhaalphaville.sp';
+                injectModalsIfNeeded();
+                const res = await fetch('/api/cards/' + cardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), { headers: getPageAuthHeaders() });
+                if (!res.ok) throw new Error('Failed to load card');
+                const card = await res.json();
+                openModal(card, colId || card.column_id);
+            } catch (err) {
+                console.error('Error opening card:', err);
+                alert('Erro ao abrir demanda');
+            }
+        };
         
         renderList();
     </script>

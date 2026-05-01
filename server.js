@@ -1032,7 +1032,7 @@ app.get('/api/my-cards', authGuard, async (req, res) => {
         
         // Build query - search by email in assignee or JSONB members array
         let params = [userEmail];
-        let query = `SELECT id, title, assignee, members, created_by, post_date, post_time, workspace_id, platform 
+        let query = `SELECT id, title, assignee, members, created_by, post_date, post_time, workspace_id, platform, column_id 
                      FROM cards 
                      WHERE (assignee = $1`;
         
