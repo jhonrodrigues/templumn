@@ -1023,18 +1023,20 @@ app.delete('/api/cards/:id', authGuard, async (req, res) => {
 app.get('/api/my-cards', authGuard, async (req, res) => {
     try {
         const workspace = req.query.workspace;
-        const params = [req.user.email];
-        let query = 'SELECT * FROM cards WHERE assignee = $1';
+        const userEmail = req.user.email;
+        const params = [userEmail, userEmail];
+        let query = 'SELECT * FROM cards WHERE (assignee = $1 OR $1 = ANY(members))';
 
         if (workspace) {
             params.push(workspace);
-            query += ` AND ${workspaceVisibilityClause(2)}`;
+            query += ` AND ${workspaceVisibilityClause(3)}`;
         }
 
         query += ' ORDER BY post_date ASC, post_time ASC';
         const result = await pool.query(query, params);
         res.json(result.rows);
     } catch(err) {
+        console.error('My cards error:', err);
         res.status(500).json({ error: 'Erro de Mesa' });
     }
 });
