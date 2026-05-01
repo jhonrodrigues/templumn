@@ -1026,26 +1026,44 @@ app.get('/api/my-cards', authGuard, async (req, res) => {
         const userEmail = req.user.email;
         const userId = req.user.id;
         
+        // Get user name for matching
         const userRes = await pool.query('SELECT name FROM users WHERE id = $1', [userId]);
         const userName = userRes.rows.length > 0 ? userRes.rows[0].name : null;
         
-        let params = [userEmail, userEmail];
-        let query = 'SELECT * FROM cards WHERE (assignee = $1 OR assignee = $2';
+        console.log('my-cards: userEmail=', userEmail, 'userName=', userName);
         
+        // Build query - search by email in assignee or members
+        let params = [];
+        let query = 'SELECT id, title, assignee, members, created_by, post_date, post_time, workspace_id, platform FROM cards WHERE 1=1';
+        
+        // Search by assignee (email match)
+        params.push(userEmail);
+        query += ` AND (assignee = $${params.length}`;
+        
+        // Also search in members array
+        params.push(userEmail);
+        query += ` OR assignee = $${params.length}`;
+        
+        params.push(userEmail);
+        query += ` OR $${params.length} = ANY(members)`;
+        
+        // Also check created_by with name or email
         if (userName) {
             params.push(userName);
-            params.push(userName);
-            query += ' OR $3 = ANY(members) OR created_by = $4';
+            params.push(userEmail);
+            query += ` OR created_by = $${params.length} OR created_by = $${params.length}`;
         }
 
-        if (workspace) {
+        if (workspace && workspace !== '__all__') {
             params.push(workspace);
-            const paramIndex = params.length;
-            query += ' AND ' + workspaceVisibilityClause(paramIndex);
+            query += ` AND (workspace_id = $${params.length} OR workspace_id = 'lagoinhaalphaville.sp')`;
         }
 
-        query += ' ORDER BY post_date ASC, post_time ASC';
+        query += ') ORDER BY post_date ASC NULLS LAST, post_time ASC NULLS LAST';
+        
+        console.log('my-cards query:', query, params);
         const result = await pool.query(query, params);
+        console.log('my-cards result count:', result.rows.length);
         res.json(result.rows);
     } catch(err) {
         console.error('My cards error:', err);
