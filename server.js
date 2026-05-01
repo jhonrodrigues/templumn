@@ -1024,12 +1024,24 @@ app.get('/api/my-cards', authGuard, async (req, res) => {
     try {
         const workspace = req.query.workspace;
         const userEmail = req.user.email;
-        const params = [userEmail, userEmail];
-        let query = 'SELECT * FROM cards WHERE (assignee = $1 OR $1 = ANY(members))';
+        const userId = req.user.id;
+        
+        const userRes = await pool.query('SELECT name FROM users WHERE id = $1', [userId]);
+        const userName = userRes.rows.length > 0 ? userRes.rows[0].name : null;
+        
+        let params = [userEmail, userEmail];
+        let query = 'SELECT * FROM cards WHERE (assignee = $1 OR assignee = $2';
+        
+        if (userName) {
+            params.push(userName);
+            params.push(userName);
+            query += ' OR $3 = ANY(members) OR created_by = $4';
+        }
 
         if (workspace) {
             params.push(workspace);
-            query += ` AND ${workspaceVisibilityClause(3)}`;
+            const paramIndex = params.length;
+            query += ' AND ' + workspaceVisibilityClause(paramIndex);
         }
 
         query += ' ORDER BY post_date ASC, post_time ASC';
