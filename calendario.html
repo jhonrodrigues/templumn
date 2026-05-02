@@ -102,37 +102,7 @@
                 </div>
             </div>
 
-            <div class="sidebar-menu">
-                <div class="menu-section">
-                    <span class="section-title">Contas / Workspaces</span>
-                    <ul id="sidebar-ws-list"></ul>
-                </div>
-
-                <div class="menu-section">
-                    <span class="section-title">Minha Mesa</span>
-                    <ul>
-                        <li onclick="window.location.href='index.html'"><i class="fa-solid fa-table-columns"></i> Planejamento de Postagem</li>
-                        <li onclick="window.location.href='index.html?category=design'"><i class="fa-solid fa-palette"></i> Produção Agência (Design)</li>
-                        <li onclick="window.location.href='index.html?category=photo'"><i class="fa-solid fa-camera"></i> Produção de Fotos</li>
-                        <li onclick="window.location.href='index.html?category=video'"><i class="fa-solid fa-video"></i> Produção de Vídeos</li>
-                        <li onclick="window.location.href='mesa.html'"><i class="fa-solid fa-user-check"></i> Minhas Tarefas</li>
-                        <li onclick="window.location.href='captacoes.html'"><i class="fa-solid fa-video"></i> Agendamento Captações</li>
-                        <li onclick="window.location.href='calendario.html'"><i class="fa-regular fa-calendar-days"></i> Calendário do Mês</li>
-                        <li onclick="window.location.href='postados.html'"><i class="fa-solid fa-square-check"></i> Checklist de Postagem</li>
-                        <li onclick="window.location.href='minha-conta.html'"><i class="fa-solid fa-user-gear"></i> Minha Conta</li>
-                    </ul>
-                </div>
-                
-                <div class="menu-section">
-                    <span class="section-title">Gestão e Liderança</span>
-                    <ul>
-                        <li onclick="window.location.href='gestao.html'"><i class="fa-solid fa-chart-pie"></i> Relatórios da Agência</li>
-                        <li onclick="window.location.href='usuarios.html'"><i class="fa-solid fa-users"></i> Equipe e Acessos</li>
-                        <li onclick="window.location.href='etiquetas.html'"><i class="fa-solid fa-tags"></i> Etiquetas Padrão</li>
-                        <li onclick="window.location.href='admin-settings.html'"><i class="fa-solid fa-cogs"></i> Master Configurações</li>
-                    </ul>
-                </div>
-            </div>
+            <div id="sidebar-menu-content"></div>
             
             <div class="user-profile">
                 <div class="user-info" style="width:100%;">
@@ -331,6 +301,7 @@
         });
         renderCalendar();
     </script>
+    <script src="js/menu.js"></script>
     <script src="js/state.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
