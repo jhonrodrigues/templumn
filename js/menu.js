@@ -35,12 +35,15 @@ function renderSidebarMenu() {
     });
     html += '</ul></div>';
     
-    html += '<div class="menu-section"><span class="section-title">Gestão e Liderança</span><ul>';
-    menuConfig.gestao.forEach(item => {
-        if (item.roles && !item.roles.includes(userRole)) return;
-        html += `<li><a href="${item.href}"><i class="fa-solid ${item.icon}"></i> ${item.label}</a></li>`;
-    });
-    html += '</ul></div>';
+    // Só mostra Gestão e Liderança para master/gestor
+    if (userRole === 'master' || userRole === 'gestor') {
+        html += '<div class="menu-section"><span class="section-title">Gestão e Liderança</span><ul>';
+        menuConfig.gestao.forEach(item => {
+            if (item.roles && !item.roles.includes(userRole)) return;
+            html += `<li><a href="${item.href}"><i class="fa-solid ${item.icon}"></i> ${item.label}</a></li>`;
+        });
+        html += '</ul></div>';
+    }
 
     container.innerHTML = html;
 }
