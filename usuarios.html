@@ -124,7 +124,18 @@
                 <button class="btn" id="nu-btn" style="height: 44px; padding: 0 24px;"><i class="fa-solid fa-user-plus"></i></button>
             </div>
 
-            <h3 style="color:var(--text-main); font-weight:600;"><i class="fa-solid fa-address-card"></i> Pessoas Ativas na Base</h3>
+<h3 style="color:var(--text-main); font-weight:600;"><i class="fa-solid fa-address-card"></i> Pessoas Ativas na Base</h3>
+            
+            <div style="display:flex; gap:12px; margin-bottom:16px; align-items:center; flex-wrap:wrap;">
+                <label style="font-size:13px; color:var(--text-muted);">Ordenar por:</label>
+                <select id="sort-select" onchange="sortUsers()" style="padding:8px 12px; border-radius:8px; background: rgba(0,0,0,0.2); border:1px solid var(--border); color: var(--text-main);">
+                    <option value="name">Nome</option>
+                    <option value="email">E-mail</option>
+                    <option value="role">Perfil</option>
+                    <option value="function">Função</option>
+                </select>
+                <button class="btn" onclick="saveAllUsers()" style="margin-left:auto; background: var(--primary);"><i class="fa-solid fa-floppy-disk"></i> Salvar Alterações</button>
+            </div>
             
             <table class="member-table">
                 <thead>
@@ -138,7 +149,7 @@
                     </tr>
                 </thead>
                 <tbody id="users-tbody">
-                    <tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>
+                    <tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -149,6 +160,7 @@
         const pageToken = localStorage.getItem('templum-auth-token');
         if (!pageToken) window.location.href='/login.html';
         const getPageAuthHeaders = () => ({ 'Authorization': 'Bearer ' + pageToken });
+        let allUsers = [];
         
         async function loadUsers() {
             try {
@@ -157,62 +169,84 @@
                      document.getElementById('users-tbody').innerHTML = '<tr><td colspan="6">Falha Fatal de Permissão: Apenas Masters/Gestores visualizam o RH.</td></tr>';
                      return;
                  }
-                const users = await r.json();
+                allUsers = await r.json();
+                
+                await loadUserFunctions();
                 
                 // Show create tool safely if token valid role
                 document.getElementById('add-user-box').style.display = 'flex';
-
-                let h = '';
-                users.forEach(u => {
-                    let badge = 'role-membro';
-                    let rName = 'Operação';
-                    if(u.role === 'master') { badge = 'role-master'; rName = 'Master Supremo'; }
-                    if(u.role === 'gestor') { badge = 'role-gestor'; rName = 'Líder Executivo'; }
-                    
-                    h += `<tr>
-                        <td><input type="text" value="${u.name || ''}" data-user-name="${u.id}" style="width:100%; padding:10px; border-radius:8px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main);"></td>
-                        <td><span>${u.email}</span></td>
-                        <td>
-                            <select data-user-role="${u.id}" style="width:100%; padding:10px; border-radius:8px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main);">
-                                <option value="membro" ${u.role === 'membro' ? 'selected' : ''}>Membro</option>
-                                <option value="gestor" ${u.role === 'gestor' ? 'selected' : ''}>Gestor</option>
-                                <option value="master" ${u.role === 'master' ? 'selected' : ''}>Master</option>
-                            </select>
-                            <div style="margin-top:8px;"><span class="role-badge ${badge}">${rName}</span></div>
-                        </td>
-                        <td>
-                            <label style="font-size:10px; color:var(--text-muted);">Função:</label>
-                            <select data-user-function="${u.id}" style="width:100%; padding:8px; margin-bottom:8px; border-radius:6px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main);">
-                                <option value="membro" ${u.function === 'membro' ? 'selected' : ''}>Membro</option>
-                                <option value="editor" ${u.function === 'editor' ? 'selected' : ''}>Editor</option>
-                                <option value="design" ${u.function === 'design' ? 'selected' : ''}>Designer</option>
-                                <option value="social" ${u.function === 'social' ? 'selected' : ''}>Social Media</option>
-                                <option value="video" ${u.function === 'video' ? 'selected' : ''}>Videomaker</option>
-                                <option value="fotografo" ${u.function === 'fotografo' ? 'selected' : ''}>Fotógrafo</option>
-                            </select>
-                            <label style="font-size:10px; color:var(--text-muted);">Acesso a Boards:</label>
-                            <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                                <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="editorial" ${(u.allowed_boards || []).includes('editorial') ? 'checked' : ''}> Edit.</label>
-                                <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="design" ${(u.allowed_boards || []).includes('design') ? 'checked' : ''}> Des.</label>
-                                <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="photo" ${(u.allowed_boards || []).includes('photo') ? 'checked' : ''}> Fot.</label>
-                                <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="video" ${(u.allowed_boards || []).includes('video') ? 'checked' : ''}> Vid.</label>
-                                <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="gestao" ${(u.allowed_boards || []).includes('gestao') ? 'checked' : ''}> Gest.</label>
-                            </div>
-                        </td>
-                        <td><span style="color:#10b981; font-size:13px; font-weight:600;"><i class="fa-solid fa-circle" style="font-size:8px; margin-right:4px;"></i>Ativo</span></td>
-                        <td>
-                            <input type="password" data-user-pass="${u.id}" placeholder="Nova senha" style="width:100%; padding:10px; border-radius:8px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main); margin-bottom:8px;">
-                            <div style="display:flex; gap:8px;">
-                                <button class="btn" style="padding:8px 10px;" onclick="saveUser(${u.id})"><i class="fa-solid fa-save"></i></button>
-                                <button class="btn" style="background:transparent; color:red; padding:8px 10px;" onclick="delUser(${u.id})"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                        </td>
-                    </tr>`;
-                });
-                document.getElementById('users-tbody').innerHTML = h;
+                
+                sortUsers();
             } catch(e) {}
         }
-
+        
+        let userFunctions = [];
+        
+        async function loadUserFunctions() {
+            try {
+                const r = await fetch('/api/user-functions', { headers: getPageAuthHeaders() });
+                userFunctions = await r.json();
+            } catch(e) { userFunctions = []; }
+        }
+        
+        function sortUsers() {
+            const sortBy = document.getElementById('sort-select').value;
+            const sorted = [...allUsers].sort((a, b) => {
+                if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+                if (sortBy === 'email') return (a.email || '').localeCompare(b.email || '');
+                if (sortBy === 'role') return (a.role || '').localeCompare(b.role || '');
+                if (sortBy === 'function') return (a.function || '').localeCompare(b.function || '');
+                return 0;
+            });
+            renderUsers(sorted);
+        }
+        
+        function renderUsers(users) {
+            let h = '';
+            users.forEach(u => {
+                let badge = 'role-membro';
+                let rName = 'Operação';
+                if(u.role === 'master') { badge = 'role-master'; rName = 'Master Supremo'; }
+                if(u.role === 'gestor') { badge = 'role-gestor'; rName = 'Líder Executivo'; }
+                
+                const functionOptions = userFunctions.map(f => 
+                    `<option value="${f.name.toLowerCase()}" ${u.function === f.name.toLowerCase() ? 'selected' : ''}>${f.name}</option>`
+                ).join('');
+                
+                h += `<tr>
+                    <td><input type="text" value="${u.name || ''}" data-user-name="${u.id}" style="width:100%; padding:10px; border-radius:8px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main);"></td>
+                    <td><span>${u.email}</span></td>
+                    <td>
+                        <select data-user-role="${u.id}" style="width:100%; padding:10px; border-radius:8px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main);">
+                            <option value="membro" ${u.role === 'membro' ? 'selected' : ''}>Membro</option>
+                            <option value="gestor" ${u.role === 'gestor' ? 'selected' : ''}>Gestor</option>
+                            <option value="master" ${u.role === 'master' ? 'selected' : ''}>Master</option>
+                        </select>
+                        <div style="margin-top:8px;"><span class="role-badge ${badge}">${rName}</span></div>
+                    </td>
+                    <td>
+                        <label style="font-size:10px; color:var(--text-muted);">Função:</label>
+                        <select data-user-function="${u.id}" style="width:100%; padding:8px; margin-bottom:8px; border-radius:6px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main);">
+                            ${functionOptions}
+                        </select>
+                        <label style="font-size:10px; color:var(--text-muted);">Acesso a Boards:</label>
+                        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                            <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="editorial" ${(u.allowed_boards || []).includes('editorial') ? 'checked' : ''}> Edit.</label>
+                            <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="design" ${(u.allowed_boards || []).includes('design') ? 'checked' : ''}> Des.</label>
+                            <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="photo" ${(u.allowed_boards || []).includes('photo') ? 'checked' : ''}> Fot.</label>
+                            <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="video" ${(u.allowed_boards || []).includes('video') ? 'checked' : ''}> Vid.</label>
+                            <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="gestao" ${(u.allowed_boards || []).includes('gestao') ? 'checked' : ''}> Gest.</label>
+                        </div>
+                    </td>
+                    <td><span style="color:#10b981; font-size:13px; font-weight:600;"><i class="fa-solid fa-circle" style="font-size:8px; margin-right:4px;"></i>Ativo</span></td>
+                    <td>
+                        <button class="btn" style="background:transparent; color:red; padding:8px 10px;" onclick="delUser(${u.id})"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('users-tbody').innerHTML = h;
+        }
+        
         async function delUser(id) {
             if(confirm("Tirar acesso desta pessoa da plataforma?")) {
                 const r = await fetch('/api/users/'+id, { method: 'DELETE', headers: getPageAuthHeaders()});
@@ -220,27 +254,30 @@
                 else alert('Nível Incompatível. Apenas Supremo.');
             }
         }
-
-        async function saveUser(id) {
-            const name = document.querySelector(`[data-user-name="${id}"]`).value.trim();
-            const role = document.querySelector(`[data-user-role="${id}"]`).value;
-            const userFunction = document.querySelector(`[data-user-function="${id}"]`).value;
-            const password = document.querySelector(`[data-user-pass="${id}"]`).value;
-            
-            // Gather board access
-            const allowedBoards = [];
-            document.querySelectorAll(`[data-board-access="${id}"]:checked`).forEach(cb => allowedBoards.push(cb.value));
-            
-            const r = await fetch('/api/users/' + id, {
-                method: 'PUT',
-                headers: {'Content-Type':'application/json', ...getPageAuthHeaders()},
-                body: JSON.stringify({ name, role, password, function: userFunction, allowed_boards: allowedBoards })
+        
+        async function saveAllUsers() {
+            const saves = allUsers.map(async u => {
+                const name = document.querySelector(`[data-user-name="${u.id}"]`).value.trim();
+                const role = document.querySelector(`[data-user-role="${u.id}"]`).value;
+                const userFunction = document.querySelector(`[data-user-function="${u.id}"]`).value;
+                
+                const allowedBoards = [];
+                document.querySelectorAll(`[data-board-access="${u.id}"]:checked`).forEach(cb => allowedBoards.push(cb.value));
+                
+                return fetch('/api/users/' + u.id, {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json', ...getPageAuthHeaders()},
+                    body: JSON.stringify({ name, role, function: userFunction, allowed_boards: allowedBoards })
+                });
             });
-            if(r.ok) {
+            
+            const results = await Promise.allSettled(saves);
+            const errors = results.filter(r => r.status === 'rejected');
+            if (errors.length === 0) {
+                alert('Alterações salvas com sucesso!');
                 loadUsers();
             } else {
-                const data = await r.json().catch(() => ({}));
-                alert(data.error || 'Não foi possível atualizar o usuário.');
+                alert('Algumas alterações podem não ter sido salvas.');
             }
         }
 

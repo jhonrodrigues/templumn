@@ -73,6 +73,25 @@ CREATE TABLE IF NOT EXISTS demand_types (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS user_functions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    icon VARCHAR(50) DEFAULT 'fa-user',
+    color VARCHAR(50) DEFAULT '#6b7280',
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Inserir funções padrão
+INSERT INTO user_functions (name, icon, color, sort_order) VALUES
+('Membro', 'fa-user', '#6b7280', 1),
+('Editor', 'fa-pen', '#10b981', 2),
+('Designer', 'fa-palette', '#8b5cf6', 3),
+('Social Media', 'fa-share-nodes', '#f59e0b', 4),
+('Videomaker', 'fa-video', '#ef4444', 5),
+('Fotógrafo', 'fa-camera', '#06b6d4', 6)
+ON CONFLICT DO NOTHING;
+
 -- Inserir dados mockados base para testes no primeiro deploy
 INSERT INTO columns (id, title, col_order, category) VALUES
 ('col-1', 'Backlog / Pedidos', 1, 'editorial'),

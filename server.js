@@ -163,6 +163,15 @@ async function initDb() {
 
         try { await pool.query("CREATE TABLE IF NOT EXISTS demand_types (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, icon VARCHAR(50) DEFAULT 'fa-tag', color VARCHAR(50) DEFAULT '#6b7280', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"); } catch(e){}
 
+        try { await pool.query("CREATE TABLE IF NOT EXISTS user_functions (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, icon VARCHAR(50) DEFAULT 'fa-user', color VARCHAR(50) DEFAULT '#6b7280', sort_order INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"); } catch(e){}
+
+        try { await pool.query("INSERT INTO user_functions (name, icon, color, sort_order) SELECT 'Membro', 'fa-user', '#6b7280', 1 WHERE NOT EXISTS (SELECT 1 FROM user_functions WHERE name = 'Membro');"); } catch(e){}
+        try { await pool.query("INSERT INTO user_functions (name, icon, color, sort_order) SELECT 'Editor', 'fa-pen', '#10b981', 2 WHERE NOT EXISTS (SELECT 1 FROM user_functions WHERE name = 'Editor');"); } catch(e){}
+        try { await pool.query("INSERT INTO user_functions (name, icon, color, sort_order) SELECT 'Designer', 'fa-palette', '#8b5cf6', 3 WHERE NOT EXISTS (SELECT 1 FROM user_functions WHERE name = 'Designer');"); } catch(e){}
+        try { await pool.query("INSERT INTO user_functions (name, icon, color, sort_order) SELECT 'Social Media', 'fa-share-nodes', '#f59e0b', 4 WHERE NOT EXISTS (SELECT 1 FROM user_functions WHERE name = 'Social Media');"); } catch(e){}
+        try { await pool.query("INSERT INTO user_functions (name, icon, color, sort_order) SELECT 'Videomaker', 'fa-video', '#ef4444', 5 WHERE NOT EXISTS (SELECT 1 FROM user_functions WHERE name = 'Videomaker');"); } catch(e){}
+        try { await pool.query("INSERT INTO user_functions (name, icon, color, sort_order) SELECT 'Fotógrafo', 'fa-camera', '#06b6d4', 6 WHERE NOT EXISTS (SELECT 1 FROM user_functions WHERE name = 'Fotógrafo');"); } catch(e){}
+
         // 2. Executar init.sql para garantir estrutura base e dados iniciais
         const sql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
         await pool.query(sql);
@@ -488,6 +497,52 @@ app.delete('/api/demand-types/:id', authGuard, requireRole(['master', 'gestor'])
         res.status(500).json({ error: 'Erro ao excluir tipo de demanda' });
     }
 });
+
+// --- API: User Functions ---
+app.get('/api/user-functions', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, name, icon, color, sort_order FROM user_functions ORDER BY sort_order ASC, name ASC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao carregar funções' });
+    }
+});
+
+app.post('/api/user-functions', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const { name, icon, color } = req.body;
+        if (!name || !name.trim()) {
+            return res.status(400).json({ error: 'Nome obrigatório' });
+        }
+        await pool.query('INSERT INTO user_functions (name, icon, color) VALUES ($1, $2, $3)', [name.trim(), icon || 'fa-user', color || '#6b7280']);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao criar função' });
+    }
+});
+
+app.put('/api/user-functions/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const { name, icon, color, sort_order } = req.body;
+        if (!name || !name.trim()) {
+            return res.status(400).json({ error: 'Nome obrigatório' });
+        }
+        await pool.query('UPDATE user_functions SET name = $1, icon = $2, color = $3 WHERE id = $4', [name.trim(), icon || 'fa-user', color || '#6b7280', req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao atualizar função' });
+    }
+});
+
+app.delete('/api/user-functions/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        await pool.query('DELETE FROM user_functions WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao excluir função' });
+    }
+});
+
 app.get('/api/users/options', authGuard, async (req, res) => {
     try {
         const search = (req.query.q || '').trim();

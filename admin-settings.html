@@ -235,6 +235,19 @@
                     </div>
                     <div id="demand-type-admin-list" class="label-admin-list"></div>
                 </div>
+
+                <div class="settings-card" style="margin-top: 24px;">
+                    <h2 style="font-size: 18px; margin-bottom: 16px; color: var(--text-main);"><i class="fa-solid fa-user-tag"></i> Funções de Usuário</h2>
+                    <div class="form-group">
+                        <label>Funções Disponíveis</label>
+                        <p>Gerencie as funções que aparecem na tela de usuários.</p>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="new-user-function-name" class="text-input" placeholder="Nome da função (ex: Editor)" style="flex:1;">
+                            <button class="btn-save" id="create-user-function-btn"><i class="fa-solid fa-plus"></i> Adicionar</button>
+                        </div>
+                    </div>
+                    <div id="user-function-admin-list" class="label-admin-list"></div>
+                </div>
             </div>
         </main>
     </div>
@@ -557,6 +570,95 @@
                 loadDemandTypeAdmin();
             } catch (err) {
                 alert('Não foi possível criar o tipo de demanda.');
+            }
+        });
+        
+        const userFunctionList = document.getElementById('user-function-admin-list');
+        const newUserFunctionName = document.getElementById('new-user-function-name');
+        const createUserFunctionBtn = document.getElementById('create-user-function-btn');
+        
+        loadUserFunctions();
+        
+        async function loadUserFunctions() {
+            try {
+                const response = await fetch('/api/user-functions', { headers: getAuthHeaders() });
+                const functions = await response.json();
+                userFunctionList.innerHTML = functions.length ? functions.map((f) => `
+                    <div class="label-admin-item" data-function-id="${f.id}">
+                        <div>
+                            <label style="display:block; margin-bottom:8px; font-size:12px; color:var(--text-muted); font-weight:600;">NOME</label>
+                            <input type="text" class="text-input uf-name" value="${f.name}">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:8px; font-size:12px; color:var(--text-muted); font-weight:600;">COR</label>
+                            <input type="color" class="uf-color" value="${f.color || '#6b7280'}" style="width:50px; height:42px; border:1px solid var(--border); border-radius:8px;">
+                        </div>
+                        <button class="btn-save uf-save-btn"><i class="fa-solid fa-save"></i> Salvar</button>
+                        <button class="danger-btn uf-delete-btn"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `).join('') : '<div style="color:var(--text-muted);">Nenhuma função criada ainda.</div>';
+                
+                userFunctionList.querySelectorAll('.uf-save-btn').forEach((button) => {
+                    button.addEventListener('click', async () => {
+                        const item = button.closest('[data-function-id]');
+                        const id = item.dataset.functionId;
+                        const name = item.querySelector('.uf-name').value.trim();
+                        const color = item.querySelector('.uf-color').value;
+                        if (!name) return alert('Digite o nome da função.');
+                        button.innerHTML = 'Salvando...';
+                        try {
+                            const response = await fetch('/api/user-functions/' + id, {
+                                method: 'PUT',
+                                headers: authHeaders,
+                                body: JSON.stringify({ name, color })
+                            });
+                            if (!response.ok) throw new Error('save failed');
+                            loadUserFunctions();
+                        } catch (err) {
+                            alert('Não foi possível salvar.');
+                            button.innerHTML = '<i class="fa-solid fa-save"></i> Salvar';
+                        }
+                    });
+                });
+                
+                userFunctionList.querySelectorAll('.uf-delete-btn').forEach((button) => {
+                    button.addEventListener('click', async () => {
+                        if (!confirm('Excluir esta função?')) return;
+                        const item = button.closest('[data-function-id]');
+                        const id = item.dataset.functionId;
+                        try {
+                            const response = await fetch('/api/user-functions/' + id, {
+                                method: 'DELETE',
+                                headers: authHeaders
+                            });
+                            loadUserFunctions();
+                        } catch (err) {
+                            alert('Não foi possível excluir.');
+                        }
+                    });
+                });
+            } catch (err) {
+                userFunctionList.innerHTML = '<div style="color:var(--text-muted);">Não foi possível carregar as funções.</div>';
+            }
+        }
+        
+        createUserFunctionBtn.addEventListener('click', async () => {
+            const name = newUserFunctionName.value.trim();
+            if (!name) return alert('Digite o nome da função.');
+            createUserFunctionBtn.innerHTML = 'Criando...';
+            try {
+                const response = await fetch('/api/user-functions', {
+                    method: 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify({ name, color: '#6b7280' })
+                });
+                if (!response.ok) throw new Error('create failed');
+                newUserFunctionName.value = '';
+                loadUserFunctions();
+            } catch (err) {
+                alert('Não foi possível criar a função.');
+            } finally {
+                createUserFunctionBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Adicionar';
             }
         });
 
