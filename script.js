@@ -328,14 +328,12 @@ async function loadStateFromServer() {
     const boardCanvas = document.getElementById('board-canvas');
     if (!boardCanvas) return; // Not on the Kanban page
     
-    // Verificar acesso ao board gestao
-    if (activeCategory === 'gestao') {
-        const userRole = localStorage.getItem('templum-auth-role');
-        const userBoards = JSON.parse(localStorage.getItem('templum-auth-boards') || '["editorial", "design", "photo", "video", "gestao"]');
-        if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes('gestao')) {
-            boardCanvas.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-lock" style="font-size: 48px; margin-bottom: 16px;"></i><p>Você não tem acesso ao Board de Gestão Interna.</p></div>';
-            return;
-        }
+    // Verificar acesso ao board
+    const userRole = localStorage.getItem('templum-auth-role');
+    const userBoards = JSON.parse(localStorage.getItem('templum-auth-boards') || '["editorial", "design", "photo", "video", "gestao"]');
+    if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes(activeCategory)) {
+        boardCanvas.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-lock" style="font-size: 48px; margin-bottom: 16px;"></i><p>Você não tem acesso a este board.</p></div>';
+        return;
     }
     
     try {

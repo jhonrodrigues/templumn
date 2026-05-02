@@ -631,12 +631,12 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
         const category = req.query.category || 'editorial';
         const isAllWorkspaces = workspace === '__all__';
         
-        // Verificar acesso ao board gestao - apenas master/gestor ou usuários com acesso liberado
-        if (category === 'gestao' && !req.tv) {
+        // Verificar acesso ao board - apenas master/gestor ou usuários com acesso liberado
+        if (!req.tv) {
             const userRole = req.user?.role;
             const userBoards = req.user?.allowed_boards || [];
-            if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes('gestao')) {
-                return res.status(403).json({ error: 'Acesso negado ao board de gestão' });
+            if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes(category)) {
+                return res.status(403).json({ error: 'Acesso negado ao board' });
             }
         }
         
@@ -715,12 +715,12 @@ app.post('/api/board/move', authGuard, async (req, res) => {
     const { cardId, targetColId, newOrder, workspace_id, category } = req.body;
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     
-    // Verificar acesso ao board gestao
-    if (category === 'gestao') {
+    // Verificar acesso ao board
+    if (category) {
         const userRole = req.user?.role;
         const userBoards = req.user?.allowed_boards || [];
-        if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes('gestao')) {
-            return res.status(403).json({ error: 'Acesso negado ao board de gestão' });
+        if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes(category)) {
+            return res.status(403).json({ error: 'Acesso negado ao board' });
         }
     }
     
@@ -745,12 +745,12 @@ app.post('/api/cards', authGuard, async (req, res) => {
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     const resolvedCategory = category || 'editorial';
     
-    // Verificar acesso ao board gestao
-    if (resolvedCategory === 'gestao') {
+    // Verificar acesso ao board
+    if (resolvedCategory) {
         const userRole = req.user?.role;
         const userBoards = req.user?.allowed_boards || [];
-        if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes('gestao')) {
-            return res.status(403).json({ error: 'Acesso negado ao board de gestão' });
+        if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes(resolvedCategory)) {
+            return res.status(403).json({ error: 'Acesso negado ao board' });
         }
     }
     
