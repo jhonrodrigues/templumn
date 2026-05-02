@@ -16,6 +16,8 @@ async function syncCurrentUser() {
         const user = await response.json();
         localStorage.setItem('templum-auth-user', user.email);
         localStorage.setItem('templum-auth-role', user.role || 'membro');
+        localStorage.setItem('templum-auth-function', user.function || 'membro');
+        localStorage.setItem('templum-auth-boards', JSON.stringify(user.allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao']));
         updateRoleBasedNavigation(user.role || 'membro');
     } catch (err) {
         console.error('Current user sync error', err);
@@ -192,7 +194,11 @@ async function initWorkspaces() {
             const dynamicTitle = document.getElementById('dyn-board-title');
             if (dynamicTitle) {
                 const wsName = activeWorkspaceId === '__all__' ? 'Todas as contas' : (wss.find(w => w.id === activeWorkspaceId)?.name || 'Board');
-                const catName = activeCategory === 'design' ? ' (Produção Agência)' : ' (Editorial)';
+                const catName = activeCategory === 'design' ? ' (Produção Agência)' : 
+                             activeCategory === 'photo' ? ' (Produção de Fotos)' :
+                             activeCategory === 'video' ? ' (Produção de Vídeos)' :
+                             activeCategory === 'gestao' ? ' (Gestão Interna)' :
+                             ' (Editorial)';
                 dynamicTitle.innerText = wsName + catName;
             }
             sw.onchange = (e) => {
@@ -322,9 +328,24 @@ async function loadStateFromServer() {
     const boardCanvas = document.getElementById('board-canvas');
     if (!boardCanvas) return; // Not on the Kanban page
     
+    // Verificar acesso ao board gestao
+    if (activeCategory === 'gestao') {
+        const userRole = localStorage.getItem('templum-auth-role');
+        const userBoards = JSON.parse(localStorage.getItem('templum-auth-boards') || '["editorial", "design", "photo", "video", "gestao"]');
+        if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes('gestao')) {
+            boardCanvas.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-lock" style="font-size: 48px; margin-bottom: 16px;"></i><p>Você não tem acesso ao Board de Gestão Interna.</p></div>';
+            return;
+        }
+    }
+    
     try {
         const response = await fetch(`/api/board?workspace=${activeWorkspaceId}&category=${activeCategory}`, { headers: getAuthHeaders() });
         if (response.status === 401 || response.status === 403) {
+            const data = await response.json();
+            if (data.error && data.error.includes('Acesso negado')) {
+                boardCanvas.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-lock" style="font-size: 48px; margin-bottom: 16px;"></i><p>' + data.error + '</p></div>';
+                return;
+            }
             window.location.href = '/login.html';
             return;
         }

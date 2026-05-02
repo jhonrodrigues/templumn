@@ -138,6 +138,17 @@
                         <option value="master">Poder de Master Admin</option>
                     </select>
                 </div>
+                <div class="input-group">
+                    <label>Função</label>
+                    <select id="nu-function">
+                        <option value="membro">Membro</option>
+                        <option value="editor">Editor</option>
+                        <option value="design">Designer</option>
+                        <option value="social">Social Media</option>
+                        <option value="video">Videomaker</option>
+                        <option value="fotografo">Fotógrafo</option>
+                    </select>
+                </div>
                 <button class="btn" id="nu-btn" style="height: 44px; padding: 0 24px;"><i class="fa-solid fa-user-plus"></i></button>
             </div>
 
@@ -149,6 +160,7 @@
                         <th>Nome</th>
                         <th>E-mail</th>
                         <th>Perfil (Role)</th>
+                        <th>Função / Acessos</th>
                         <th>Status</th>
                         <th>Ações</th>
                     </tr>
@@ -170,7 +182,7 @@
             try {
                 const r = await fetch('/api/users', { headers: getPageAuthHeaders() });
                  if(r.status === 403 || r.status === 401) {
-                     document.getElementById('users-tbody').innerHTML = '<tr><td colspan="5">Falha Fatal de Permissão: Apenas Masters/Gestores visualizam o RH.</td></tr>';
+                     document.getElementById('users-tbody').innerHTML = '<tr><td colspan="6">Falha Fatal de Permissão: Apenas Masters/Gestores visualizam o RH.</td></tr>';
                      return;
                  }
                 const users = await r.json();
@@ -195,6 +207,25 @@
                                 <option value="master" ${u.role === 'master' ? 'selected' : ''}>Master</option>
                             </select>
                             <div style="margin-top:8px;"><span class="role-badge ${badge}">${rName}</span></div>
+                        </td>
+                        <td>
+                            <label style="font-size:10px; color:var(--text-muted);">Função:</label>
+                            <select data-user-function="${u.id}" style="width:100%; padding:8px; margin-bottom:8px; border-radius:6px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main);">
+                                <option value="membro" ${u.function === 'membro' ? 'selected' : ''}>Membro</option>
+                                <option value="editor" ${u.function === 'editor' ? 'selected' : ''}>Editor</option>
+                                <option value="design" ${u.function === 'design' ? 'selected' : ''}>Designer</option>
+                                <option value="social" ${u.function === 'social' ? 'selected' : ''}>Social Media</option>
+                                <option value="video" ${u.function === 'video' ? 'selected' : ''}>Videomaker</option>
+                                <option value="fotografo" ${u.function === 'fotografo' ? 'selected' : ''}>Fotógrafo</option>
+                            </select>
+                            <label style="font-size:10px; color:var(--text-muted);">Acesso a Boards:</label>
+                            <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                                <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="editorial" ${(u.allowed_boards || []).includes('editorial') ? 'checked' : ''}> Edit.</label>
+                                <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="design" ${(u.allowed_boards || []).includes('design') ? 'checked' : ''}> Des.</label>
+                                <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="photo" ${(u.allowed_boards || []).includes('photo') ? 'checked' : ''}> Fot.</label>
+                                <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="video" ${(u.allowed_boards || []).includes('video') ? 'checked' : ''}> Vid.</label>
+                                <label style="font-size:10px; display:flex; align-items:center;"><input type="checkbox" data-board-access="${u.id}" value="gestao" ${(u.allowed_boards || []).includes('gestao') ? 'checked' : ''}> Gest.</label>
+                            </div>
                         </td>
                         <td><span style="color:#10b981; font-size:13px; font-weight:600;"><i class="fa-solid fa-circle" style="font-size:8px; margin-right:4px;"></i>Ativo</span></td>
                         <td>
@@ -221,11 +252,17 @@
         async function saveUser(id) {
             const name = document.querySelector(`[data-user-name="${id}"]`).value.trim();
             const role = document.querySelector(`[data-user-role="${id}"]`).value;
+            const userFunction = document.querySelector(`[data-user-function="${id}"]`).value;
             const password = document.querySelector(`[data-user-pass="${id}"]`).value;
+            
+            // Gather board access
+            const allowedBoards = [];
+            document.querySelectorAll(`[data-board-access="${id}"]:checked`).forEach(cb => allowedBoards.push(cb.value));
+            
             const r = await fetch('/api/users/' + id, {
                 method: 'PUT',
                 headers: {'Content-Type':'application/json', ...getPageAuthHeaders()},
-                body: JSON.stringify({ name, role, password })
+                body: JSON.stringify({ name, role, password, function: userFunction, allowed_boards: allowedBoards })
             });
             if(r.ok) {
                 loadUsers();
@@ -240,11 +277,12 @@
              const email = document.getElementById('nu-email').value;
              const password = document.getElementById('nu-pass').value;
              const role = document.getElementById('nu-role').value;
+             const userFunction = document.getElementById('nu-function').value;
              if(!email || !password) return alert("Preencha Login e Senha!");
 
              const r = await fetch('/api/users', { 
                   method:'POST', headers: {'Content-Type':'application/json', ...getPageAuthHeaders()},
-                 body: JSON.stringify({ name, email, password, role })
+                 body: JSON.stringify({ name, email, password, role, function: userFunction })
              });
              if(r.ok) {
                  document.getElementById('nu-name').value = ''; document.getElementById('nu-email').value = ''; document.getElementById('nu-pass').value = '';

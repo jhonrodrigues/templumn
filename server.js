@@ -174,9 +174,27 @@ async function initDb() {
             try { await pool.query("ALTER TABLE users ADD COLUMN name VARCHAR(255) DEFAULT '';"); } catch(e2){}
         }
         
+        try { await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS allowed_boards JSONB DEFAULT '[\"editorial\", \"design\", \"photo\", \"video\", \"gestao\"]'::jsonb;"); } catch(e){
+            try { await pool.query("ALTER TABLE users ADD COLUMN allowed_boards JSONB DEFAULT '[\"editorial\", \"design\", \"photo\", \"video\", \"gestao\"]'::jsonb;"); } catch(e2){}
+        }
+
+        try { await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS function VARCHAR(100) DEFAULT 'membro';"); } catch(e){
+            try { await pool.query("ALTER TABLE users ADD COLUMN function VARCHAR(100) DEFAULT 'membro';"); } catch(e2){}
+        }
+        
         // 4. Garantir integridade dos dados existentes
         await pool.query("UPDATE columns SET category = 'editorial' WHERE category IS NULL");
         await pool.query("UPDATE cards SET category = 'editorial' WHERE category IS NULL");
+
+        // 5. Criar colunas do board de Gestão Interna se não existirem
+        try {
+            const gestaoColsExist = await pool.query("SELECT id FROM columns WHERE category = 'gestao' LIMIT 1");
+            if (gestaoColsExist.rows.length === 0) {
+                await pool.query("INSERT INTO columns (id, title, col_order, category) VALUES ('gestao-1', 'A Fazer', 1, 'gestao')");
+                await pool.query("INSERT INTO columns (id, title, col_order, category) VALUES ('gestao-2', 'Em Andamento', 2, 'gestao')");
+                await pool.query("INSERT INTO columns (id, title, col_order, category) VALUES ('gestao-3', 'Concluído', 3, 'gestao')");
+            }
+        } catch (e) {}
 
         console.log('[TEMPLUM] Database schema e tabelas inicializados com sucesso!');
     } catch (err) {
@@ -210,7 +228,7 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/me', authGuard, async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, name, email, role FROM users WHERE id = $1', [req.user.id]);
+        const result = await pool.query('SELECT id, name, email, role, allowed_boards, function FROM users WHERE id = $1', [req.user.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Usuário não encontrado' });
         res.json(result.rows[0]);
     } catch (err) {
@@ -246,8 +264,23 @@ function authGuard(req, res, next) {
     const token = authHeader && authHeader.split(' ')[1];
     if (!token) return res.status(401).json({error: 'Token Ausente - Não Autorizado'});
     
-    jwt.verify(token, JWT_SECRET, (err, user) => {
+    jwt.verify(token, JWT_SECRET, async (err, user) => {
         if (err) return res.status(403).json({error: 'Sessão Expirada'});
+        
+        try {
+            const userRes = await pool.query('SELECT allowed_boards, function FROM users WHERE id = $1', [user.id]);
+            if (userRes.rows.length > 0) {
+                user.allowed_boards = userRes.rows[0].allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao'];
+                user.function = userRes.rows[0].function || 'membro';
+            } else {
+                user.allowed_boards = ['editorial', 'design', 'photo', 'video', 'gestao'];
+                user.function = 'membro';
+            }
+        } catch (e) {
+            user.allowed_boards = ['editorial', 'design', 'photo', 'video', 'gestao'];
+            user.function = 'membro';
+        }
+        
         req.user = user;
         next();
     });
@@ -357,7 +390,7 @@ app.delete('/api/workspaces/:id', authGuard, requireRole(['master', 'gestor']), 
 // --- API: Users Governance ---
 app.get('/api/users', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY id ASC');
+        const result = await pool.query('SELECT id, name, email, role, allowed_boards, function FROM users ORDER BY id ASC');
         res.json(result.rows);
     } catch(err) { res.status(500).send('Error loading users'); }
 });
@@ -467,23 +500,24 @@ app.get('/api/users/options', authGuard, async (req, res) => {
     }
 });
 app.post('/api/users', authGuard, async (req, res) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, allowed_boards, function: userFunction } = req.body;
     try {
         if(req.user.role !== 'master' && req.user.role !== 'gestor') return res.status(403).json({ error: 'Permissão Negada' });
         const hash = await bcrypt.hash(password, 8);
-        await pool.query('INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4)', [name || '', email, hash, role || 'membro']);
+        const defaultBoards = ['editorial', 'design', 'photo', 'video', 'gestao'];
+        await pool.query('INSERT INTO users (name, email, password_hash, role, allowed_boards, function) VALUES ($1, $2, $3, $4, $5, $6)', [name || '', email, hash, role || 'membro', JSON.stringify(defaultBoards), userFunction || 'membro']);
         res.json({ success: true });
     } catch(err) { res.status(500).json({ error: 'Erro ao criar membro.' }); }
 });
 app.put('/api/users/:id', authGuard, async (req, res) => {
     if(req.user.role !== 'master') return res.status(403).json({ error: 'Permissão Negada' });
-    const { name, role, password } = req.body;
+    const { name, role, password, allowed_boards, function: userFunction } = req.body;
     try {
         if (password && password.trim()) {
             const hash = await bcrypt.hash(password.trim(), 8);
-            await pool.query('UPDATE users SET name = $1, role = $2, password_hash = $3 WHERE id = $4', [name || '', role || 'membro', hash, req.params.id]);
+            await pool.query('UPDATE users SET name = $1, role = $2, password_hash = $3, allowed_boards = $4, function = $5 WHERE id = $6', [name || '', role || 'membro', hash, JSON.stringify(allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao']), userFunction || 'membro', req.params.id]);
         } else {
-            await pool.query('UPDATE users SET name = $1, role = $2 WHERE id = $3', [name || '', role || 'membro', req.params.id]);
+            await pool.query('UPDATE users SET name = $1, role = $2, allowed_boards = $3, function = $4 WHERE id = $5', [name || '', role || 'membro', JSON.stringify(allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao']), userFunction || 'membro', req.params.id]);
         }
         res.json({ success: true });
     } catch(err) { res.status(500).json({ error: 'Erro ao atualizar membro.' }); }
@@ -507,8 +541,8 @@ app.post('/api/solicitations', async (req, res) => {
         const minPriority = priority || 'normal';
         
         await pool.query(
-            `INSERT INTO cards (id, column_id, title, description, platform, post_date, post_time, demand_type, priority, workspace_id, assignee, labels, created_by, category)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+            `INSERT INTO cards (id, column_id, title, description, platform, post_date, post_time, demand_type, priority, workspace_id, assignee, labels, created_by, category, card_order)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
             [
                 'card-' + Date.now() + Math.floor(Math.random() * 1000),
                 'col-1',
@@ -518,11 +552,13 @@ app.post('/api/solicitations', async (req, res) => {
                 post_date || null,
                 post_time || null,
                 demand_type || null,
+                minPriority,
                 'lagoinhaalphaville.sp',
                 requested_by || null,
                 JSON.stringify([{ text: ministry || 'Solicitação', color: '#3b82f6' }]),
                 `Solicitante: ${requested_by || 'Anónimo'} (${request_email || 'sem email'})`,
-                'editorial'
+                'editorial',
+                1
             ]
         );
         
@@ -539,6 +575,16 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
         const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
         const category = req.query.category || 'editorial';
         const isAllWorkspaces = workspace === '__all__';
+        
+        // Verificar acesso ao board gestao - apenas master/gestor ou usuários com acesso liberado
+        if (category === 'gestao' && !req.tv) {
+            const userRole = req.user?.role;
+            const userBoards = req.user?.allowed_boards || [];
+            if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes('gestao')) {
+                return res.status(403).json({ error: 'Acesso negado ao board de gestão' });
+            }
+        }
+        
         const cardVisibilityCondition = isAllWorkspaces ? '1=1' : workspaceVisibilityClause(1);
         const params = isAllWorkspaces ? [category] : [workspace, category];
         const catParam = isAllWorkspaces ? 1 : 2;
@@ -613,6 +659,16 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
 app.post('/api/board/move', authGuard, async (req, res) => {
     const { cardId, targetColId, newOrder, workspace_id, category } = req.body;
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
+    
+    // Verificar acesso ao board gestao
+    if (category === 'gestao') {
+        const userRole = req.user?.role;
+        const userBoards = req.user?.allowed_boards || [];
+        if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes('gestao')) {
+            return res.status(403).json({ error: 'Acesso negado ao board de gestão' });
+        }
+    }
+    
     try {
         // If moving in the design, photo, or video board, update the respective column_id instead of column_id
         const columnField = category === 'design' ? 'design_column_id' : (category === 'photo' ? 'photo_column_id' : (category === 'video' ? 'video_column_id' : 'column_id'));
@@ -633,6 +689,16 @@ app.post('/api/cards', authGuard, async (req, res) => {
     const { title, column_id, platform, post_date, post_time, workspace_id, assignee, visible_workspaces, images, files, labels, category, parent_id, demand_type, priority, deadline } = req.body;
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     const resolvedCategory = category || 'editorial';
+    
+    // Verificar acesso ao board gestao
+    if (resolvedCategory === 'gestao') {
+        const userRole = req.user?.role;
+        const userBoards = req.user?.allowed_boards || [];
+        if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes('gestao')) {
+            return res.status(403).json({ error: 'Acesso negado ao board de gestão' });
+        }
+    }
+    
     const resolvedPriority = priority || 'normal';
     const visibleWorkspaces = normalizeWorkspaceList(resolvedWS, visible_workspaces);
     const serializedVisibleWorkspaces = JSON.stringify(visibleWorkspaces);

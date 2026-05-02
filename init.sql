@@ -98,7 +98,11 @@ INSERT INTO columns (id, title, col_order, category) VALUES
 ('video-2', 'Pauta de Produção', 2, 'video'),
 ('video-3', 'Em Produção', 3, 'video'),
 ('video-4', 'Revisão', 4, 'video'),
-('video-5', 'Finalizado', 5, 'video')
+('video-5', 'Finalizado', 5, 'video'),
+-- Colunas do Setor de Gestão Interna
+('gestao-1', 'A Fazer', 1, 'gestao'),
+('gestao-2', 'Em Andamento', 2, 'gestao'),
+('gestao-3', 'Concluído', 3, 'gestao')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO system_settings (id, primary_color, tv_access_code) VALUES (1, '#4F46E5', '0000')
