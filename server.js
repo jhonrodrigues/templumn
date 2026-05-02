@@ -566,13 +566,13 @@ app.post('/api/users', authGuard, async (req, res) => {
 });
 app.put('/api/users/:id', authGuard, async (req, res) => {
     if(req.user.role !== 'master') return res.status(403).json({ error: 'Permissão Negada' });
-    const { name, role, password, allowed_boards, function: userFunction } = req.body;
+    const { name, email, role, password, allowed_boards, function: userFunction } = req.body;
     try {
         if (password && password.trim()) {
             const hash = await bcrypt.hash(password.trim(), 8);
-            await pool.query('UPDATE users SET name = $1, role = $2, password_hash = $3, allowed_boards = $4, function = $5 WHERE id = $6', [name || '', role || 'membro', hash, JSON.stringify(allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao']), userFunction || 'membro', req.params.id]);
+            await pool.query('UPDATE users SET name = $1, email = $2, role = $3, password_hash = $4, allowed_boards = $5, function = $6 WHERE id = $7', [name || '', email || '', role || 'membro', hash, JSON.stringify(allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao']), userFunction || 'membro', req.params.id]);
         } else {
-            await pool.query('UPDATE users SET name = $1, role = $2, allowed_boards = $3, function = $4 WHERE id = $5', [name || '', role || 'membro', JSON.stringify(allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao']), userFunction || 'membro', req.params.id]);
+            await pool.query('UPDATE users SET name = $1, email = $2, role = $3, allowed_boards = $4, function = $5 WHERE id = $6', [name || '', email || '', role || 'membro', JSON.stringify(allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao']), userFunction || 'membro', req.params.id]);
         }
         res.json({ success: true });
     } catch(err) { res.status(500).json({ error: 'Erro ao atualizar membro.' }); }

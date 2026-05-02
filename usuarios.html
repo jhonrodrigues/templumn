@@ -215,7 +215,7 @@
                 
                 h += `<tr>
                     <td><input type="text" value="${u.name || ''}" data-user-name="${u.id}" style="width:100%; padding:10px; border-radius:8px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main);"></td>
-                    <td><span>${u.email}</span></td>
+                    <td><input type="email" value="${u.email || ''}" data-user-email="${u.id}" style="width:100%; padding:10px; border-radius:8px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main);"></td>
                     <td>
                         <select data-user-role="${u.id}" style="width:100%; padding:10px; border-radius:8px; background: rgba(0,0,0,0.08); border:1px solid var(--border); color: var(--text-main);">
                             <option value="membro" ${u.role === 'membro' ? 'selected' : ''}>Membro</option>
@@ -255,9 +255,10 @@
             }
         }
         
-        async function saveAllUsers() {
+async function saveAllUsers() {
             const saves = allUsers.map(async u => {
                 const name = document.querySelector(`[data-user-name="${u.id}"]`).value.trim();
+                const email = document.querySelector(`[data-user-email="${u.id}"]`).value.trim();
                 const role = document.querySelector(`[data-user-role="${u.id}"]`).value;
                 const userFunction = document.querySelector(`[data-user-function="${u.id}"]`).value;
                 
@@ -267,7 +268,7 @@
                 return fetch('/api/users/' + u.id, {
                     method: 'PUT',
                     headers: {'Content-Type':'application/json', ...getPageAuthHeaders()},
-                    body: JSON.stringify({ name, role, function: userFunction, allowed_boards: allowedBoards })
+                    body: JSON.stringify({ name, email, role, function: userFunction, allowed_boards: allowedBoards })
                 });
             });
             
@@ -279,6 +280,7 @@
             } else {
                 alert('Algumas alterações podem não ter sido salvas.');
             }
+        }
         }
 
         document.getElementById('nu-btn').onclick = async () => {
