@@ -34,60 +34,59 @@ function renderSidebarMenu(containerId = 'sidebar-menu-content') {
 
     const userRole = localStorage.getItem('templum-auth-role');
 
-    let html = '';
-
-    html += `<div class="menu-section">
-        <span class="section-title">Contas / Workspaces</span>
-        <ul id="sidebar-ws-list"></ul>
-    </div>`;
-
-    html += `<div class="menu-section">
-        <span class="section-title">Minha Mesa</span>
-        <ul>`;
-    menuConfig.minhaMesa.forEach(item => {
-        html += `<li onclick="window.location.href='${getMenuItemHref(item)}'"><i class="fa-solid ${item.icon}"></i> ${item.label}</li>`;
-    });
-    html += `</ul></div>`;
-
-    html += `<div class="menu-section">
-        <span class="section-title">Gestão e Liderança</span>
-        <ul>`;
-    menuConfig.gestao.forEach(item => {
-        if (item.roles && !item.roles.includes(userRole)) return;
-        html += `<li onclick="window.location.href='${item.href}'"><i class="fa-solid ${item.icon}"></i> ${item.label}</li>`;
-    });
-    html += `</ul></div>`;
-
-    container.innerHTML = html;
+    container.innerHTML = `
+        <div class="menu-section">
+            <span class="section-title">Contas / Workspaces</span>
+            <ul id="sidebar-ws-list"></ul>
+        </div>
+        <div class="menu-section">
+            <span class="section-title">Minha Mesa</span>
+            <ul>
+                ${menuConfig.minhaMesa.map(item => `
+                    <li onclick="window.location.href='${getMenuItemHref(item)}'">
+                        <i class="fa-solid ${item.icon}"></i> ${item.label}
+                    </li>
+                `).join('')}
+            </ul>
+        </div>
+        <div class="menu-section">
+            <span class="section-title">Gestão e Liderança</span>
+            <ul>
+                ${menuConfig.gestao.filter(item => !item.roles || item.roles.includes(userRole)).map(item => `
+                    <li onclick="window.location.href='${item.href}'">
+                        <i class="fa-solid ${item.icon}"></i> ${item.label}
+                    </li>
+                `).join('')}
+            </ul>
+        </div>
+    `;
 }
 
 function initSidebarMenu() {
-    let container = document.getElementById('sidebar-menu-content');
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
 
+    let container = document.getElementById('sidebar-menu-content');
     if (!container) {
         container = document.createElement('div');
         container.id = 'sidebar-menu-content';
-        container.className = 'sidebar-menu';
-        
-        const profile = sidebar.querySelector('.user-profile');
-        const logo = sidebar.querySelector('.sidebar-header');
-        
-        if (profile && logo) {
-            container.innerHTML = '';
-            sidebar.insertBefore(container, profile);
-        } else if (logo) {
-            container.innerHTML = '';
-            sidebar.appendChild(container);
-        }
     }
 
-    if (container && !container.innerHTML) {
-        renderSidebarMenu('sidebar-menu-content');
-    } else if (container && container.children.length === 0) {
-        renderSidebarMenu('sidebar-menu-content');
+    const profile = sidebar.querySelector('.user-profile');
+    const logo = sidebar.querySelector('.sidebar-header');
+    const existingContainer = sidebar.querySelector('#sidebar-menu-content');
+    
+    if (existingContainer && existingContainer !== container) {
+        existingContainer.remove();
     }
+    
+    if (profile && logo) {
+        sidebar.insertBefore(container, profile);
+    } else if (logo) {
+        sidebar.appendChild(container);
+    }
+
+    renderSidebarMenu('sidebar-menu-content');
 }
 
 if (document.readyState === 'loading') {
