@@ -28,69 +28,28 @@ function getMenuItemHref(item) {
     return item.href;
 }
 
-function renderSidebarMenu(containerId = 'sidebar-menu-content') {
-    const container = document.getElementById(containerId);
+function renderSidebarMenu() {
+    const container = document.getElementById('sidebar-menu-content');
     if (!container) return;
 
     const userRole = localStorage.getItem('templum-auth-role');
 
-    container.innerHTML = `
-        <div class="menu-section">
-            <span class="section-title">Contas / Workspaces</span>
-            <ul id="sidebar-ws-list"></ul>
-        </div>
-        <div class="menu-section">
-            <span class="section-title">Minha Mesa</span>
-            <ul>
-                ${menuConfig.minhaMesa.map(item => `
-                    <li onclick="window.location.href='${getMenuItemHref(item)}'">
-                        <i class="fa-solid ${item.icon}"></i> ${item.label}
-                    </li>
-                `).join('')}
-            </ul>
-        </div>
-        <div class="menu-section">
-            <span class="section-title">Gestão e Liderança</span>
-            <ul>
-                ${menuConfig.gestao.filter(item => !item.roles || item.roles.includes(userRole)).map(item => `
-                    <li onclick="window.location.href='${item.href}'">
-                        <i class="fa-solid ${item.icon}"></i> ${item.label}
-                    </li>
-                `).join('')}
-            </ul>
-        </div>
-    `;
-}
-
-function initSidebarMenu() {
-    const sidebar = document.querySelector('.sidebar');
-    if (!sidebar) return;
-
-    let container = document.getElementById('sidebar-menu-content');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'sidebar-menu-content';
-    }
-
-    const profile = sidebar.querySelector('.user-profile');
-    const logo = sidebar.querySelector('.sidebar-header');
-    const existingContainer = sidebar.querySelector('#sidebar-menu-content');
+    let html = '<div class="menu-section"><span class="section-title">Contas / Workspaces</span><ul id="sidebar-ws-list"></ul></div>';
+    html += '<div class="menu-section"><span class="section-title">Minha Mesa</span><ul>';
     
-    if (existingContainer && existingContainer !== container) {
-        existingContainer.remove();
-    }
+    menuConfig.minhaMesa.forEach(item => {
+        html += `<li><a href="${getMenuItemHref(item)}" style="display:block; padding:0;"><i class="fa-solid ${item.icon}"></i> ${item.label}</a></li>`;
+    });
+    html += '</ul></div>';
     
-    if (profile && logo) {
-        sidebar.insertBefore(container, profile);
-    } else if (logo) {
-        sidebar.appendChild(container);
-    }
+    html += '<div class="menu-section"><span class="section-title">Gestão e Liderança</span><ul>';
+    menuConfig.gestao.forEach(item => {
+        if (item.roles && !item.roles.includes(userRole)) return;
+        html += `<li><a href="${item.href}" style="display:block; padding:0;"><i class="fa-solid ${item.icon}"></i> ${item.label}</a></li>`;
+    });
+    html += '</ul></div>';
 
-    renderSidebarMenu('sidebar-menu-content');
+    container.innerHTML = html;
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSidebarMenu);
-} else {
-    initSidebarMenu();
-}
+document.addEventListener('DOMContentLoaded', renderSidebarMenu);
