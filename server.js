@@ -504,7 +504,7 @@ app.get('/api/user-functions', authGuard, requireRole(['master', 'gestor']), asy
         const result = await pool.query('SELECT id, name, icon, color, sort_order FROM user_functions ORDER BY sort_order ASC, name ASC');
         res.json(result.rows);
     } catch (err) {
-        res.status(500).json({ error: 'Erro ao carregar funções' });
+        res.json([]);
     }
 });
 

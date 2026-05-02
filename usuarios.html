@@ -185,8 +185,20 @@
         async function loadUserFunctions() {
             try {
                 const r = await fetch('/api/user-functions', { headers: getPageAuthHeaders() });
-                userFunctions = await r.json();
-            } catch(e) { userFunctions = []; }
+                if (r.ok) {
+                    userFunctions = await r.json();
+                } else {
+                    userFunctions = [
+                        { name: 'Membro' }, { name: 'Editor' }, { name: 'Designer' },
+                        { name: 'Social Media' }, { name: 'Videomaker' }, { name: 'Fotógrafo' }
+                    ];
+                }
+            } catch(e) { 
+                userFunctions = [
+                    { name: 'Membro' }, { name: 'Editor' }, { name: 'Designer' },
+                    { name: 'Social Media' }, { name: 'Videomaker' }, { name: 'Fotógrafo' }
+                ];
+            }
         }
         
         function sortUsers() {
