@@ -330,7 +330,7 @@ async function loadStateFromServer() {
     
     // Verificar acesso ao board
     const userRole = localStorage.getItem('templum-auth-role');
-    const userBoards = JSON.parse(localStorage.getItem('templum-auth-boards') || '["editorial", "design", "photo", "video", "gestao"]');
+    const userBoards = JSON.parse(localStorage.getItem('templum-auth-boards') || '["editorial","design","photo","video","gestao"]');
     if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes(activeCategory)) {
         boardCanvas.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-lock" style="font-size: 48px; margin-bottom: 16px;"></i><p>Você não tem acesso a este board.</p></div>';
         return;
@@ -338,14 +338,17 @@ async function loadStateFromServer() {
     
     try {
         const response = await fetch(`/api/board?workspace=${activeWorkspaceId}&category=${activeCategory}`, { headers: getAuthHeaders() });
-        if (response.status === 401 || response.status === 403) {
-            const data = await response.json();
-            if (data.error && data.error.includes('Acesso negado')) {
-                boardCanvas.innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-lock" style="font-size: 48px; margin-bottom: 16px;"></i><p>' + data.error + '</p></div>';
-                return;
-            }
+        if (response.status === 401) {
             window.location.href = '/login.html';
             return;
+        }
+        if (response.status === 403) {
+            const data = await response.json();
+            if (data.error) {
+                alert(data.error);
+                window.location.href = 'mesa.html';
+                return;
+            }
         }
         if (response.ok) {
             const data = await response.json();

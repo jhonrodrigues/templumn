@@ -640,7 +640,7 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
         // Verificar acesso ao board - apenas master/gestor ou usuários com acesso liberado
         if (!req.tv) {
             const userRole = req.user?.role;
-            const userBoards = req.user?.allowed_boards || [];
+            const userBoards = req.user?.allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao'];
             if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes(category)) {
                 return res.status(403).json({ error: 'Acesso negado ao board' });
             }
@@ -724,7 +724,7 @@ app.post('/api/board/move', authGuard, async (req, res) => {
     // Verificar acesso ao board
     if (category) {
         const userRole = req.user?.role;
-        const userBoards = req.user?.allowed_boards || [];
+        const userBoards = req.user?.allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao'];
         if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes(category)) {
             return res.status(403).json({ error: 'Acesso negado ao board' });
         }
@@ -754,7 +754,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
     // Verificar acesso ao board
     if (resolvedCategory) {
         const userRole = req.user?.role;
-        const userBoards = req.user?.allowed_boards || [];
+        const userBoards = req.user?.allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao'];
         if (userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes(resolvedCategory)) {
             return res.status(403).json({ error: 'Acesso negado ao board' });
         }
