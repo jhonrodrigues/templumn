@@ -14,8 +14,8 @@ function reinitializeModalElements() {
     editPlatformInput = document.getElementById('edit-card-platform');
     editDateInput = document.getElementById('edit-card-date');
     editTimeInput = document.getElementById('edit-card-time');
-    editRecurrenceInput = document.getElementById('edit-card-recurrence');
-    removeRecurrenceBtn = document.getElementById('remove-recurrence-btn');
+    editDeadlineInput = document.getElementById('edit-card-deadline');
+    editPriorityInput = document.getElementById('edit-card-priority');
     editDemandTypeInput = document.getElementById('edit-card-demand-type');
     modalListName = document.getElementById('modal-list-name');
     modalTitle = document.getElementById('modal-title');
@@ -55,7 +55,8 @@ function reinitializeModalElements() {
     ncPlatform = document.getElementById('nc-platform');
     ncDate = document.getElementById('nc-date');
     ncTime = document.getElementById('nc-time');
-    ncRecurrence = document.getElementById('nc-recurrence');
+    ncDeadline = document.getElementById('nc-deadline');
+    ncPriority = document.getElementById('nc-priority');
     ncAssignee = document.getElementById('nc-assignee');
     ncWorkspaces = document.getElementById('new-card-workspaces');
     
@@ -112,17 +113,16 @@ function injectModalsIfNeeded() {
                                     <input type="time" id="edit-card-time" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
                                 </div>
                                 <div>
-                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">RECORRÊNCIA</label>
-                                    <div style="display:flex; gap:8px;">
-                                        <select id="edit-card-recurrence" style="flex:1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
-                                            <option value="none">Sem recorrência</option>
-                                            <option value="weekly">Semanal</option>
-                                            <option value="monthly">Mensal</option>
-                                        </select>
-                                        <button type="button" id="remove-recurrence-btn" title="Remover recorrência" style="padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-app); color:var(--text-main); cursor:pointer; display:none;">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DATA LIMITE DE ENTREGA</label>
+                                    <input type="date" id="edit-card-deadline" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">PRIORIDADE</label>
+                                    <select id="edit-card-priority" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                                        <option value="normal">Normal</option>
+                                        <option value="high">Alta</option>
+                                        <option value="urgent">Urgente</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label style="display:block; margin-bottom:8px; color: var(--text-muted); font-weight:500; font-size:13px;">DESCRIÇÃO</label>
@@ -228,11 +228,11 @@ function injectModalsIfNeeded() {
                 <div style="margin-bottom: 16px;">
                     <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">TÍTULO / PAUTA</label>
                     <input type="text" id="nc-title" autocomplete="off" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
-                </div>
+</div>
                 <div style="margin-bottom: 16px;">
                     <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">REDE SOCIAL</label>
                     <select id="nc-platform" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
-                        <option value="">Nenhuma / Geral</option>
+                        <option value="">Nenhuma / GERAL</option>
                         <option value="instagram">Instagram</option>
                         <option value="tiktok">TikTok</option>
                         <option value="youtube">YouTube</option>
@@ -248,11 +248,15 @@ function injectModalsIfNeeded() {
                     <input type="time" id="nc-time" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
                 </div>
                 <div style="margin-bottom: 16px;">
-                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">RECORRÊNCIA</label>
-                    <select id="nc-recurrence" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
-                        <option value="none">Sem recorrência</option>
-                        <option value="weekly">Semanal</option>
-                        <option value="monthly">Mensal</option>
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">DATA LIMITE DE ENTREGA</label>
+                    <input type="date" id="nc-deadline" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px;">PRIORIDADE</label>
+                    <select id="nc-priority" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family:var(--font); outline:none;">
+                        <option value="normal">Normal</option>
+                        <option value="high">Alta</option>
+                        <option value="urgent">Urgente</option>
                     </select>
                 </div>
                 <div style="margin-bottom: 24px;">
@@ -503,13 +507,8 @@ function openModal(card, colId) {
     if (editPlatformInput) editPlatformInput.value = card.platform || '';
     if (editDateInput) editDateInput.value = card.post_date || '';
     if (editTimeInput) editTimeInput.value = card.post_time || '';
-    if (editRecurrenceInput) {
-        editRecurrenceInput.value = card.recurrence_type || 'none';
-        const removeBtn = document.getElementById('remove-recurrence-btn');
-        if (removeBtn) {
-            removeBtn.style.display = (card.recurrence_type && card.recurrence_type !== 'none') ? 'block' : 'none';
-        }
-    }
+    if (editDeadlineInput) editDeadlineInput.value = card.deadline || '';
+    if (editPriorityInput) editPriorityInput.value = card.priority || 'normal';
     if (editDemandTypeInput) {
         loadDemandTypes().then(() => {
             editDemandTypeInput.value = card.demand_type || '';
@@ -750,7 +749,8 @@ function attachModalHandlers() {
             const platform = editPlatformInput ? editPlatformInput.value : '';
             const post_date = editDateInput ? editDateInput.value : '';
             const post_time = editTimeInput ? editTimeInput.value : '';
-            const recurrence_type = editRecurrenceInput ? editRecurrenceInput.value : 'none';
+            const deadline = editDeadlineInput ? editDeadlineInput.value : '';
+            const priority = editPriorityInput ? editPriorityInput.value : 'normal';
             const demand_type = editDemandTypeInput ? editDemandTypeInput.value : '';
             const assignee = activeCardData.members.length > 0 ? activeCardData.members[0] : '';
             const visible_workspaces = getSelectedWorkspaceIds('edit-card-workspaces');
@@ -762,7 +762,7 @@ function attachModalHandlers() {
                 const response = await fetch('/api/cards/' + activeCardId + '?workspace=' + encodeURIComponent(activeWorkspaceId), {
                     method: 'PUT',
                     headers: authHeaders,
-                    body: JSON.stringify({ title, description, platform, post_date, post_time, recurrence_type, demand_type, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id, category: activeCardData.category, parent_id: activeCardData.parent_id })
+                    body: JSON.stringify({ title, description, platform, post_date, post_time, deadline, priority, demand_type, assignee, labels: activeCardData.labels, members: activeCardData.members, checklist: activeCardData.checklist, comments: activeCardData.comments, images: activeCardData.images, files: activeCardData.files, visible_workspaces, primary_workspace_id: activeCardData.workspace_id, category: activeCardData.category, parent_id: activeCardData.parent_id })
                 });
                 if (!response.ok) throw new Error('save failed');
                 const activeColumn = boardState.columns.find(c => c.id === activeCardColId);
@@ -770,7 +770,8 @@ function attachModalHandlers() {
                 if (activeCard) {
                     activeCard.title = title; activeCard.description = description;
                     activeCard.platform = platform; activeCard.post_date = post_date;
-                    activeCard.post_time = post_time; activeCard.recurrence_type = recurrence_type;
+                    activeCard.post_time = post_time; activeCard.deadline = deadline;
+                    activeCard.priority = priority; activeCard.demand_type = demand_type;
                     activeCard.assignee = assignee; activeCard.labels = activeCardData.labels;
                     activeCard.members = activeCardData.members; activeCard.checklist = activeCardData.checklist;
                     activeCard.comments_data = activeCardData.comments; activeCard.images = activeCardData.images;

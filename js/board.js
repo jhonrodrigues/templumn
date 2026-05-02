@@ -136,7 +136,8 @@ function renderBoard() {
                 const platform = document.getElementById('nc-platform').value;
                 const post_date = document.getElementById('nc-date').value;
                 const post_time = document.getElementById('nc-time').value;
-                const recurrence_type = document.getElementById('nc-recurrence').value;
+                const deadline = document.getElementById('nc-deadline').value;
+                const priority = document.getElementById('nc-priority').value;
                 const demandTypeSelect = document.getElementById('nc-demand-type');
                 const demand_type = demandTypeSelect ? demandTypeSelect.value : '';
                 const aField = document.getElementById('nc-assignee');
@@ -154,7 +155,7 @@ function renderBoard() {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
-                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, post_time, recurrence_type, demand_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], labels: newCardLabels, category: activeCategory })
+                        body: JSON.stringify({ title, column_id: column.id, platform, post_date, post_time, deadline, priority, demand_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], labels: newCardLabels, category: activeCategory })
                     });
                     m.classList.remove('active');
                     loadStateFromServer();
@@ -190,7 +191,8 @@ function initFAB() {
                 const platform = document.getElementById('nc-platform').value;
                 const post_date = document.getElementById('nc-date').value;
                 const post_time = document.getElementById('nc-time').value;
-                const recurrence_type = document.getElementById('nc-recurrence').value;
+                const deadline = document.getElementById('nc-deadline').value;
+                const priority = document.getElementById('nc-priority').value;
                 const demandTypeSelect = document.getElementById('nc-demand-type');
                 const demand_type = demandTypeSelect ? demandTypeSelect.value : '';
                 const assignee = aField ? aField.value.trim() : '';
@@ -207,7 +209,7 @@ function initFAB() {
                     await fetch('/api/cards', {
                         method: 'POST',
                         headers: authHeaders,
-                        body: JSON.stringify({ title, column_id: colId, platform, post_date, post_time, recurrence_type, demand_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], labels: newCardLabels, category: activeCategory })
+                        body: JSON.stringify({ title, column_id: colId, platform, post_date, post_time, deadline, priority, demand_type, workspace_id: activeWorkspaceId, assignee, visible_workspaces, images: [], labels: newCardLabels, category: activeCategory })
                     });
                     m.classList.remove('active');
                     loadStateFromServer();
@@ -262,6 +264,9 @@ function createCardElement(card, colId) {
 
     const creatorHtml = card.created_by ? `<span title="Criado por ${escapeHtml(card.created_by)}" style="color: var(--text-muted); font-size: 11px;"><i class="fa-regular fa-user"></i> ${escapeHtml(card.created_by)}</span>` : '';
     const demandTypeHtml = card.demand_type ? `<span style="background: #6366f1; color: white; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">${escapeHtml(card.demand_type)}</span>` : '';
+    const priorityHtml = (card.priority && card.priority !== 'normal') 
+        ? `<span title="Prioridade: ${card.priority === 'urgent' ? 'Urgente' : 'Alta'}" style="background: ${card.priority === 'urgent' ? '#ef4444' : '#f59e0b'}; color: white; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; margin-right: 6px;"><i class="fa-solid fa-flag"></i> ${card.priority === 'urgent' ? 'URG' : 'ALTA'}</span>` 
+        : '';
     
     cardEl.innerHTML = `
         ${(platformHtml || dateHtml || labelsHTML || workspaceTagHtml) ? `<div class="card-labels" style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
@@ -274,6 +279,7 @@ function createCardElement(card, colId) {
         <div class="card-title">${card.title}</div>
         <div class="card-footer">
             <div class="card-badges">
+                ${priorityHtml}
                 ${demandTypeHtml}
                 ${creatorHtml}
                 ${card.design_column_id ? `<span title="Enviado para Design" style="color: #f59e0b; font-weight: bold;"><i class="fa-solid fa-palette"></i> Design</span>` : ''}

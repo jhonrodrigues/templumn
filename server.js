@@ -149,6 +149,18 @@ async function initDb() {
             try { await pool.query("ALTER TABLE cards ADD COLUMN video_column_id VARCHAR(50) REFERENCES columns(id) ON DELETE SET NULL;"); } catch(e2){}
         }
 
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'normal';"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN priority VARCHAR(20) DEFAULT 'normal';"); } catch(e2){}
+        }
+
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS deadline VARCHAR(50);"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN deadline VARCHAR(50);"); } catch(e2){}
+        }
+
+        try { await pool.query("ALTER TABLE cards ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"); } catch(e){
+            try { await pool.query("ALTER TABLE cards ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"); } catch(e2){}
+        }
+
         try { await pool.query("CREATE TABLE IF NOT EXISTS demand_types (id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, icon VARCHAR(50) DEFAULT 'fa-tag', color VARCHAR(50) DEFAULT '#6b7280', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"); } catch(e){}
 
         // 2. Executar init.sql para garantir estrutura base e dados iniciais
@@ -484,6 +496,43 @@ app.delete('/api/users/:id', authGuard, async (req, res) => {
     } catch(err) { res.status(500).json({ error: 'Erro na exclusão.' }); }
 });
 
+app.post('/api/solicitations', async (req, res) => {
+    try {
+        const { title, description, platform, post_date, post_time, demand_type, priority, ministry, requested_by, request_email } = req.body;
+        
+        if (!title || !title.trim()) {
+            return res.status(400).json({ error: 'Título obrigatório' });
+        }
+        
+        const minPriority = priority || 'normal';
+        
+        await pool.query(
+            `INSERT INTO cards (id, column_id, title, description, platform, post_date, post_time, demand_type, priority, workspace_id, assignee, labels, created_by, category)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+            [
+                'card-' + Date.now() + Math.floor(Math.random() * 1000),
+                'col-1',
+                title,
+                description || '',
+                platform || null,
+                post_date || null,
+                post_time || null,
+                demand_type || null,
+                'lagoinhaalphaville.sp',
+                requested_by || null,
+                JSON.stringify([{ text: ministry || 'Solicitação', color: '#3b82f6' }]),
+                `Solicitante: ${requested_by || 'Anónimo'} (${request_email || 'sem email'})`,
+                'editorial'
+            ]
+        );
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Solicitation error:', err);
+        res.status(500).json({ error: 'Erro ao enviar solicitação' });
+    }
+});
+
 // --- API: Board API (Columns & Cards) ---
 app.get('/api/board', authOrTvGuard, async (req, res) => {
     try {
@@ -539,7 +588,10 @@ app.get('/api/board', authOrTvGuard, async (req, res) => {
                             'created_by', k.created_by,
                             'demand_type', k.demand_type,
                             'photo_column_id', k.photo_column_id,
-                            'video_column_id', k.video_column_id
+                            'video_column_id', k.video_column_id,
+                            'priority', k.priority,
+                            'deadline', k.deadline,
+                            'created_at', k.created_at
                         ) ORDER BY k.post_date ASC NULLS LAST, k.post_time ASC NULLS LAST, k.card_order ASC
                     ) FILTER (WHERE k.id IS NOT NULL), '[]'
                 ) as cards
@@ -578,10 +630,10 @@ app.post('/api/board/move', authGuard, async (req, res) => {
 // --- API: Create & Delete Cards ---
 app.post('/api/cards', authGuard, async (req, res) => {
     // Schema already ensured by initDb()
-    const { title, column_id, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, labels, category, parent_id, demand_type } = req.body;
-    const normalizedRecurrenceType = normalizeRecurrenceType(recurrence_type);
+    const { title, column_id, platform, post_date, post_time, workspace_id, assignee, visible_workspaces, images, files, labels, category, parent_id, demand_type, priority, deadline } = req.body;
     const resolvedWS = workspace_id || 'lagoinhaalphaville.sp';
     const resolvedCategory = category || 'editorial';
+    const resolvedPriority = priority || 'normal';
     const visibleWorkspaces = normalizeWorkspaceList(resolvedWS, visible_workspaces);
     const serializedVisibleWorkspaces = JSON.stringify(visibleWorkspaces);
     const serializedImages = JSON.stringify(Array.isArray(images) ? images : []);
@@ -589,7 +641,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
     const serializedLabels = JSON.stringify(Array.isArray(labels) ? labels : []);
     const id = 'card-' + Date.now() + Math.floor(Math.random()*1000);
     try {
-        console.log('Creating card with:', { column_id, title, post_date, post_time, recurrence_type: normalizedRecurrenceType, resolvedWS, category: resolvedCategory });
+        console.log('Creating card with:', { column_id, title, post_date, post_time, resolvedWS, category: resolvedCategory, priority: resolvedPriority });
         const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND ${workspaceVisibilityClause(2)}`, [column_id, resolvedWS]);
         const order = maxRes.rows[0].next_order;
         
@@ -597,8 +649,8 @@ app.post('/api/cards', authGuard, async (req, res) => {
         const createdBy = userResult.rows.length > 0 ? (userResult.rows[0].name || userResult.rows[0].email) : null;
         
         await pool.query(
-            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee, visible_workspaces, images, files, attachments_count, category, parent_id, created_by, labels, demand_type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18, $19)',
-            [id, column_id, title, order, platform, post_date, post_time || null, normalizedRecurrenceType, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0), resolvedCategory, parent_id || null, createdBy, serializedLabels, demand_type || null]
+            'INSERT INTO cards (id, column_id, title, card_order, platform, post_date, post_time, workspace_id, assignee, visible_workspaces, images, files, attachments_count, category, parent_id, created_by, labels, demand_type, priority, deadline, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12::jsonb, $13, $14, $15, $16, $17, $18, $19, $20, $21, CURRENT_TIMESTAMP)',
+            [id, column_id, title, order, platform, post_date, post_time || null, resolvedWS, assignee, serializedVisibleWorkspaces, serializedImages, serializedFiles, (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0), resolvedCategory, parent_id || null, createdBy, serializedLabels, demand_type || null, resolvedPriority, deadline || null]
         );
         res.json({ success: true, id, title });
     } catch (err) {
@@ -610,8 +662,7 @@ app.post('/api/cards', authGuard, async (req, res) => {
 app.put('/api/cards/:id', authGuard, async (req, res) => {
     // Schema already ensured by initDb()
     const workspace = req.query.workspace || 'lagoinhaalphaville.sp';
-    const { title, description, platform, post_date, post_time, recurrence_type, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id, category, parent_id, demand_type } = req.body;
-    const normalizedRecurrenceType = normalizeRecurrenceType(recurrence_type);
+    const { title, description, platform, post_date, post_time, assignee, labels, members, checklist, comments, images, files, visible_workspaces, primary_workspace_id, category, parent_id, demand_type, priority, deadline } = req.body;
     try {
         const serializedLabels = Array.isArray(labels) ? JSON.stringify(labels) : '[]';
         const serializedMembers = Array.isArray(members) ? JSON.stringify(members) : '[]';
@@ -625,12 +676,12 @@ app.put('/api/cards/:id', authGuard, async (req, res) => {
         const attachmentsCount = (Array.isArray(images) ? images.length : 0) + (Array.isArray(files) ? files.length : 0);
         const result = await pool.query(
             `UPDATE cards
-             SET title = $1, description = $2, platform = $3, post_date = $4, post_time = $5, recurrence_type = $6, assignee = $7,
-                 labels = $8::jsonb, members = $9::jsonb, checklist = $10::jsonb, comments = $11::jsonb, comments_count = $12,
-                 images = $13::jsonb, files = $14::jsonb, visible_workspaces = $15::jsonb, attachments_count = $16,
-                 category = COALESCE($17, category), parent_id = COALESCE($18, parent_id), demand_type = $19
-             WHERE id = $20 AND ${workspaceVisibilityClause(21)}`,
-            [title, description || '', platform || null, post_date || null, post_time || null, normalizedRecurrenceType, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedFiles, serializedVisibleWorkspaces, attachmentsCount, category || null, parent_id || null, demand_type || null, req.params.id, workspace]
+             SET title = $1, description = $2, platform = $3, post_date = $4, post_time = $5, assignee = $6,
+                 labels = $7::jsonb, members = $8::jsonb, checklist = $9::jsonb, comments = $10::jsonb, comments_count = $11,
+                 images = $12::jsonb, files = $13::jsonb, visible_workspaces = $14::jsonb, attachments_count = $15,
+                 category = COALESCE($16, category), parent_id = COALESCE($17, parent_id), demand_type = $18, priority = $19, deadline = $20
+             WHERE id = $21 AND ${workspaceVisibilityClause(22)}`,
+            [title, description || '', platform || null, post_date || null, post_time || null, assignee || null, serializedLabels, serializedMembers, serializedChecklist, serializedComments, commentsCount, serializedImages, serializedFiles, serializedVisibleWorkspaces, attachmentsCount, category || null, parent_id || null, demand_type || null, priority || 'normal', deadline || null, req.params.id, workspace]
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
         res.json({ success: true });
@@ -766,56 +817,19 @@ app.post('/api/cards/:id/mark-posted', authGuard, async (req, res) => {
         if (cardRes.rows.length === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
         const card = cardRes.rows[0];
 
+        // Check if current date is >= post_date
+        if (card.post_date) {
+            const { date: today } = getSaoPauloDateParts();
+            if (today < card.post_date) {
+                return res.status(400).json({ error: 'Só pode marcar como postado na data ou após a data de postagem prevista (' + card.post_date + ')' });
+            }
+        }
+
         const result = await pool.query(
             `UPDATE cards SET column_id = 'col-6' WHERE id = $1 AND ${workspaceVisibilityClause(2)}`,
             [req.params.id, workspace]
         );
         if (result.rowCount === 0) return res.status(404).json({ error: 'Card não encontrado neste workspace' });
-
-        const recurrenceType = normalizeRecurrenceType(card.recurrence_type);
-        if (recurrenceType === 'weekly' || recurrenceType === 'monthly') {
-            const sourceDate = card.post_date || getSaoPauloDateParts().date;
-            const nextDate = addRecurringDate(sourceDate, recurrenceType);
-            if (nextDate) {
-                const duplicateRes = await pool.query(
-                    'SELECT id FROM cards WHERE title = $1 AND workspace_id = $2 AND post_date = $3 AND recurrence_type = $4 LIMIT 1',
-                    [card.title, card.workspace_id, nextDate, recurrenceType]
-                );
-                if (duplicateRes.rows.length > 0) {
-                    return res.json({ success: true, recurring_created: false, reason: 'duplicate' });
-                }
-                const maxRes = await pool.query(`SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1 AND ${workspaceVisibilityClause(2)}`, [card.column_id, card.workspace_id]);
-                const order = maxRes.rows[0].next_order;
-                const nextId = 'card-' + Date.now() + Math.floor(Math.random() * 1000);
-                await pool.query(
-                    `INSERT INTO cards (id, column_id, title, description, labels, members, checklist, comments, images, files, visible_workspaces, comments_count, attachments_count, card_order, platform, post_date, post_time, recurrence_type, workspace_id, assignee)
-                     VALUES ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
-                    [
-                        nextId,
-                        card.column_id,
-                        card.title,
-                        card.description || '',
-                        JSON.stringify(card.labels || []),
-                        JSON.stringify(card.members || []),
-                        JSON.stringify(card.checklist || []),
-                        JSON.stringify(card.comments || []),
-                        JSON.stringify(card.images || []),
-                        JSON.stringify(card.files || []),
-                        JSON.stringify(card.visible_workspaces || []),
-                        0,
-                        card.attachments_count || 0,
-                        order,
-                        card.platform || null,
-                        nextDate,
-                        card.post_time || null,
-                        recurrenceType,
-                        card.workspace_id,
-                        card.assignee || null
-                    ]
-                );
-                return res.json({ success: true, recurring_created: true, next_date: nextDate });
-            }
-        }
 
         res.json({ success: true });
     } catch (err) {

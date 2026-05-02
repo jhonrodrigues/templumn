@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitar Demanda - Templum</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background: var(--bg-app); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .solicitacao-form { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 18px; padding: 32px; max-width: 500px; width: 100%; box-shadow: var(--shadow-lg); }
+        .solicitacao-form h1 { font-size: 24px; margin-bottom: 8px; color: var(--text-main); }
+        .solicitacao-form .subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: var(--text-muted); font-weight: 500; font-size: 13px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-family: var(--font); font-size: 14px; outline: none; box-sizing: border-box; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+        .submit-btn { width: 100%; padding: 14px; border-radius: 10px; background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; font-size: 15px; transition: 0.2s; }
+        .submit-btn:hover { background: var(--primary-dark); }
+        .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .success-message { display: none; text-align: center; padding: 40px 20px; }
+        .success-message i { font-size: 48px; color: #22c55e; margin-bottom: 16px; }
+        .success-message h2 { font-size: 20px; color: var(--text-main); margin-bottom: 8px; }
+        .success-message p { color: var(--text-muted); font-size: 14px; }
+        .logo-area { text-align: center; margin-bottom: 24px; }
+        .logo-area img { max-height: 60px; }
+        .priority-options { display: flex; gap: 10px; }
+        .priority-option { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-app); text-align: center; cursor: pointer; font-size: 13px; font-weight: 500; transition: 0.2s; }
+        .priority-option:hover { border-color: var(--primary); }
+        .priority-option.selected { background: var(--primary); color: white; border-color: var(--primary); }
+        .priority-option input { display: none; }
+    </style>
+</head>
+<body>
+    <div class="solicitacao-form" id="form-container">
+        <div class="logo-area" id="logo-area">
+            <div style="font-size: 32px; color: var(--primary);"><i class="fa-solid fa-shapes"></i></div>
+        </div>
+        <h1>Solicitar Demanda</h1>
+        <p class="subtitle">Preencha o formulário abaixo para solicitar uma nova demanda para a Agência.</p>
+        
+        <form id="solicitacao-form">
+            <div class="form-group">
+                <label>MINISTÉRIO / ÁREA</label>
+                <input type="text" id="minsterio" required placeholder="Ex: Ministério da Música, Juventud, Kids...">
+            </div>
+            
+            <div class="form-group">
+                <label>TÍTULO / PAUTA</label>
+                <input type="text" id="titulo" required placeholder="Título ou pauta da demanda">
+            </div>
+            
+            <div class="form-group">
+                <label>DESCRIÇÃO / DETALHES</label>
+                <textarea id="descricao" placeholder="Descreva os detalhes, briefing ou informações importantes para a demanda..."></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>DATA PREVISTA DO POST</label>
+                    <input type="date" id="data-post">
+                </div>
+                <div class="form-group">
+                    <label>HORÁRIO</label>
+                    <input type="time" id="hora-post">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>REDE SOCIAL</label>
+                    <select id="plataforma">
+                        <option value="">Qualquer uma</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="facebook">Facebook</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>TIPO DE CONTEÚDO</label>
+                    <select id="tipo-conteudo">
+                        <option value="">Selecione...</option>
+                        <option value="Post">Post</option>
+                        <option value="Story">Story</option>
+                        <option value="Reels">Reels</option>
+                        <option value="Carrossel">Carrossel</option>
+                        <option value="Vídeo">Vídeo</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>PRIORIDADE</label>
+                <div class="priority-options">
+                    <label class="priority-option"><input type="radio" name="prioridade" value="normal" checked>Normal</label>
+                    <label class="priority-option"><input type="radio" name="prioridade" value="high">Alta</label>
+                    <label class="priority-option"><input type="radio" name="prioridade" value="urgent">Urgente</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>SEU NOME</label>
+                <input type="text" id="nome-solicitante" placeholder="Seu nome para contato">
+            </div>
+            
+            <div class="form-group">
+                <label>SEU EMAIL</label>
+                <input type="email" id="email-solicitante" placeholder="Seu email para contato">
+            </div>
+            
+            <button type="submit" class="submit-btn" id="submit-btn">Enviar Solicitação</button>
+        </form>
+    </div>
+    
+    <div class="success-message" id="success-container">
+        <i class="fa-solid fa-check-circle"></i>
+        <h2>Solicitação Enviada!</h2>
+        <p>Sua demanda foi enviada com sucesso para a Agência. Aguarde o contato da equipe.</p>
+        <button class="submit-btn" style="margin-top: 20px;" onclick="window.location.reload()">Nova Solicitação</button>
+    </div>
+    
+    <script>
+        const prioridadeOptions = document.querySelectorAll('.priority-option');
+        prioridadeOptions.forEach(opt => {
+            opt.addEventListener('click', () => {
+                prioridadeOptions.forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+            });
+        });
+        
+        document.getElementById('solicitacao-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+            
+            const data = {
+                title: document.getElementById('titulo').value,
+                description: document.getElementById('descricao').value,
+                platform: document.getElementById('plataforma').value,
+                post_date: document.getElementById('data-post').value,
+                post_time: document.getElementById('hora-post').value,
+                demand_type: document.getElementById('tipo-conteudo').value,
+                priority: document.querySelector('input[name="prioridade"]:checked').value,
+                ministry: document.getElementById('minsterio').value,
+                requested_by: document.getElementById('nome-solicitante').value,
+                request_email: document.getElementById('email-solicitante').value
+            };
+            
+            try {
+                const response = await fetch('/api/solicitations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    document.getElementById('form-container').style.display = 'none';
+                    document.getElementById('success-container').style.display = 'block';
+                } else {
+                    alert('Erro ao enviar solicitação. Tente novamente.');
+                }
+            } catch(err) {
+                alert('Erro de conexão. Verifique sua internet.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Enviar Solicitação';
+            }
+        });
+    </script>
+</body>
+</html>
