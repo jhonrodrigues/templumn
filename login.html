@@ -109,6 +109,7 @@
                     localStorage.setItem('templum-auth-token', data.token);
                     localStorage.setItem('templum-auth-user', data.email);
                     localStorage.setItem('templum-auth-role', data.role || 'membro');
+                    localStorage.setItem('templum-auth-boards', JSON.stringify(data.allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao']));
                     window.location.href = '/index.html';
                 } else {
                     err.style.display = 'block';

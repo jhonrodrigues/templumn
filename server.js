@@ -228,8 +228,10 @@ app.post('/api/login', async (req, res) => {
         const user = uRes.rows[0];
         const valid = await bcrypt.compare(password, user.password_hash);
         if (!valid) return res.status(401).json({error: 'Senha incorreta.'});
+        
+        const allowedBoards = user.allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao'];
         const token = jwt.sign({ id: user.id, role: user.role, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-        res.json({ token, email: user.email, role: user.role });
+        res.json({ token, email: user.email, role: user.role, allowed_boards: allowedBoards });
     } catch(err) {
         res.status(500).json({error: 'Erro de validação.'});
     }
@@ -277,15 +279,19 @@ function authGuard(req, res, next) {
         if (err) return res.status(403).json({error: 'Sessão Expirada'});
         
         try {
-            const userRes = await pool.query('SELECT allowed_boards, function FROM users WHERE id = $1', [user.id]);
-            if (userRes.rows.length > 0) {
-                user.allowed_boards = userRes.rows[0].allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao'];
-                user.function = userRes.rows[0].function || 'membro';
-            } else {
-                user.allowed_boards = ['editorial', 'design', 'photo', 'video', 'gestao'];
-                user.function = 'membro';
+            let userData = { allowed_boards: ['editorial', 'design', 'photo', 'video', 'gestao'], function: 'membro' };
+            try {
+                const userRes = await pool.query('SELECT allowed_boards, function FROM users WHERE id = $1', [user.id]);
+                if (userRes.rows.length > 0) {
+                    userData = userRes.rows[0];
+                }
+            } catch (queryErr) {
+                console.log('User query warning:', queryErr.message);
             }
+            user.allowed_boards = userData.allowed_boards || ['editorial', 'design', 'photo', 'video', 'gestao'];
+            user.function = userData.function || 'membro';
         } catch (e) {
+            console.log('authGuard error:', e.message);
             user.allowed_boards = ['editorial', 'design', 'photo', 'video', 'gestao'];
             user.function = 'membro';
         }
