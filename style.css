@@ -192,8 +192,22 @@ body {
     transition: all 0.2s;
 }
 
+.sidebar-menu li a {
+    color: inherit;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    font-size: inherit;
+}
+
 .sidebar-menu li:hover {
     background-color: var(--bg-app);
+    color: var(--primary);
+}
+
+.sidebar-menu li:hover a {
     color: var(--primary);
 }
 
