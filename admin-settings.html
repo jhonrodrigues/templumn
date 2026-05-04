@@ -538,7 +538,7 @@
                             <input type="number" class="text-input board-sort" value="${board.sort_order || 0}" style="max-width: 70px;">
                         </div>
                         <button class="btn-save board-save-btn"><i class="fa-solid fa-save"></i></button>
-                        ${!board.is_default ? '<button class="danger-btn board-delete-btn"><i class="fa-solid fa-trash"></i></button>' : '<span style="padding:12px; color:var(--text-muted); font-size:12px;">Padrão</span>'}
+                        ${['editorial','design','photo','video','gestao'].includes(board.id) ? '<span style="padding:12px; color:var(--text-muted); font-size:12px;">Padrão</span>' : '<button class="danger-btn board-delete-btn"><i class="fa-solid fa-trash"></i></button>'}
                     </div>
                 `).join('');
 
