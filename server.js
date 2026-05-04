@@ -1370,6 +1370,8 @@ app.get('/api/reports/labels', authGuard, async (req, res) => {
     try {
         const workspace = req.query.workspace;
         const labelFilter = req.query.label;
+        const dateStart = req.query.date_start;
+        const dateEnd = req.query.date_end;
         
         let whereClause = '1=1';
         let params = [];
@@ -1377,6 +1379,16 @@ app.get('/api/reports/labels', authGuard, async (req, res) => {
         if (workspace && workspace !== '__all__') {
             whereClause += ` AND (c.workspace_id = $${params.length + 1} OR c.visible_workspaces ? $${params.length + 1})`;
             params.push(workspace);
+        }
+        
+        if (dateStart) {
+            whereClause += ` AND c.post_date >= $${params.length + 1}`;
+            params.push(dateStart);
+        }
+        
+        if (dateEnd) {
+            whereClause += ` AND c.post_date <= $${params.length + 1}`;
+            params.push(dateEnd);
         }
         
         const query = `
@@ -1439,6 +1451,8 @@ app.get('/api/reports/demand-types', authGuard, async (req, res) => {
     try {
         const workspace = req.query.workspace;
         const typeFilter = req.query.type;
+        const dateStart = req.query.date_start;
+        const dateEnd = req.query.date_end;
         
         let whereClause = '1=1';
         let params = [];
@@ -1446,6 +1460,16 @@ app.get('/api/reports/demand-types', authGuard, async (req, res) => {
         if (workspace && workspace !== '__all__') {
             whereClause += ` AND (c.workspace_id = $${params.length + 1} OR c.visible_workspaces ? $${params.length + 1})`;
             params.push(workspace);
+        }
+        
+        if (dateStart) {
+            whereClause += ` AND c.post_date >= $${params.length + 1}`;
+            params.push(dateStart);
+        }
+        
+        if (dateEnd) {
+            whereClause += ` AND c.post_date <= $${params.length + 1}`;
+            params.push(dateEnd);
         }
         
         const query = `

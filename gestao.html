@@ -6,6 +6,8 @@
     <title>Dashboard - Templum</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>html.auth-pending body{display:none!important;}</style>
     <script>document.documentElement.classList.add('auth-pending');if(!localStorage.getItem('templum-auth-token')){window.location.replace('/login.html');}else{document.documentElement.classList.remove('auth-pending');}</script>
@@ -220,14 +222,24 @@
                 <div class="dash-panel" style="margin-top: 24px;">
                     <div class="panel-header">
                         <span class="panel-title">Relatório por Tipos de Demanda</span>
-                        <div style="display: flex; gap: 12px; align-items: center;">
+                        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                             <select id="type-filter-workspace" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-size: 13px;">
                                 <option value="__all__">Todas as contas</option>
                             </select>
+                            <select id="type-period" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-size: 13px;">
+                                <option value="all">Todo período</option>
+                                <option value="current-month">Mês atual</option>
+                                <option value="last-month">Mês anterior</option>
+                                <option value="current-year">Ano atual</option>
+                                <option value="custom">Personalizado</option>
+                            </select>
+                            <input type="date" id="type-date-start" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-size: 13px; display: none;" placeholder="Início">
+                            <input type="date" id="type-date-end" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-size: 13px; display: none;" placeholder="Fim">
                             <select id="type-filter-select" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-size: 13px;">
                                 <option value="">Todos os tipos</option>
                             </select>
                             <button id="type-filter-btn" style="padding: 8px 16px; border-radius: 8px; background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; font-size: 13px;"><i class="fa-solid fa-filter"></i> Filtrar</button>
+                            <button id="type-export-btn" style="padding: 8px 16px; border-radius: 8px; background: #10b981; color: white; border: none; font-weight: 600; cursor: pointer; font-size: 13px;"><i class="fa-solid fa-file-pdf"></i> Exportar PDF</button>
                         </div>
                     </div>
                     <div id="type-report-container">
@@ -238,14 +250,24 @@
                 <div class="dash-panel" style="margin-top: 24px;">
                     <div class="panel-header">
                         <span class="panel-title">Relatório por Etiquetas</span>
-                        <div style="display: flex; gap: 12px; align-items: center;">
+                        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                             <select id="label-filter-workspace" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-size: 13px;">
                                 <option value="__all__">Todas as contas</option>
                             </select>
+                            <select id="label-period" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-size: 13px;">
+                                <option value="all">Todo período</option>
+                                <option value="current-month">Mês atual</option>
+                                <option value="last-month">Mês anterior</option>
+                                <option value="current-year">Ano atual</option>
+                                <option value="custom">Personalizado</option>
+                            </select>
+                            <input type="date" id="label-date-start" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-size: 13px; display: none;" placeholder="Início">
+                            <input type="date" id="label-date-end" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-size: 13px; display: none;" placeholder="Fim">
                             <select id="label-filter-select" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-main); font-size: 13px;">
                                 <option value="">Todas as etiquetas</option>
                             </select>
                             <button id="label-filter-btn" style="padding: 8px 16px; border-radius: 8px; background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; font-size: 13px;"><i class="fa-solid fa-filter"></i> Filtrar</button>
+                            <button id="label-export-btn" style="padding: 8px 16px; border-radius: 8px; background: #10b981; color: white; border: none; font-weight: 600; cursor: pointer; font-size: 13px;"><i class="fa-solid fa-file-pdf"></i> Exportar PDF</button>
                         </div>
                     </div>
                     <div id="label-report-container">
@@ -328,6 +350,49 @@
         loadDashboard();
         loadTvCode();
         loadLabelReport();
+        
+        // Period filter toggles
+        document.getElementById('label-period').addEventListener('change', function() {
+            const custom = this.value === 'custom';
+            document.getElementById('label-date-start').style.display = custom ? 'block' : 'none';
+            document.getElementById('label-date-end').style.display = custom ? 'block' : 'none';
+        });
+        
+        document.getElementById('type-period').addEventListener('change', function() {
+            const custom = this.value === 'custom';
+            document.getElementById('type-date-start').style.display = custom ? 'block' : 'none';
+            document.getElementById('type-date-end').style.display = custom ? 'block' : 'none';
+        });
+
+        function getPeriodParams(prefix) {
+            const period = document.getElementById(prefix + '-period').value;
+            const startDate = document.getElementById(prefix + '-date-start').value;
+            const endDate = document.getElementById(prefix + '-date-end').value;
+            
+            let dateStart = null;
+            let dateEnd = null;
+            
+            const now = new Date();
+            if (period === 'current-month') {
+                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                dateStart = firstDay.toISOString().split('T')[0];
+                dateEnd = now.toISOString().split('T')[0];
+            } else if (period === 'last-month') {
+                const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+                dateStart = firstDay.toISOString().split('T')[0];
+                dateEnd = lastDay.toISOString().split('T')[0];
+            } else if (period === 'current-year') {
+                const firstDay = new Date(now.getFullYear(), 0, 1);
+                dateStart = firstDay.toISOString().split('T')[0];
+                dateEnd = now.toISOString().split('T')[0];
+            } else if (period === 'custom' && startDate && endDate) {
+                dateStart = startDate;
+                dateEnd = endDate;
+            }
+            
+            return { date_start: dateStart, date_end: dateEnd };
+        }
 
         async function loadLabelReport() {
             try {
@@ -359,15 +424,23 @@
             }
         }
 
+        window.labelReportData = null;
+        
         async function loadLabelReportData() {
             const container = document.getElementById('label-report-container');
             const workspace = document.getElementById('label-filter-workspace').value;
             const label = document.getElementById('label-filter-select').value;
+            const { date_start, date_end } = getPeriodParams('label');
             
             try {
-                const url = '/api/reports/labels?workspace=' + encodeURIComponent(workspace) + (label ? '&label=' + encodeURIComponent(label) : '');
+                let url = '/api/reports/labels?workspace=' + encodeURIComponent(workspace);
+                if (label) url += '&label=' + encodeURIComponent(label);
+                if (date_start) url += '&date_start=' + date_start;
+                if (date_end) url += '&date_end=' + date_end;
+                
                 const res = await fetch(url, { headers: getAuthHeaders() });
                 const data = await res.json();
+                window.labelReportData = data;
                 
                 if (!data.labels || data.labels.length === 0) {
                     container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Nenhum dado encontrado para os filtros selecionados.</p>';
@@ -429,15 +502,23 @@
             }
         }
 
+        window.typeReportData = null;
+        
         async function loadTypeReportData() {
             const container = document.getElementById('type-report-container');
             const workspace = document.getElementById('type-filter-workspace').value;
             const type = document.getElementById('type-filter-select').value;
+            const { date_start, date_end } = getPeriodParams('type');
             
             try {
-                const url = '/api/reports/demand-types?workspace=' + encodeURIComponent(workspace) + (type ? '&type=' + encodeURIComponent(type) : '');
+                let url = '/api/reports/demand-types?workspace=' + encodeURIComponent(workspace);
+                if (type) url += '&type=' + encodeURIComponent(type);
+                if (date_start) url += '&date_start=' + date_start;
+                if (date_end) url += '&date_end=' + date_end;
+                
                 const res = await fetch(url, { headers: getAuthHeaders() });
                 const data = await res.json();
+                window.typeReportData = data;
                 
                 if (!data.types || data.types.length === 0) {
                     container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Nenhum dado encontrado para os filtros selecionados.</p>';
@@ -466,6 +547,77 @@
         }
 
         document.getElementById('type-filter-btn').addEventListener('click', loadTypeReportData);
+
+        // PDF Export Functions
+        document.getElementById('label-export-btn').addEventListener('click', function() {
+            if (!window.labelReportData || !window.labelReportData.labels) {
+                alert('Carregue o relatório primeiro.');
+                return;
+            }
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(18);
+            doc.text('Relatório por Etiquetas', 14, 20);
+            
+            const period = document.getElementById('label-period').value;
+            const ws = document.getElementById('label-filter-workspace').value;
+            doc.setFontSize(10);
+            doc.text(`Workspace: ${ws === '__all__' ? 'Todas as contas' : ws}`, 14, 28);
+            doc.text(`Período: ${period === 'all' ? 'Todo período' : period === 'current-month' ? 'Mês atual' : period === 'last-month' ? 'Mês anterior' : period === 'current-year' ? 'Ano atual' : 'Personalizado'}`, 14, 34);
+            
+            const tableData = window.labelReportData.labels.map(item => [
+                item.label,
+                item.total.toString(),
+                item.byWorkspace.map(ws => `${ws.workspace_name}: ${ws.count}`).join(', ')
+            ]);
+            
+            doc.autoTable({
+                head: [['Etiqueta', 'Total', 'Por Conta']],
+                body: tableData,
+                startY: 40,
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [79, 70, 229] }
+            });
+            
+            doc.save('relatorio-etiquetas.pdf');
+        });
+
+        document.getElementById('type-export-btn').addEventListener('click', function() {
+            if (!window.typeReportData || !window.typeReportData.types) {
+                alert('Carregue o relatório primeiro.');
+                return;
+            }
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(18);
+            doc.text('Relatório por Tipos de Demanda', 14, 20);
+            
+            const period = document.getElementById('type-period').value;
+            const ws = document.getElementById('type-filter-workspace').value;
+            doc.setFontSize(10);
+            doc.text(`Workspace: ${ws === '__all__' ? 'Todas as contas' : ws}`, 14, 28);
+            doc.text(`Período: ${period === 'all' ? 'Todo período' : period === 'current-month' ? 'Mês atual' : period === 'last-month' ? 'Mês anterior' : period === 'current-year' ? 'Ano atual' : 'Personalizado'}`, 14, 34);
+            
+            const tableData = window.typeReportData.types.map(item => [
+                item.type,
+                item.total.toString(),
+                item.byWorkspace.map(ws => `${ws.workspace_name}: ${ws.count}`).join(', ')
+            ]);
+            
+            doc.autoTable({
+                head: [['Tipo de Demanda', 'Total', 'Por Conta']],
+                body: tableData,
+                startY: 40,
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [79, 70, 229] }
+            });
+            
+            doc.save('relatorio-tipos-demanda.pdf');
+        });
     </script>
 </body>
 </html>

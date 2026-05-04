@@ -1,19 +1,25 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Templum - Platform</title>
+    <title>Templum</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <style>html.auth-pending body{display:none!important;}</style>
-    <script>document.documentElement.classList.add('auth-pending');if(!localStorage.getItem('templum-auth-token')){window.location.replace('/login.html');}else{document.documentElement.classList.remove('auth-pending');}</script>
+    <style>
+        html.auth-pending body {
+            display: none !important;
+        }
+    </style>
+    <script>document.documentElement.classList.add('auth-pending'); if (!localStorage.getItem('templum-auth-token')) { window.location.replace('/login.html'); } else { document.documentElement.classList.remove('auth-pending'); }</script>
 </head>
+
 <body>
 
     <div class="app-layout">
-        
+
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="sidebar-header">
@@ -26,17 +32,19 @@
             <div class="sidebar-menu">
                 <div class="sidebar-menu" id="sidebar-menu-content"></div>
             </div>
-            
+
             <div class="user-profile">
                 <div class="user-info" style="width:100%;">
-                    <button onclick="localStorage.clear(); window.location.href='/login.html';" style="width:100%; padding: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border:none; border-radius:8px; cursor:pointer; font-weight: 600;"><i class="fa-solid fa-right-from-bracket"></i> Sair do Sistema</button>
+                    <button onclick="localStorage.clear(); window.location.href='/login.html';"
+                        style="width:100%; padding: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border:none; border-radius:8px; cursor:pointer; font-weight: 600;"><i
+                            class="fa-solid fa-right-from-bracket"></i> Sair do Sistema</button>
                 </div>
             </div>
         </aside>
 
         <!-- Main Workspace -->
         <main class="main-content">
-            
+
             <!-- Top Header -->
             <header class="topbar">
                 <div class="search-container">
@@ -48,7 +56,9 @@
                     <button class="icon-btn theme-toggle" id="theme-toggle" aria-label="Alternar Tema">
                         <i class="fa-solid fa-moon"></i>
                     </button>
-                    <button class="icon-btn" id="notifications-btn" aria-label="Abrir notificações"><i class="fa-regular fa-bell"></i><span class="badge" id="notifications-badge">0</span></button>
+                    <button class="icon-btn" id="notifications-btn" aria-label="Abrir notificações"><i
+                            class="fa-regular fa-bell"></i><span class="badge"
+                            id="notifications-badge">0</span></button>
                 </div>
             </header>
 
@@ -59,12 +69,14 @@
                         <h1 id="dyn-board-title">Workspace Ativo</h1>
                         <span class="tag-status">Em andamento</span>
                     </div>
-                    <select id="ws-switcher" data-include-all="true" style="padding: 8px 12px; border-radius: 8px; background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border); font-weight: 600; outline:none; font-family:var(--font); cursor: pointer; width: fit-content;">
+                    <select id="ws-switcher" data-include-all="true"
+                        style="padding: 8px 12px; border-radius: 8px; background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--border); font-weight: 600; outline:none; font-family:var(--font); cursor: pointer; width: fit-content;">
                         <!-- JS INJECT -->
                     </select>
                 </div>
                 <div class="board-filters">
-                    <button id="create-column-btn" class="new-btn" style="display:none;"><i class="fa-solid fa-table-columns"></i> Novo Quadro</button>
+                    <button id="create-column-btn" class="new-btn" style="display:none;"><i
+                            class="fa-solid fa-table-columns"></i> Novo Quadro</button>
                 </div>
             </div>
 
@@ -91,7 +103,9 @@
 
 
     <!-- Botao Global -->
-    <button id="fab-global-create" style="position: fixed; bottom: 32px; right: 32px; width: 64px; height: 64px; border-radius: 32px; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; border: none; cursor: pointer; box-shadow: 0 10px 25px rgba(79,70,229,0.4); z-index: 100; transition: 0.3s;"><i class="fa-solid fa-plus"></i></button>
+    <button id="fab-global-create"
+        style="position: fixed; bottom: 32px; right: 32px; width: 64px; height: 64px; border-radius: 32px; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; border: none; cursor: pointer; box-shadow: 0 10px 25px rgba(79,70,229,0.4); z-index: 100; transition: 0.3s;"><i
+            class="fa-solid fa-plus"></i></button>
 
     <script src="js/menu.js"></script>
     <script src="js/state.js"></script>
@@ -102,4 +116,5 @@
     <script src="js/modal.js"></script>
     <script src="js/init.js"></script>
 </body>
+
 </html>

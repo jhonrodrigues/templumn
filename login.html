@@ -1,75 +1,156 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Templum Agency</title>
+    <title>Login - Templum</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
-        body { 
-            display: flex; align-items: center; justify-content: center; 
-            min-height: 100vh; background: var(--bg-app); 
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--bg-app);
             background-image: radial-gradient(circle at 10% 20%, rgba(79, 70, 229, 0.15) 0%, transparent 40%),
-                              radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 40%);
+                radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 40%);
         }
+
         .login-box {
-            background: var(--glass-bg); backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border); border-radius: 20px;
-            padding: 48px; width: 440px; text-align: center;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 48px;
+            width: 440px;
+            text-align: center;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
+
         .login-logo {
-            width: 56px; height: 56px; background: var(--primary);
-            color: white; border-radius: 16px; display: inline-flex;
-            align-items: center; justify-content: center; font-size: 28px;
-            margin-bottom: 24px; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
+            width: 56px;
+            height: 56px;
+            background: var(--primary);
+            color: white;
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
             overflow: hidden;
         }
+
         .login-logo img {
-            width: 100%; height: 100%; object-fit: contain;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
-        .login-box h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; color: var(--text-main); }
-        .login-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 32px; }
-        
-        .form-group { text-align: left; margin-bottom: 20px; }
-        .form-group label { display: block; font-weight: 600; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
+
+        .login-box h1 {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        .login-box p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
         .form-input {
-            width: 100%; padding: 14px 16px; border-radius: 12px;
-            background: rgba(0,0,0,0.05); border: 1px solid var(--border);
-            color: var(--text-main); font-family: var(--font); font-size: 15px; outline: none; transition: 0.3s;
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            font-family: var(--font);
+            font-size: 15px;
+            outline: none;
+            transition: 0.3s;
         }
-        [data-theme='dark'] .form-input { background: rgba(0,0,0,0.2); }
-        .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }
-        
+
+        [data-theme='dark'] .form-input {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+
         .btn-login {
-            width: 100%; padding: 14px; border-radius: 12px; border: none;
-            background: var(--primary); color: white; font-weight: 700; font-size: 15px;
-            cursor: pointer; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
-            transition: all 0.2s; margin-top: 8px;
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+            transition: all 0.2s;
+            margin-top: 8px;
         }
-        .btn-login:hover { filter: brightness(1.1); transform: translateY(-2px); }
-        .error-msg { color: #ef4444; font-size: 13px; margin-top: 12px; font-weight: 500; display: none; }
+
+        .btn-login:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+        }
+
+        .error-msg {
+            color: #ef4444;
+            font-size: 13px;
+            margin-top: 12px;
+            font-weight: 500;
+            display: none;
+        }
     </style>
 </head>
+
 <body>
 
     <div class="login-box" id="login-logo-container">
-        <div class="login-logo" id="login-logo-img" style="width: 80px; height: 80px; border-radius: 20px; font-size: 40px;"><i class="fa-solid fa-shapes"></i></div>
+        <div class="login-logo" id="login-logo-img"
+            style="width: 80px; height: 80px; border-radius: 20px; font-size: 40px;"><i class="fa-solid fa-shapes"></i>
+        </div>
         <p>Acesse seu painel executivo para gerenciar contas.</p>
 
         <div class="form-group">
             <label>E-mail Corporativo</label>
             <input type="email" id="email" class="form-input" placeholder="Seu e-mail">
         </div>
-        
+
         <div class="form-group">
             <label>Senha Segura</label>
             <input type="password" id="password" class="form-input" placeholder="Sua senha">
         </div>
 
-        <button class="btn-login" id="login-btn">Acessar Plataforma <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i></button>
+        <button class="btn-login" id="login-btn">Acessar Plataforma <i class="fa-solid fa-arrow-right"
+                style="margin-left: 8px;"></i></button>
         <div class="error-msg" id="error-msg">Acesso Negado: E-mail ou Senha incorretos.</div>
     </div>
 
@@ -83,7 +164,7 @@
             } else if (data.primary_color) {
                 logoDiv.style.background = data.primary_color;
             }
-        }).catch(() => {});
+        }).catch(() => { });
 
         const btn = document.getElementById('login-btn');
         const err = document.getElementById('error-msg');
@@ -91,7 +172,7 @@
         btn.addEventListener('click', async () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            
+
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Validando...';
             err.style.display = 'none';
 
@@ -115,7 +196,7 @@
                     err.style.display = 'block';
                     err.innerText = data.error || 'Acesso Negado';
                 }
-            } catch(e) {
+            } catch (e) {
                 err.style.display = 'block';
                 err.innerText = 'Servidor Indisponível';
             } finally {
@@ -124,4 +205,5 @@
         });
     </script>
 </body>
+
 </html>
