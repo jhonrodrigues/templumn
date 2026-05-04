@@ -205,6 +205,34 @@ async function initDb() {
             }
         } catch (e) {}
 
+        // 6. Criar tabela de boards se não existir
+        try {
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS boards (
+                    id VARCHAR(50) PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    icon VARCHAR(50) DEFAULT 'fa-columns',
+                    color VARCHAR(50) DEFAULT '#6366f1',
+                    sort_order INTEGER DEFAULT 0,
+                    is_default BOOLEAN DEFAULT false,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            const defaultBoards = [
+                ['editorial', 'Editorial', 'fa-newspaper', '#4F46E5', 1, true],
+                ['design', 'Design', 'fa-palette', '#8b5cf6', 2, true],
+                ['photo', 'Foto', 'fa-camera', '#06b6d4', 3, true],
+                ['video', 'Vídeo', 'fa-video', '#ef4444', 4, true],
+                ['gestao', 'Gestão', 'fa-briefcase', '#10b981', 5, true]
+            ];
+            for (const b of defaultBoards) {
+                await pool.query(
+                    `INSERT INTO boards (id, name, icon, color, sort_order, is_default) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING`,
+                    b
+                );
+            }
+        } catch (e) {}
+
         console.log('[TEMPLUM] Database schema e tabelas inicializados com sucesso!');
     } catch (err) {
         console.error('[TEMPLUM] Erro crítico ao inicializar tabelas:', err);
@@ -546,6 +574,84 @@ app.delete('/api/user-functions/:id', authGuard, requireRole(['master', 'gestor'
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao excluir função' });
+    }
+});
+
+// =======================
+//   BOARDS API
+// =======================
+app.get('/api/boards', authGuard, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM boards ORDER BY sort_order ASC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao carregar boards' });
+    }
+});
+
+app.post('/api/boards', authGuard, requireRole(['master']), async (req, res) => {
+    try {
+        const { name, icon, color, sort_order } = req.body;
+        if (!name || !name.trim()) {
+            return res.status(400).json({ error: 'Nome obrigatório' });
+        }
+        const id = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const maxOrder = await pool.query('SELECT COALESCE(MAX(sort_order), 0) + 1 as next FROM boards');
+        const nextOrder = sort_order || maxOrder.rows[0].next;
+        
+        await pool.query(
+            'INSERT INTO boards (id, name, icon, color, sort_order, is_default) VALUES ($1, $2, $3, $4, $5, $6)',
+            [id, name.trim(), icon || 'fa-columns', color || '#6366f1', nextOrder, false]
+        );
+        
+        await pool.query(
+            `INSERT INTO columns (id, title, col_order, category) VALUES 
+            ($1, 'A Fazer', 1, $2), ($2 || '-2', 'Em Andamento', 2, $2), ($2 || '-3', 'Concluído', 3, $2)`,
+            [id + '-1', id]
+        );
+        
+        res.json({ success: true, id });
+    } catch (err) {
+        console.error('Erro ao criar board:', err);
+        res.status(500).json({ error: 'Erro ao criar board' });
+    }
+});
+
+app.put('/api/boards/:id', authGuard, requireRole(['master']), async (req, res) => {
+    try {
+        const { name, icon, color, sort_order } = req.body;
+        if (!name || !name.trim()) {
+            return res.status(400).json({ error: 'Nome obrigatório' });
+        }
+        await pool.query('UPDATE boards SET name = $1, icon = $2, color = $3, sort_order = $4 WHERE id = $5', 
+            [name.trim(), icon || 'fa-columns', color || '#6366f1', sort_order || 0, req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao atualizar board' });
+    }
+});
+
+app.delete('/api/boards/:id', authGuard, requireRole(['master']), async (req, res) => {
+    try {
+        const boardId = req.params.id;
+        const boardCheck = await pool.query('SELECT is_default FROM boards WHERE id = $1', [boardId]);
+        if (boardCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Board não encontrado' });
+        }
+        if (boardCheck.rows[0].is_default) {
+            return res.status(400).json({ error: 'Não é possível excluir boards padrão' });
+        }
+        
+        const cardsCount = await pool.query('SELECT COUNT(*) as count FROM cards WHERE category = $1', [boardId]);
+        if (parseInt(cardsCount.rows[0].count) > 0) {
+            return res.status(400).json({ error: 'Exclua os cards deste board primeiro' });
+        }
+        
+        await pool.query('DELETE FROM columns WHERE category = $1', [boardId]);
+        await pool.query('DELETE FROM boards WHERE id = $1', [boardId]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao excluir board' });
     }
 });
 

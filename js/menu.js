@@ -1,10 +1,5 @@
 const menuConfig = {
-    minhaMesa: [
-        { icon: 'fa-table-columns', label: 'Planejamento de Postagem', href: 'index.html?category=editorial', board: 'editorial' },
-        { icon: 'fa-palette', label: 'Produção Agência (Design)', href: 'index.html?category=design', board: 'design' },
-        { icon: 'fa-camera', label: 'Produção de Fotos', href: 'index.html?category=photo', board: 'photo' },
-        { icon: 'fa-video', label: 'Produção de Vídeos', href: 'index.html?category=video', board: 'video' },
-        { icon: 'fa-briefcase', label: 'Gestão Interna', href: 'index.html?category=gestao', board: 'gestao' },
+    otherItems: [
         { icon: 'fa-user-check', label: 'Minhas Tarefas', href: 'mesa.html' },
         { icon: 'fa-video', label: 'Agendamento Captações', href: 'captacoes.html' },
         { icon: 'fa-calendar-days', label: 'Calendário do Mês', href: 'calendario.html' },
@@ -19,23 +14,61 @@ const menuConfig = {
     ]
 };
 
-function renderSidebarMenu() {
+const boardLabels = {
+    'editorial': 'Planejamento de Postagem',
+    'design': 'Produção Agência (Design)',
+    'photo': 'Produção de Fotos',
+    'video': 'Produção de Vídeos',
+    'gestao': 'Gestão Interna'
+};
+
+async function loadBoardsForMenu() {
+    try {
+        const token = localStorage.getItem('templum-auth-token');
+        const res = await fetch('/api/boards', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+            const boards = await res.json();
+            localStorage.setItem('templum-cached-boards', JSON.stringify(boards));
+            return boards;
+        }
+    } catch (e) {}
+    return JSON.parse(localStorage.getItem('templum-cached-boards') || '[]');
+}
+
+async function renderSidebarMenu() {
     const container = document.getElementById('sidebar-menu-content');
     if (!container) return;
 
     const userRole = localStorage.getItem('templum-auth-role');
     const userBoards = JSON.parse(localStorage.getItem('templum-auth-boards') || '["editorial", "design", "photo", "video", "gestao"]');
 
+    const boards = await loadBoardsForMenu();
+    const boardMap = {};
+    boards.forEach(b => { boardMap[b.id] = b; });
+
     let html = '<div class="menu-section"><span class="section-title">Contas / Workspaces</span><ul id="sidebar-ws-list"></ul></div>';
     html += '<div class="menu-section"><span class="section-title">Minha Mesa</span><ul>';
     
-    menuConfig.minhaMesa.forEach(item => {
-        if (item.board && !userBoards.includes(item.board) && userRole !== 'master' && userRole !== 'gestor') return;
-        html += `<li><a href="${item.href}"><i class="fa-solid ${item.icon}"></i> ${item.label}</a></li>`;
+    if (boards.length > 0) {
+        boards.forEach(board => {
+            if (board.id === 'gestao') return;
+            if (board.id !== 'editorial' && userRole !== 'master' && userRole !== 'gestor' && !userBoards.includes(board.id)) return;
+            const label = boardLabels[board.id] || board.name;
+            html += `<li><a href="index.html?category=${board.id}"><i class="fa-solid ${board.icon}"></i> ${label}</a></li>`;
+        });
+    } else {
+        menuConfig.otherItems.filter(i => !i.board).forEach(item => {
+            html += `<li><a href="${item.href}"><i class="fa-solid ${item.icon}"></i> ${item.label}</a></li>`;
+        });
+    }
+    
+    menuConfig.otherItems.forEach(item => {
+        if (!item.board) {
+            html += `<li><a href="${item.href}"><i class="fa-solid ${item.icon}"></i> ${item.label}</a></li>`;
+        }
     });
     html += '</ul></div>';
     
-    // Só mostra Gestão e Liderança para master/gestor
     if (userRole === 'master' || userRole === 'gestor') {
         html += '<div class="menu-section"><span class="section-title">Gestão e Liderança</span><ul>';
         menuConfig.gestao.forEach(item => {

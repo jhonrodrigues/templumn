@@ -204,6 +204,30 @@
                 </div>
 
                 <div class="settings-card" style="margin-top: 24px;">
+                    <h2 style="font-size: 18px; margin-bottom: 16px; color: var(--text-main);"><i class="fa-solid fa-columns"></i> Kanbans/Boards</h2>
+                    <div class="form-group">
+                        <label>Criar Novo Board</label>
+                        <p>Crie um novo kanban com colunas padrão (A Fazer, Em Andamento, Concluído).</p>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <input type="text" id="new-board-name" class="text-input" placeholder="Nome do board (ex: Eventos)" style="flex:1; min-width: 200px;">
+                            <input type="color" id="new-board-color" value="#6366f1" style="width: 50px; height: 42px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                            <select id="new-board-icon" class="text-input" style="max-width: 150px;">
+                                <option value="fa-columns">Colunas</option>
+                                <option value="fa-calendar">Calendário</option>
+                                <option value="fa-calendar-check">Evento</option>
+                                <option value="fa-bullhorn">Marketing</option>
+                                <option value="fa-users">Equipe</option>
+                                <option value="fa-chart-line">Métricas</option>
+                                <option value="fa-tasks">Tarefas</option>
+                                <option value="fa-clipboard">Projetos</option>
+                            </select>
+                            <button class="btn-save" id="create-board-btn"><i class="fa-solid fa-plus"></i> Criar Board</button>
+                        </div>
+                    </div>
+                    <div id="board-admin-list" class="label-admin-list"></div>
+                </div>
+
+                <div class="settings-card" style="margin-top: 24px;">
                     <div class="form-group">
                         <label>Etiquetas Padrão</label>
                         <p>Crie etiquetas reutilizáveis para aplicar rapidamente em várias demandas.</p>
@@ -488,6 +512,105 @@
         loadWorkspaceAdmin();
         loadLabelAdmin();
         loadDemandTypeAdmin();
+        loadBoardAdmin();
+
+        const boardList = document.getElementById('board-admin-list');
+        
+        async function loadBoardAdmin() {
+            try {
+                const response = await fetch('/api/boards', { headers: getAuthHeaders() });
+                const boards = await response.json();
+                boardList.innerHTML = boards.map((board) => `
+                    <div class="label-admin-item" data-board-id="${board.id}">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <i class="fa-solid ${board.icon}" style="color: ${board.color}; font-size: 20px;"></i>
+                            <div>
+                                <label style="display:block; margin-bottom:4px; font-size:12px; color:var(--text-muted); font-weight:600;">NOME</label>
+                                <input type="text" class="text-input board-name" value="${board.name}" style="min-width: 150px;">
+                            </div>
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:4px; font-size:12px; color:var(--text-muted); font-weight:600;">COR</label>
+                            <input type="color" class="board-color" value="${board.color || '#6366f1'}" style="width:50px; height:42px; border:1px solid var(--border); border-radius:8px;">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:4px; font-size:12px; color:var(--text-muted); font-weight:600;">ORDEM</label>
+                            <input type="number" class="text-input board-sort" value="${board.sort_order || 0}" style="max-width: 70px;">
+                        </div>
+                        <button class="btn-save board-save-btn"><i class="fa-solid fa-save"></i></button>
+                        ${!board.is_default ? '<button class="danger-btn board-delete-btn"><i class="fa-solid fa-trash"></i></button>' : '<span style="padding:12px; color:var(--text-muted); font-size:12px;">Padrão</span>'}
+                    </div>
+                `).join('');
+
+                boardList.querySelectorAll('.board-save-btn').forEach((button) => {
+                    button.addEventListener('click', async () => {
+                        const item = button.closest('[data-board-id]');
+                        const id = item.dataset.boardId;
+                        const name = item.querySelector('.board-name').value.trim();
+                        const color = item.querySelector('.board-color').value;
+                        const sort_order = Number(item.querySelector('.board-sort').value || 0);
+                        if (!name) return alert('Digite o nome do board.');
+                        const original = button.innerHTML;
+                        button.innerHTML = 'Salvando...';
+                        try {
+                            const response = await fetch('/api/boards/' + id, {
+                                method: 'PUT',
+                                headers: authHeaders,
+                                body: JSON.stringify({ name, color, sort_order })
+                            });
+                            if (!response.ok) throw new Error('save failed');
+                            loadBoardAdmin();
+                        } catch (err) {
+                            alert('Não foi possível salvar o board.');
+                        } finally {
+                            button.innerHTML = original;
+                        }
+                    });
+                });
+
+                boardList.querySelectorAll('.board-delete-btn').forEach((button) => {
+                    button.addEventListener('click', async () => {
+                        const item = button.closest('[data-board-id]');
+                        const id = item.dataset.boardId;
+                        if (!confirm('Excluir este board e todas as suas colunas?')) return;
+                        try {
+                            const response = await fetch('/api/boards/' + id, { method: 'DELETE', headers: authHeaders });
+                            const data = await response.json().catch(() => ({}));
+                            if (!response.ok) throw new Error(data.error || 'delete failed');
+                            loadBoardAdmin();
+                        } catch (err) {
+                            alert(err.message || 'Não foi possível excluir o board.');
+                        }
+                    });
+                });
+            } catch (err) {
+                boardList.innerHTML = '<div style="color:var(--text-muted);">Erro ao carregar boards.</div>';
+            }
+        }
+
+        document.getElementById('create-board-btn').addEventListener('click', async () => {
+            const nameInput = document.getElementById('new-board-name');
+            const colorInput = document.getElementById('new-board-color');
+            const iconInput = document.getElementById('new-board-icon');
+            const name = nameInput.value.trim();
+            const color = colorInput.value;
+            const icon = iconInput.value;
+            if (!name) return alert('Digite o nome do board.');
+            try {
+                const response = await fetch('/api/boards', {
+                    method: 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify({ name, color, icon })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || 'create failed');
+                nameInput.value = '';
+                loadBoardAdmin();
+                alert('Board criado com sucesso! Colunas padrão adicionadas.');
+            } catch (err) {
+                alert(err.message || 'Não foi possível criar o board.');
+            }
+        });
 
         async function loadDemandTypeAdmin() {
             const list = document.getElementById('demand-type-admin-list');

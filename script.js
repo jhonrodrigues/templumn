@@ -194,11 +194,20 @@ async function initWorkspaces() {
             const dynamicTitle = document.getElementById('dyn-board-title');
             if (dynamicTitle) {
                 const wsName = activeWorkspaceId === '__all__' ? 'Todas as contas' : (wss.find(w => w.id === activeWorkspaceId)?.name || 'Board');
-                const catName = activeCategory === 'design' ? ' (Produção Agência)' : 
+                let catName = '';
+                try {
+                    const cachedBoards = JSON.parse(localStorage.getItem('templum-cached-boards') || '[]');
+                    const board = cachedBoards.find(b => b.id === activeCategory);
+                    if (board) {
+                        catName = ' (' + board.name + ')';
+                    }
+                } catch(e) {
+                    catName = activeCategory === 'design' ? ' (Produção Agência)' : 
                              activeCategory === 'photo' ? ' (Produção de Fotos)' :
                              activeCategory === 'video' ? ' (Produção de Vídeos)' :
                              activeCategory === 'gestao' ? ' (Gestão Interna)' :
                              ' (Editorial)';
+                }
                 dynamicTitle.innerText = wsName + catName;
             }
             sw.onchange = (e) => {
@@ -425,11 +434,22 @@ async function loadLabelPresets() {
     try {
         const response = await fetch('/api/label-presets', { headers: getAuthHeaders() });
         if (!response.ok) return;
-        labelPresets = await response.json();
-        renderPresetLabels();
-    } catch (err) {
+        window.labelPresets = await response.json();
+    } catch(err) {
         console.error('Label presets error', err);
     }
+}
+
+async function loadBoards() {
+    try {
+        const response = await fetch('/api/boards', { headers: getAuthHeaders() });
+        if (!response.ok) return;
+        const boards = await response.json();
+        localStorage.setItem('templum-cached-boards', JSON.stringify(boards));
+    } catch(err) {
+        console.error('Boards load error', err);
+    }
+}
 }
 
 async function initBranding() {
@@ -477,6 +497,7 @@ syncCurrentUser();
 loadStateFromServer();
 loadNotifications();
 loadLabelPresets();
+loadBoards();
 
 async function loadNotifications() {
     const badge = document.getElementById('notifications-badge');

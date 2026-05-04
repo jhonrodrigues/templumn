@@ -58,6 +58,24 @@ CREATE TABLE IF NOT EXISTS workspaces (
     priority INTEGER DEFAULT 100
 );
 
+CREATE TABLE IF NOT EXISTS boards (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    icon VARCHAR(50) DEFAULT 'fa-columns',
+    color VARCHAR(50) DEFAULT '#6366f1',
+    sort_order INTEGER DEFAULT 0,
+    is_default BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO boards (id, name, icon, color, sort_order, is_default) VALUES
+('editorial', 'Editorial', 'fa-newspaper', '#4F46E5', 1, true),
+('design', 'Design', 'fa-palette', '#8b5cf6', 2, true),
+('photo', 'Foto', 'fa-camera', '#06b6d4', 3, true),
+('video', 'Vídeo', 'fa-video', '#ef4444', 4, true),
+('gestao', 'Gestão', 'fa-briefcase', '#10b981', 5, true)
+ON CONFLICT (id) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS label_presets (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
