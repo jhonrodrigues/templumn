@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const res = await fetch(`/api/jarvis/demands/${currentDemand.id}`, {
                 method: 'PATCH',
-                headers: getAuthHeaders(),
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
             });
             if (res.ok) {
@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // First save any edits
             await fetch(`/api/jarvis/demands/${currentDemand.id}`, {
                 method: 'PATCH',
-                headers: getAuthHeaders(),
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     title: document.getElementById('form-title').value.trim(),
                     ministry: document.getElementById('form-ministry').value.trim(),
@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Then approve
             const res = await fetch(`/api/jarvis/demands/${currentDemand.id}/approve`, {
                 method: 'POST',
-                headers: getAuthHeaders(),
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ workspace_id, column_id, assignee, notes })
             });
             
@@ -267,7 +267,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const res = await fetch(`/api/jarvis/demands/${currentDemand.id}/reject`, {
                 method: 'POST',
-                headers: getAuthHeaders(),
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ reason: reason.trim() })
             });
             
