@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         demands.forEach(demand => {
             const li = document.createElement('li');
-            li.className = \`demand-item \${demand.urgency}\`;
+            li.className = `demand-item ${demand.urgency}`;
             if (currentDemand && currentDemand.id === demand.id) li.classList.add('selected');
 
             let badgeHtml = '';
@@ -113,16 +113,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const timeStr = new Date(demand.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
-            li.innerHTML = \`
+            li.innerHTML = `
                 <div class="demand-header">
-                    <span class="demand-title">\${escapeHTML(demand.title)}</span>
+                    <span class="demand-title">${escapeHTML(demand.title)}</span>
                 </div>
                 <div class="demand-meta">
-                    \${badgeHtml}
-                    \${demand.ministry ? \`<span class="badge"><i class="fa-solid fa-church"></i> \${escapeHTML(demand.ministry)}</span>\` : ''}
-                    <span><i class="fa-solid fa-clock"></i> \${timeStr}</span>
+                    ${badgeHtml}
+                    ${demand.ministry ? `<span class="badge"><i class="fa-solid fa-church"></i> ${escapeHTML(demand.ministry)}</span>` : ''}
+                    <span><i class="fa-solid fa-clock"></i> ${timeStr}</span>
                 </div>
-            \`;
+            `;
 
             li.addEventListener('click', () => {
                 document.querySelectorAll('.demand-item').forEach(el => el.classList.remove('selected'));
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         try {
-            const res = await fetch(\`/api/jarvis/demands/\${currentDemand.id}\`, {
+            const res = await fetch(`/api/jarvis/demands/${currentDemand.id}`, {
                 method: 'PATCH',
                 headers: getAuthHeaders(),
                 body: JSON.stringify(body)
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             // First save any edits
-            await fetch(\`/api/jarvis/demands/\${currentDemand.id}\`, {
+            await fetch(`/api/jarvis/demands/${currentDemand.id}`, {
                 method: 'PATCH',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             // Then approve
-            const res = await fetch(\`/api/jarvis/demands/\${currentDemand.id}/approve\`, {
+            const res = await fetch(`/api/jarvis/demands/${currentDemand.id}/approve`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({ workspace_id, column_id, assignee, notes })
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.disabled = true;
 
         try {
-            const res = await fetch(\`/api/jarvis/demands/\${currentDemand.id}/reject\`, {
+            const res = await fetch(`/api/jarvis/demands/${currentDemand.id}/reject`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify({ reason: reason.trim() })
