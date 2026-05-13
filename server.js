@@ -172,6 +172,10 @@ async function initDb() {
         try { await pool.query("INSERT INTO user_functions (name, icon, color, sort_order) SELECT 'Videomaker', 'fa-video', '#ef4444', 5 WHERE NOT EXISTS (SELECT 1 FROM user_functions WHERE name = 'Videomaker');"); } catch(e){}
         try { await pool.query("INSERT INTO user_functions (name, icon, color, sort_order) SELECT 'Fotógrafo', 'fa-camera', '#06b6d4', 6 WHERE NOT EXISTS (SELECT 1 FROM user_functions WHERE name = 'Fotógrafo');"); } catch(e){}
 
+        try { await pool.query("ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS jarvis_api_key VARCHAR(255);"); } catch(e){
+            try { await pool.query("ALTER TABLE system_settings ADD COLUMN jarvis_api_key VARCHAR(255);"); } catch(e2){}
+        }
+
         // 2. Executar init.sql para garantir estrutura base e dados iniciais
         const sql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
         await pool.query(sql);
@@ -1661,17 +1665,50 @@ app.post('/api/settings', authGuard, requireRole(['master', 'gestor']), async (r
 //   JARVIS TRIAGE API
 // =======================
 // Authentication via API KEY for the Jarvis Webhook
-const JARVIS_API_KEY = process.env.JARVIS_API_KEY || 'templum-jarvis-dev-key';
-
-function jarvisAuth(req, res, next) {
+// Authentication via API KEY for the Jarvis Webhook
+async function jarvisAuth(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    if (token === JARVIS_API_KEY) {
+    
+    let validKey = process.env.JARVIS_API_KEY || 'templum-jarvis-dev-key';
+    try {
+        const settingsRes = await pool.query('SELECT jarvis_api_key FROM system_settings WHERE id = 1');
+        if (settingsRes.rows.length > 0 && settingsRes.rows[0].jarvis_api_key) {
+            validKey = settingsRes.rows[0].jarvis_api_key;
+        }
+    } catch(e) {}
+    
+    if (token === validKey) {
         next();
     } else {
         res.status(401).json({ error: 'Unauthorized Jarvis API Key' });
     }
 }
+
+app.get('/api/settings/jarvis-key', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const result = await pool.query('SELECT jarvis_api_key FROM system_settings WHERE id = 1');
+        const key = result.rows.length > 0 ? result.rows[0].jarvis_api_key : null;
+        res.json({ key });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao buscar chave' });
+    }
+});
+
+app.post('/api/settings/jarvis-key/generate', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    try {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let newKey = 'jarvis_';
+        for(let i = 0; i < 32; i++) {
+            newKey += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        // Assegura que o registro com id 1 existe
+        await pool.query('INSERT INTO system_settings (id, primary_color, jarvis_api_key) VALUES (1, $1, $2) ON CONFLICT (id) DO UPDATE SET jarvis_api_key = $2', ['#4F46E5', newKey]);
+        res.json({ success: true, key: newKey });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao gerar chave' });
+    }
+});
 
 app.post('/api/jarvis/demand', jarvisAuth, async (req, res) => {
     const { title, ministry, deadline, urgency, demand_type, source, source_id } = req.body;

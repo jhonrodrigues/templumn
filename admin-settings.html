@@ -272,6 +272,20 @@
                     </div>
                     <div id="user-function-admin-list" class="label-admin-list"></div>
                 </div>
+
+                <div class="settings-card" style="margin-top: 24px;">
+                    <h2 style="font-size: 18px; margin-bottom: 16px; color: var(--text-main);"><i class="fa-solid fa-robot"></i> Integração Jarvis AI</h2>
+                    <div class="form-group">
+                        <label>Chave de API do Jarvis (JARVIS_API_KEY)</label>
+                        <p>Esta chave é usada para autenticar as requisições que chegam do Jarvis pelo WhatsApp para criar demandas na tela de Triagem. O Jarvis deve usar essa chave no cabeçalho <code style="background:var(--bg-app);padding:2px 6px;border-radius:4px;font-size:12px;">Authorization: Bearer CHAVE</code></p>
+                        <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                            <input type="password" id="jarvis-api-key-input" class="text-input" readonly placeholder="Nenhuma chave gerada no banco ainda. Usando .env" style="flex:1; min-width: 250px;">
+                            <button class="btn-save" id="jarvis-reveal-btn" style="background: var(--bg-app); color: var(--text-main); border: 1px solid var(--border);"><i class="fa-solid fa-eye"></i></button>
+                            <button class="btn-save" id="jarvis-copy-btn" style="background: var(--bg-app); color: var(--text-main); border: 1px solid var(--border);"><i class="fa-solid fa-copy"></i> Copiar</button>
+                            <button class="btn-save" id="jarvis-generate-btn"><i class="fa-solid fa-rotate"></i> Gerar Nova Chave</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -888,6 +902,67 @@
                 saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Identidade';
             }
         });
+
+        // Jarvis API Key Admin
+        const jarvisInput = document.getElementById('jarvis-api-key-input');
+        const jarvisRevealBtn = document.getElementById('jarvis-reveal-btn');
+        const jarvisCopyBtn = document.getElementById('jarvis-copy-btn');
+        const jarvisGenerateBtn = document.getElementById('jarvis-generate-btn');
+
+        async function loadJarvisKey() {
+            try {
+                const response = await fetch('/api/settings/jarvis-key', { headers: getAuthHeaders() });
+                const data = await response.json();
+                if (data.key) {
+                    jarvisInput.value = data.key;
+                } else {
+                    jarvisInput.value = '';
+                }
+            } catch (err) {
+                console.error('Erro ao buscar chave do jarvis', err);
+            }
+        }
+
+        jarvisRevealBtn.addEventListener('click', () => {
+            if (jarvisInput.type === 'password') {
+                jarvisInput.type = 'text';
+                jarvisRevealBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+            } else {
+                jarvisInput.type = 'password';
+                jarvisRevealBtn.innerHTML = '<i class="fa-solid fa-eye"></i>';
+            }
+        });
+
+        jarvisCopyBtn.addEventListener('click', () => {
+            if (!jarvisInput.value) return alert('Nenhuma chave para copiar.');
+            jarvisInput.type = 'text';
+            jarvisInput.select();
+            document.execCommand('copy');
+            jarvisInput.type = 'password';
+            jarvisCopyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado';
+            setTimeout(() => {
+                jarvisCopyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> Copiar';
+            }, 2000);
+        });
+
+        jarvisGenerateBtn.addEventListener('click', async () => {
+            if (!confirm('Atenção: Gerar uma nova chave invalidará a chave atual. O Jarvis no n8n ou código Python vai parar de funcionar até você atualizar a chave lá. Continuar?')) return;
+            jarvisGenerateBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+            try {
+                const response = await fetch('/api/settings/jarvis-key/generate', { method: 'POST', headers: authHeaders });
+                const data = await response.json();
+                if (data.success && data.key) {
+                    jarvisInput.value = data.key;
+                    alert('Nova chave gerada com sucesso! Atualize no Jarvis.');
+                }
+            } catch (err) {
+                alert('Erro ao gerar nova chave.');
+            } finally {
+                jarvisGenerateBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Gerar Nova Chave';
+            }
+        });
+
+        loadJarvisKey();
     </script>
 </body>
 </html>
