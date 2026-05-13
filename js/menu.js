@@ -7,6 +7,7 @@ const menuConfig = {
         { icon: 'fa-user-gear', label: 'Minha Conta', href: 'minha-conta.html' }
     ],
     gestao: [
+        { icon: 'fa-inbox', label: 'Triagem Jarvis <span id="jarvis-badge" style="background:#ef4444;color:#fff;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:bold;margin-left:8px;display:none;">0</span>', href: 'triagem.html', roles: ['master', 'gestor'] },
         { icon: 'fa-chart-pie', label: 'Relatórios da Agência', href: 'gestao.html' },
         { icon: 'fa-users', label: 'Equipe e Acessos', href: 'usuarios.html' },
         { icon: 'fa-tags', label: 'Etapas Padrão', href: 'etiquetas.html' },
@@ -86,3 +87,30 @@ if (document.readyState === 'loading') {
 } else {
     renderSidebarMenu();
 }
+
+async function pollJarvisDemands() {
+    const userRole = localStorage.getItem('templum-auth-role');
+    if (userRole !== 'master' && userRole !== 'gestor') return;
+
+    try {
+        const token = localStorage.getItem('templum-auth-token');
+        if (!token) return;
+        const res = await fetch('/api/jarvis/demands/count', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+            const data = await res.json();
+            const badge = document.getElementById('jarvis-badge');
+            if (badge) {
+                if (data.count > 0) {
+                    badge.textContent = data.count;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+    } catch (e) {}
+}
+
+// Polling interval 30s
+setInterval(pollJarvisDemands, 30000);
+setTimeout(pollJarvisDemands, 2000);

@@ -205,7 +205,33 @@ async function initDb() {
             }
         } catch (e) {}
 
-        // 6. Criar tabela de boards se não existir
+        // 6. Criar tabela de jarvis_demands se não existir
+        try {
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS jarvis_demands (
+                    id SERIAL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    ministry TEXT,
+                    deadline DATE,
+                    urgency TEXT DEFAULT 'normal',
+                    demand_type TEXT,
+                    source TEXT DEFAULT 'whatsapp',
+                    source_id TEXT UNIQUE,
+                    status TEXT DEFAULT 'pending',
+                    workspace_id VARCHAR(50),
+                    card_id VARCHAR(50),
+                    notes TEXT,
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    reviewed_at TIMESTAMPTZ,
+                    reviewed_by INTEGER
+                );
+            `);
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_jarvis_status ON jarvis_demands(status);`);
+        } catch (e) {
+            console.error('[TEMPLUM] Erro ao criar tabela jarvis_demands:', e);
+        }
+
+        // 7. Criar tabela de boards se não existir
         try {
             await pool.query(`
                 CREATE TABLE IF NOT EXISTS boards (
@@ -1628,6 +1654,175 @@ app.post('/api/settings', authGuard, requireRole(['master', 'gestor']), async (r
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to update settings' });
+    }
+});
+
+// =======================
+//   JARVIS TRIAGE API
+// =======================
+// Authentication via API KEY for the Jarvis Webhook
+const JARVIS_API_KEY = process.env.JARVIS_API_KEY || 'templum-jarvis-dev-key';
+
+function jarvisAuth(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token === JARVIS_API_KEY) {
+        next();
+    } else {
+        res.status(401).json({ error: 'Unauthorized Jarvis API Key' });
+    }
+}
+
+app.post('/api/jarvis/demand', jarvisAuth, async (req, res) => {
+    const { title, ministry, deadline, urgency, demand_type, source, source_id } = req.body;
+    if (!title || !source_id) return res.status(400).json({ error: 'title and source_id are required' });
+    
+    try {
+        const result = await pool.query(
+            `INSERT INTO jarvis_demands (title, ministry, deadline, urgency, demand_type, source, source_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (source_id) DO NOTHING
+             RETURNING id, status`,
+            [title.substring(0, 120), ministry, deadline || null, urgency || 'normal', demand_type, source || 'whatsapp', source_id]
+        );
+        
+        if (result.rows.length === 0) {
+            // Already exists
+            const existing = await pool.query('SELECT id, status FROM jarvis_demands WHERE source_id = $1', [source_id]);
+            return res.json({ id: existing.rows[0].id, status: existing.rows[0].status, duplicate: true });
+        }
+        res.status(201).json({ id: result.rows[0].id, status: result.rows[0].status });
+    } catch (err) {
+        console.error('Jarvis Insert Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.get('/api/jarvis/demands', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    const status = req.query.status || 'pending';
+    const limit = parseInt(req.query.limit) || 50;
+    try {
+        const result = await pool.query(
+            `SELECT * FROM jarvis_demands 
+             WHERE status = $1 
+             ORDER BY 
+               CASE WHEN urgency = 'urgent' THEN 0 ELSE 1 END,
+               created_at ASC 
+             LIMIT $2`,
+            [status, limit]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch jarvis demands' });
+    }
+});
+
+app.get('/api/jarvis/demands/count', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    const status = req.query.status || 'pending';
+    try {
+        const result = await pool.query('SELECT COUNT(*) FROM jarvis_demands WHERE status = $1', [status]);
+        res.json({ count: parseInt(result.rows[0].count) });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to count jarvis demands' });
+    }
+});
+
+app.patch('/api/jarvis/demands/:id', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    const { title, ministry, deadline, urgency, demand_type, notes } = req.body;
+    try {
+        await pool.query(
+            `UPDATE jarvis_demands 
+             SET title = COALESCE($1, title), 
+                 ministry = COALESCE($2, ministry),
+                 deadline = COALESCE($3, deadline),
+                 urgency = COALESCE($4, urgency),
+                 demand_type = COALESCE($5, demand_type),
+                 notes = COALESCE($6, notes)
+             WHERE id = $7`,
+            [title, ministry, deadline, urgency, demand_type, notes, req.params.id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update demand' });
+    }
+});
+
+app.post('/api/jarvis/demands/:id/approve', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    const { workspace_id, column_id, assignee, notes } = req.body;
+    if (!workspace_id || !column_id) return res.status(400).json({ error: 'workspace_id and column_id are required' });
+    
+    try {
+        await pool.query('BEGIN');
+        
+        const demandRes = await pool.query('SELECT * FROM jarvis_demands WHERE id = $1 FOR UPDATE', [req.params.id]);
+        if (demandRes.rows.length === 0) throw new Error('Demand not found');
+        const demand = demandRes.rows[0];
+        
+        if (demand.status !== 'pending') {
+            await pool.query('ROLLBACK');
+            return res.status(400).json({ error: 'Demand is not pending' });
+        }
+        
+        // Determinate Category by looking at the column
+        const colRes = await pool.query('SELECT category FROM columns WHERE id = $1', [column_id]);
+        const category = colRes.rows.length > 0 ? colRes.rows[0].category : 'editorial';
+        
+        const cardId = 'card-' + Date.now() + Math.floor(Math.random()*1000);
+        const orderRes = await pool.query('SELECT COALESCE(MAX(card_order), 0) + 1 as next_order FROM cards WHERE column_id = $1', [column_id]);
+        const order = orderRes.rows.length > 0 ? orderRes.rows[0].next_order : 1;
+        
+        const userResult = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.user.id]);
+        const createdBy = userResult.rows.length > 0 ? (userResult.rows[0].name || userResult.rows[0].email) : 'Atendimento';
+        
+        let labels = [];
+        if (demand.ministry) {
+            labels.push({ text: demand.ministry, color: '#3b82f6' });
+        }
+        if (demand.urgency === 'high' || demand.urgency === 'urgent') {
+            labels.push({ text: 'Urgente', color: '#ef4444' });
+        }
+        
+        const desc = `[Demanda via Jarvis - ${demand.source}]\n\nNotas do atendimento:\n${notes || ''}`;
+        
+        await pool.query(
+            `INSERT INTO cards (id, column_id, title, description, card_order, workspace_id, assignee, visible_workspaces, category, created_by, demand_type, priority, deadline, labels) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+            [cardId, column_id, demand.title, desc, order, workspace_id, assignee || null, JSON.stringify([workspace_id]), category, createdBy, demand.demand_type || null, demand.urgency, demand.deadline, JSON.stringify(labels)]
+        );
+        
+        await pool.query(
+            `UPDATE jarvis_demands SET status = 'approved', card_id = $1, workspace_id = $2, notes = $3, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $4 WHERE id = $5`,
+            [cardId, workspace_id, notes, req.user.id, req.params.id]
+        );
+        
+        await pool.query('COMMIT');
+        res.json({ success: true, demand_id: demand.id, card_id: cardId });
+    } catch (err) {
+        await pool.query('ROLLBACK');
+        console.error('Approve error:', err);
+        res.status(500).json({ error: 'Failed to approve demand' });
+    }
+});
+
+app.post('/api/jarvis/demands/:id/reject', authGuard, requireRole(['master', 'gestor']), async (req, res) => {
+    const { reason } = req.body;
+    try {
+        await pool.query(
+            `UPDATE jarvis_demands SET status = 'rejected', notes = $1, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $2 WHERE id = $3`,
+            [reason, req.user.id, req.params.id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to reject demand' });
+    }
+});
+
+app.get('/api/columns', authGuard, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, title, category FROM columns ORDER BY category, col_order');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch columns' });
     }
 });
 

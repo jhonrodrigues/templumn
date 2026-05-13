@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Triagem Jarvis - Templum</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>html.auth-pending body{display:none!important;}</style>
+    <script>document.documentElement.classList.add('auth-pending');if(!localStorage.getItem('templum-auth-token')){window.location.replace('/login.html');}else{document.documentElement.classList.remove('auth-pending');}</script>
+    <style>
+        .triage-container { padding: 32px; height: calc(100vh - 80px); display: flex; flex-direction: column; }
+        .triage-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; height: 100%; min-height: 0; }
+        
+        .triage-panel {
+            background: var(--bg-surface); border: 1px solid var(--border);
+            border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .panel-header {
+            padding: 20px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .panel-title { font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+        
+        .demand-list { flex: 1; overflow-y: auto; padding: 12px; list-style: none; margin: 0; }
+        .demand-item {
+            background: var(--bg-app); border: 1px solid var(--border); border-radius: 8px;
+            padding: 16px; margin-bottom: 12px; cursor: pointer; transition: 0.2s;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .demand-item:hover, .demand-item.selected { border-color: var(--primary); background: rgba(99, 102, 241, 0.05); }
+        .demand-item.urgent { border-left: 4px solid #ef4444; }
+        .demand-item.high { border-left: 4px solid #f97316; }
+        .demand-item.normal { border-left: 4px solid #3b82f6; }
+        .demand-item.low { border-left: 4px solid #6b7280; }
+        
+        .demand-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .demand-title { font-weight: 600; font-size: 15px; color: var(--text-main); margin-bottom: 4px; }
+        .demand-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--text-muted); }
+        
+        .badge { padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 11px; }
+        .badge.bg-blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .badge.bg-red { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        
+        .panel-content { padding: 24px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-label { font-size: 13px; font-weight: 600; color: var(--text-main); }
+        .form-control { 
+            padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); 
+            background: var(--bg-app); color: var(--text-main); font-size: 14px; 
+            font-family: inherit; width: 100%; outline: none;
+        }
+        .form-control:focus { border-color: var(--primary); }
+        textarea.form-control { resize: vertical; min-height: 80px; }
+        
+        .action-buttons { display: flex; gap: 12px; margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border); }
+        .btn { padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary { background: var(--bg-app); color: var(--text-main); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--border); }
+
+        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center; padding: 40px; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+        @media (max-width: 1024px) {
+            .triage-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon"><i class="fa-solid fa-shapes"></i></div>
+                    <span class="logo-text">Templum</span>
+                </div>
+            </div>
+
+            <div class="sidebar-menu">
+                <div class="sidebar-menu" id="sidebar-menu-content"></div>
+            </div>
+            
+            <div class="user-profile">
+                <div class="user-info" style="width:100%;">
+                    <button onclick="localStorage.clear(); window.location.href='/login.html';" style="width:100%; padding: 10px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border:none; border-radius:8px; cursor:pointer; font-weight: 600;"><i class="fa-solid fa-right-from-bracket"></i> Sair do Sistema</button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="search-container"><i class="fa-solid fa-search"></i><input type="text" placeholder="Buscar... (inativo nesta tela)"></div>
+                <div class="topbar-actions"><button class="icon-btn theme-toggle" id="theme-toggle"><i class="fa-solid fa-moon"></i></button></div>
+            </header>
+
+            <div class="triage-container">
+                <div style="margin-bottom: 24px;">
+                    <h1 style="font-size: 24px;">Fila de Triagem Jarvis</h1>
+                    <p style="color: var(--text-muted);">Demandas captadas automaticamente aguardando aprovação para entrarem no Kanban.</p>
+                </div>
+
+                <div class="triage-layout">
+                    <!-- Esquerda: Lista de Demandas -->
+                    <div class="triage-panel">
+                        <div class="panel-header">
+                            <div class="panel-title"><i class="fa-solid fa-inbox"></i> Caixa de Entrada</div>
+                            <span class="badge bg-blue" id="pending-count">0 pendentes</span>
+                        </div>
+                        <ul class="demand-list" id="demand-list">
+                            <div class="empty-state">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                                <p>Carregando demandas...</p>
+                            </div>
+                        </ul>
+                    </div>
+
+                    <!-- Direita: Painel de Aprovação/Edição -->
+                    <div class="triage-panel" id="action-panel">
+                        <div class="panel-header">
+                            <div class="panel-title"><i class="fa-solid fa-sliders"></i> Direcionamento</div>
+                        </div>
+                        
+                        <div class="empty-state" id="panel-empty">
+                            <i class="fa-solid fa-hand-pointer"></i>
+                            <p>Selecione uma demanda na lista para iniciar a triagem.</p>
+                        </div>
+
+                        <div class="panel-content" id="panel-form" style="display: none;">
+                            <input type="hidden" id="current-demand-id">
+                            
+                            <div class="form-group">
+                                <label class="form-label">Título da Demanda</label>
+                                <input type="text" class="form-control" id="form-title">
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div class="form-group">
+                                    <label class="form-label">Ministério/Origem</label>
+                                    <input type="text" class="form-control" id="form-ministry">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Prazo (Deadline)</label>
+                                    <input type="date" class="form-control" id="form-deadline">
+                                </div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div class="form-group">
+                                    <label class="form-label">Urgência</label>
+                                    <select class="form-control" id="form-urgency">
+                                        <option value="low">Baixa</option>
+                                        <option value="normal">Normal</option>
+                                        <option value="high">Alta</option>
+                                        <option value="urgent">Urgente</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Tipo de Demanda</label>
+                                    <input type="text" class="form-control" id="form-type" placeholder="Ex: design, video, foto">
+                                </div>
+                            </div>
+
+                            <hr style="border-top: 1px solid var(--border); margin: 8px 0;">
+
+                            <div class="form-group">
+                                <label class="form-label">Workspace de Destino <span style="color:#ef4444">*</span></label>
+                                <select class="form-control" id="form-workspace">
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div class="form-group">
+                                    <label class="form-label">Quadro/Coluna <span style="color:#ef4444">*</span></label>
+                                    <select class="form-control" id="form-column">
+                                        <option value="">Selecione um workspace primeiro</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Atribuir para</label>
+                                    <select class="form-control" id="form-assignee">
+                                        <option value="">(Sem responsável)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Notas do Atendimento</label>
+                                <textarea class="form-control" id="form-notes" placeholder="Adicione instruções extras para a equipe..."></textarea>
+                            </div>
+
+                            <div class="action-buttons">
+                                <button class="btn btn-success" id="btn-approve"><i class="fa-solid fa-check"></i> Aprovar e Criar</button>
+                                <button class="btn btn-secondary" id="btn-save"><i class="fa-solid fa-floppy-disk"></i> Apenas Salvar</button>
+                                <button class="btn btn-danger" id="btn-reject"><i class="fa-solid fa-xmark"></i> Rejeitar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/menu.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/triagem.js"></script>
+</body>
+</html>
