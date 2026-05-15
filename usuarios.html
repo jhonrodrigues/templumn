@@ -252,7 +252,8 @@
                     </td>
                     <td><span style="color:#10b981; font-size:13px; font-weight:600;"><i class="fa-solid fa-circle" style="font-size:8px; margin-right:4px;"></i>Ativo</span></td>
                     <td>
-                        <button class="btn" style="background:transparent; color:red; padding:8px 10px;" onclick="delUser(${u.id})"><i class="fa-solid fa-trash"></i></button>
+                        <button class="btn" style="background:transparent; color:var(--primary); padding:8px 10px;" onclick="resetUserPassword(${u.id})" title="Redefinir Senha"><i class="fa-solid fa-key"></i></button>
+                        <button class="btn" style="background:transparent; color:red; padding:8px 10px;" onclick="delUser(${u.id})" title="Excluir"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>`;
             });
@@ -264,6 +265,35 @@
                 const r = await fetch('/api/users/'+id, { method: 'DELETE', headers: getPageAuthHeaders()});
                 if(r.ok) loadUsers();
                 else alert('Nível Incompatível. Apenas Supremo.');
+            }
+        }
+
+        async function resetUserPassword(id) {
+            const newPassword = prompt("Digite a nova senha para este usuário:");
+            if (!newPassword || !newPassword.trim()) return;
+
+            try {
+                const name = document.querySelector(`[data-user-name="${id}"]`).value.trim();
+                const email = document.querySelector(`[data-user-email="${id}"]`).value.trim();
+                const role = document.querySelector(`[data-user-role="${id}"]`).value;
+                const userFunction = document.querySelector(`[data-user-function="${id}"]`).value;
+                
+                const allowedBoards = [];
+                document.querySelectorAll(`[data-board-access="${id}"]:checked`).forEach(cb => allowedBoards.push(cb.value));
+
+                const r = await fetch('/api/users/' + id, {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json', ...getPageAuthHeaders()},
+                    body: JSON.stringify({ name, email, role, function: userFunction, allowed_boards: allowedBoards, password: newPassword.trim() })
+                });
+
+                if (r.ok) {
+                    alert('Senha redefinida com sucesso!');
+                } else {
+                    alert('Erro ao redefinir senha. Apenas usuários Master podem fazer isso.');
+                }
+            } catch (err) {
+                alert('Erro de conexão ao redefinir a senha.');
             }
         }
         
